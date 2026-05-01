@@ -250,19 +250,20 @@ sub _conflict_check {
         return 'Slot does not run on that day';
     }
 
-    my $exclude_clause = $exclude_id ? 'AND id != ?' : q{};
-    my @params         = ( $slot_id, $date );
-    push @params, $exclude_id if $exclude_id;
+    my $exclude_fill_clause = $exclude_id ? 'AND id != ?'   : q{};
+    my $exclude_dup_clause  = $exclude_id ? 'AND a.id != ?' : q{};
+    my @fill_params         = ( $slot_id, $date );
+    push @fill_params, $exclude_id if $exclude_id;
 
     my ($filled) = $dbh->selectrow_array(
         "SELECT COUNT(*) FROM staff_roster_assignments
-         WHERE slot_id = ? AND assignment_date = ? $exclude_clause",
-        undef, @params,
+         WHERE slot_id = ? AND assignment_date = ? $exclude_fill_clause",
+        undef, @fill_params,
     );
     return "Slot full ($filled/$max_staff)" if $filled >= $max_staff;
 
-    @params = ( $slot_id, $borrowernumber, $date );
-    push @params, $exclude_id if $exclude_id;
+    my @dup_params = ( $slot_id, $borrowernumber, $date );
+    push @dup_params, $exclude_id if $exclude_id;
 
     my ($double) = $dbh->selectrow_array(
         "SELECT COUNT(*) FROM staff_roster_assignments a
@@ -270,10 +271,10 @@ sub _conflict_check {
          JOIN staff_roster_slots s2 ON s2.id = ?
          WHERE a.borrowernumber = ?
            AND a.assignment_date = ?
-           $exclude_clause
+           $exclude_dup_clause
            AND s1.start_time < s2.end_time
            AND s2.start_time < s1.end_time",
-        undef, @params,
+        undef, @dup_params,
     );
     return 'Staff already assigned to overlapping slot that day' if $double > 0;
 
