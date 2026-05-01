@@ -560,23 +560,25 @@
                         </li>
                         <li class="day-picker">
                             <label class="required">Days of week:</label>
-                            <div class="staff-roster-day-picker" role="group" aria-label="Days of week">
-                                [% FOREACH d IN [
-                                    { v => 1, n => 'Mon' }
-                                    { v => 2, n => 'Tue' }
-                                    { v => 3, n => 'Wed' }
-                                    { v => 4, n => 'Thu' }
-                                    { v => 5, n => 'Fri' }
-                                    { v => 6, n => 'Sat' }
-                                    { v => 0, n => 'Sun' }
-                                ] %]
-                                    <label class="staff-roster-day-checkbox">
-                                        <input type="checkbox" name="day_of_week" value="[% d.v %]" class="day-of-week-input" />
-                                        <span>[% d.n %]</span>
-                                    </label>
-                                [% END %]
+                            <div class="staff-roster-day-picker-wrap">
+                                <div class="staff-roster-day-picker" role="group" aria-label="Days of week">
+                                    [% FOREACH d IN [
+                                        { v => 1, n => 'Mon' }
+                                        { v => 2, n => 'Tue' }
+                                        { v => 3, n => 'Wed' }
+                                        { v => 4, n => 'Thu' }
+                                        { v => 5, n => 'Fri' }
+                                        { v => 6, n => 'Sat' }
+                                        { v => 0, n => 'Sun' }
+                                    ] %]
+                                        <label class="staff-roster-day-checkbox">
+                                            <input type="checkbox" name="day_of_week" value="[% d.v %]" class="day-of-week-input" />
+                                            <span>[% d.n %]</span>
+                                        </label>
+                                    [% END %]
+                                </div>
+                                <span class="hint">Pick one or more days. Combined with frequency above.</span>
                             </div>
-                            <span class="hint">Pick one or more days. Combined with frequency above.</span>
                         </li>
                         <li>
                             <label for="until_date">Until (optional):</label>
