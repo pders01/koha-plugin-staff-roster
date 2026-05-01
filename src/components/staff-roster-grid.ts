@@ -1,4 +1,4 @@
-import { LitElement, html, css, nothing } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import {
@@ -37,172 +37,10 @@ export class StaffRosterGrid extends LitElement {
   private pollTimer?: ReturnType<typeof setInterval>;
   private staffDebounce?: ReturnType<typeof setTimeout>;
 
-  static override styles = css`
-    :host {
-      display: block;
-      font-family: inherit;
-      color: #222;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      gap: 1rem;
-    }
-
-    .sidebar {
-      background: #f7f7f9;
-      border-radius: 6px;
-      padding: 0.75rem;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-
-    .sidebar h4 {
-      margin: 0 0 0.5rem;
-      font-size: 0.9rem;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: #555;
-    }
-
-    .sidebar input[type="search"] {
-      width: 100%;
-      padding: 0.4rem;
-      box-sizing: border-box;
-      margin-bottom: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-    }
-
-    .staff-pill {
-      display: block;
-      padding: 0.4rem 0.5rem;
-      margin-bottom: 0.25rem;
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: grab;
-      font-size: 0.85rem;
-      user-select: none;
-    }
-
-    .staff-pill:hover {
-      border-color: #4caf50;
-      background: #f0fdf4;
-    }
-
-    .staff-pill[draggable="true"]:active {
-      cursor: grabbing;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 140px repeat(7, 1fr);
-      gap: 1px;
-      background: #ddd;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .header,
-    .slot-label,
-    .cell {
-      background: white;
-      padding: 0.5rem;
-      min-height: 60px;
-    }
-
-    .header {
-      font-weight: 600;
-      text-align: center;
-      background: #f0f0f0;
-      font-size: 0.85rem;
-    }
-
-    .slot-label {
-      font-size: 0.85rem;
-      color: #444;
-    }
-
-    .slot-label .time {
-      font-weight: 600;
-      color: #222;
-    }
-
-    .cell {
-      cursor: pointer;
-      transition: background 0.1s;
-    }
-
-    .cell.dropping {
-      background: #e8f5e9;
-      box-shadow: inset 0 0 0 2px #4caf50;
-    }
-
-    .cell.exception {
-      background: #fff8e1;
-      color: #6d4c00;
-      cursor: not-allowed;
-    }
-
-    .assignment {
-      display: block;
-      background: var(--type-color, #3498db);
-      color: white;
-      padding: 0.25rem 0.4rem;
-      border-radius: 3px;
-      margin-bottom: 0.2rem;
-      font-size: 0.8rem;
-      cursor: grab;
-    }
-
-    .assignment.cancelled,
-    .assignment.no_show {
-      opacity: 0.5;
-      text-decoration: line-through;
-    }
-
-    .toolbar {
-      margin-bottom: 0.5rem;
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-    }
-
-    button {
-      padding: 0.35rem 0.75rem;
-      border: 1px solid #999;
-      background: white;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 0.85rem;
-    }
-
-    button:hover {
-      background: #f0f0f0;
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    .error {
-      background: #ffebee;
-      color: #b71c1c;
-      padding: 0.5rem;
-      border-radius: 3px;
-      margin-bottom: 0.5rem;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 2rem;
-      color: #888;
-    }
-  `;
+  // Render in light DOM so Koha's Bootstrap and intranet styles apply.
+  override createRenderRoot(): HTMLElement {
+    return this;
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -352,120 +190,159 @@ export class StaffRosterGrid extends LitElement {
   }
 
   override render() {
-    if (!this.week) return html`<div class="loading">Loading…</div>`;
+    if (!this.week) return html`<div class="text-center text-muted py-4">Loading…</div>`;
 
     const color = this.week.roster.type_color;
     const slotsByTime = [...this.week.slots].sort(
       (a, b) => a.start_time.localeCompare(b.start_time) || a.day_of_week - b.day_of_week,
     );
-    const slotIds = [...new Set(slotsByTime.map((s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}`))];
+    const slotKeys = [...new Set(slotsByTime.map((s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}`))];
 
     return html`
-      ${this.error ? html`<div class="error">${this.error}</div>` : nothing}
-      <div class="toolbar">
-        <button @click=${() => this.shiftWeek(-7)}>← Previous</button>
-        <strong>${this.week.roster.name} — week of ${this.weekStart}</strong>
-        <button @click=${() => this.shiftWeek(7)}>Next →</button>
-        <button @click=${() => void this.undo()} ?disabled=${this.undoStack.length === 0}>
-          Undo (${this.undoStack.length})
-        </button>
-        <button @click=${() => void this.refresh()}>Refresh</button>
+      ${this.error ? html`<div class="alert alert-warning srg-error">${this.error}</div>` : nothing}
+
+      <div class="btn-toolbar srg-toolbar" role="toolbar">
+        <div class="btn-group" role="group">
+          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(-7)}>
+            <i class="fa fa-arrow-left" aria-hidden="true"></i> Previous
+          </button>
+          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(7)}>
+            Next <i class="fa fa-arrow-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        <span class="srg-week-label">Week of ${this.weekStart}</span>
+        <div class="btn-group" role="group">
+          <button
+            class="btn btn-default btn-sm"
+            @click=${() => void this.undo()}
+            ?disabled=${this.undoStack.length === 0}
+          >
+            <i class="fa fa-undo" aria-hidden="true"></i> Undo (${this.undoStack.length})
+          </button>
+          <button class="btn btn-default btn-sm" @click=${() => void this.refresh()}>
+            <i class="fa fa-refresh" aria-hidden="true"></i> Refresh
+          </button>
+        </div>
       </div>
 
-      <div class="layout">
-        <div class="sidebar">
-          <h4>Available staff</h4>
+      <div class="srg-layout" style=${`--srg-type-color: ${color}`}>
+        <section class="srg-staff-panel">
+          <h3 class="srg-panel-title">Available staff</h3>
           <input
             type="search"
-            placeholder="Search…"
+            class="form-control input-sm"
+            placeholder="Search staff…"
             .value=${this.staffQuery}
             @input=${this.onStaffSearch}
             @focus=${() => void this.loadAvailable()}
           />
-          ${repeat(
-            this.available,
-            (s) => s.borrowernumber,
-            (s) => html`
-              <div
-                class="staff-pill"
-                draggable="true"
-                @dragstart=${(e: DragEvent) => {
-                  this.dragging = { kind: "staff", staff: s };
-                  e.dataTransfer?.setData("text/plain", String(s.borrowernumber));
-                }}
-              >
-                ${s.surname}, ${s.firstname}
-              </div>
-            `,
-          )}
-        </div>
+          <ul class="srg-staff-list" role="list">
+            ${repeat(
+              this.available,
+              (s) => s.borrowernumber,
+              (s) => html`
+                <li
+                  class="srg-staff-pill"
+                  draggable="true"
+                  @dragstart=${(e: DragEvent) => {
+                    this.dragging = { kind: "staff", staff: s };
+                    e.dataTransfer?.setData("text/plain", String(s.borrowernumber));
+                  }}
+                >
+                  <i class="fa fa-user" aria-hidden="true"></i>
+                  ${s.surname}, ${s.firstname}
+                </li>
+              `,
+            )}
+            ${this.available.length === 0 && this.staffQuery
+              ? html`<li class="text-muted">No matches</li>`
+              : nothing}
+          </ul>
+        </section>
 
-        <div class="grid" style=${`--type-color: ${color}`}>
-          <div class="header">Slot</div>
-          ${DAYS.map(
-            (d, i) => html`<div class="header">${d}<br /><small>${this.cellDate(i).slice(5)}</small></div>`,
-          )}
-          ${slotIds.map((key) => {
-            const sample = slotsByTime.find(
-              (s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}` === key,
-            )!;
-            return html`
-              <div class="slot-label">
-                <span class="time">${sample.start_time.slice(0, 5)}–${sample.end_time.slice(0, 5)}</span>
-                ${sample.location ? html`<br /><small>${sample.location}</small>` : nothing}
-              </div>
-              ${DAYS.map((_, day) => {
-                const slot = slotsByTime.find(
-                  (s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}` === key && s.day_of_week === day,
-                );
-                const date = this.cellDate(day);
-                const isException = this.exceptionFor(date);
-                if (!slot) return html`<div class="cell"></div>`;
-                if (isException) return html`<div class="cell exception">closed</div>`;
-                const assignments = this.assignmentsFor(slot.id, date);
+        <section class="srg-grid-wrap">
+          <table class="table table-bordered srg-grid">
+            <thead>
+              <tr>
+                <th class="srg-slot-col">Slot</th>
+                ${DAYS.map(
+                  (d, i) => html`
+                    <th>
+                      <span class="srg-day">${d}</span>
+                      <small class="text-muted">${this.cellDate(i).slice(5)}</small>
+                    </th>
+                  `,
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              ${slotKeys.map((key) => {
+                const sample = slotsByTime.find(
+                  (s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}` === key,
+                )!;
                 return html`
-                  <div
-                    class="cell"
-                    @dragover=${(e: DragEvent) => {
-                      e.preventDefault();
-                      (e.currentTarget as HTMLElement).classList.add("dropping");
-                    }}
-                    @dragleave=${(e: DragEvent) => {
-                      (e.currentTarget as HTMLElement).classList.remove("dropping");
-                    }}
-                    @drop=${async (e: DragEvent) => {
-                      e.preventDefault();
-                      (e.currentTarget as HTMLElement).classList.remove("dropping");
-                      await this.dropOnCell(slot, date);
-                    }}
-                  >
-                    ${repeat(
-                      assignments,
-                      (a) => a.id,
-                      (a) => html`
-                        <div
-                          class="assignment ${a.status}"
-                          draggable="true"
-                          title="${a.firstname} ${a.surname} (${a.status}). Click to remove."
-                          @dragstart=${(e: DragEvent) => {
-                            this.dragging = { kind: "assignment", assignment: a };
-                            e.dataTransfer?.setData("text/plain", String(a.id));
+                  <tr>
+                    <th scope="row" class="srg-slot-cell">
+                      <span class="srg-slot-time">${sample.start_time.slice(0, 5)}–${sample.end_time.slice(0, 5)}</span>
+                      ${sample.location
+                        ? html`<small class="text-muted d-block">${sample.location}</small>`
+                        : nothing}
+                    </th>
+                    ${DAYS.map((_, day) => {
+                      const slot = slotsByTime.find(
+                        (s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}` === key && s.day_of_week === day,
+                      );
+                      const date = this.cellDate(day);
+                      const isException = this.exceptionFor(date);
+                      if (!slot) return html`<td class="srg-cell-empty"></td>`;
+                      if (isException)
+                        return html`<td class="srg-cell-exception"><small>closed</small></td>`;
+                      const assignments = this.assignmentsFor(slot.id, date);
+                      const filled = assignments.length;
+                      return html`
+                        <td
+                          class="srg-cell"
+                          @dragover=${(e: DragEvent) => {
+                            e.preventDefault();
+                            (e.currentTarget as HTMLElement).classList.add("srg-dropping");
                           }}
-                          @click=${() => void this.deleteAssignment(a)}
+                          @dragleave=${(e: DragEvent) => {
+                            (e.currentTarget as HTMLElement).classList.remove("srg-dropping");
+                          }}
+                          @drop=${async (e: DragEvent) => {
+                            e.preventDefault();
+                            (e.currentTarget as HTMLElement).classList.remove("srg-dropping");
+                            await this.dropOnCell(slot, date);
+                          }}
                         >
-                          ${a.surname}, ${a.firstname}
-                        </div>
-                      `,
-                    )}
-                    ${assignments.length < slot.max_staff
-                      ? html`<small style="color:#888">${assignments.length}/${slot.max_staff}</small>`
-                      : nothing}
-                  </div>
+                          ${repeat(
+                            assignments,
+                            (a) => a.id,
+                            (a) => html`
+                              <div
+                                class="srg-assignment srg-status-${a.status}"
+                                draggable="true"
+                                title="${a.firstname} ${a.surname} (${a.status}). Click to remove."
+                                @dragstart=${(e: DragEvent) => {
+                                  this.dragging = { kind: "assignment", assignment: a };
+                                  e.dataTransfer?.setData("text/plain", String(a.id));
+                                }}
+                                @click=${() => void this.deleteAssignment(a)}
+                              >
+                                ${a.surname}, ${a.firstname}
+                              </div>
+                            `,
+                          )}
+                          <small class="srg-capacity">${filled}/${slot.max_staff}</small>
+                        </td>
+                      `;
+                    })}
+                  </tr>
                 `;
               })}
-            `;
-          })}
-        </div>
+            </tbody>
+          </table>
+        </section>
       </div>
     `;
   }
