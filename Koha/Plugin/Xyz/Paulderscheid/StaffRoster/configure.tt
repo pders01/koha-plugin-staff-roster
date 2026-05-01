@@ -156,16 +156,16 @@
                 <li>
                     <label for="library_group_mode">Library group enforcement:</label>
                     <select name="library_group_mode" id="library_group_mode">
-                        <option value="off"    [% IF library_group_mode == 'off'    %]selected[% END %]>Off — groups ignored</option>
-                        <option value="filter" [% IF library_group_mode == 'filter' %]selected[% END %]>Filter — non-members don't see group rosters</option>
-                        <option value="strict" [% IF library_group_mode == 'strict' %]selected[% END %]>Strict — non-members get 403 on read and write</option>
+                        <option value="off"    [% IF library_group_mode == 'off'    %]selected[% END %]>Off: groups ignored</option>
+                        <option value="filter" [% IF library_group_mode == 'filter' %]selected[% END %]>Filter: non-members don't see group rosters</option>
+                        <option value="strict" [% IF library_group_mode == 'strict' %]selected[% END %]>Strict: non-members get 403 on read and write</option>
                     </select>
                     <span class="hint">Superlibrarians always see all rosters regardless of mode.</span>
                 </li>
                 <li>
                     <label for="default_library_group_id">Default library group for new rosters:</label>
                     <select name="default_library_group_id" id="default_library_group_id">
-                        <option value="">— none —</option>
+                        <option value="">None</option>
                         [% FOREACH g IN library_groups %]
                             <option value="[% g.id | html %]" [% IF default_library_group_id == g.id %]selected[% END %]>
                                 [% g.indent | $raw %][% g.title | html %]
@@ -196,8 +196,8 @@
                 <li>
                     <label for="koha_calendar_strict">Closure handling:</label>
                     <select name="koha_calendar_strict" id="koha_calendar_strict">
-                        <option value="1" [% IF koha_calendar_strict == '1' %]selected[% END %]>Hard — block assignment on closed dates</option>
-                        <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>Soft — show closure but allow assignment</option>
+                        <option value="1" [% IF koha_calendar_strict == '1' %]selected[% END %]>Hard: block assignment on closed dates</option>
+                        <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>Soft: show closure but allow assignment</option>
                     </select>
                 </li>
             </ol>
