@@ -17,6 +17,10 @@ const POLL_MS = 5000;
 const UNDO_LIMIT = 10;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// Slot.day_of_week uses 0=Sunday..6=Saturday (matches the slot form).
+// The grid is Monday-anchored, so column index -> day_of_week is shifted.
+const dayOfWeekForColumn = (col: number): number => (col + 1) % 7;
+
 type UndoOp =
   | { kind: "create"; id: number }
   | { kind: "delete"; payload: { slot_id: number; borrowernumber: number; assignment_date: string; status: string; notes: string | null } }
@@ -301,8 +305,9 @@ export class StaffRosterGrid extends LitElement {
                         : nothing}
                     </th>
                     ${DAYS.map((_, day) => {
+                      const dow = dayOfWeekForColumn(day);
                       const slot = slotsByTime.find(
-                        (s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}` === key && s.day_of_week === day,
+                        (s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}` === key && s.day_of_week === dow,
                       );
                       const date = this.cellDate(day);
                       const isException = this.exceptionFor(date);

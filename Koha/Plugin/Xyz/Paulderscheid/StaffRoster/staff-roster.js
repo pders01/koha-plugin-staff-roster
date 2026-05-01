@@ -1290,7 +1290,7 @@ var Et = 5e3, Dt = 10, Ot = [
 	"Fri",
 	"Sat",
 	"Sun"
-], $ = class extends k {
+], kt = (e) => (e + 1) % 7, $ = class extends k {
 	constructor(...e) {
 		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.staffQuery = "", this.error = "", this.dragging = null, this.undoStack = [], this.onKeyDown = (e) => {
 			(e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey && (e.preventDefault(), this.undo());
@@ -1300,7 +1300,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		return this;
 	}
 	connectedCallback() {
-		super.connectedCallback(), this.weekStart ||= kt(/* @__PURE__ */ new Date()), this.refresh(), this.pollTimer = setInterval(() => void this.refresh(), Et), document.addEventListener("keydown", this.onKeyDown);
+		super.connectedCallback(), this.weekStart ||= At(/* @__PURE__ */ new Date()), this.refresh(), this.pollTimer = setInterval(() => void this.refresh(), Et), document.addEventListener("keydown", this.onKeyDown);
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this.pollTimer && clearInterval(this.pollTimer), document.removeEventListener("keydown", this.onKeyDown);
@@ -1485,7 +1485,7 @@ var Et = 5e3, Dt = 10, Ot = [
                     <tr>
                       <td colspan="8" class="srg-empty">
                         <p>No time slots defined for this roster yet.</p>
-                        <a class="btn btn-default btn-sm" href="?class=${At()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
+                        <a class="btn btn-default btn-sm" href="?class=${jt()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
                           <i class="fa fa-clock" aria-hidden="true"></i> Manage slots
                         </a>
                       </td>
@@ -1500,10 +1500,10 @@ var Et = 5e3, Dt = 10, Ot = [
                       ${n.location ? C`<small class="text-muted d-block">${n.location}</small>` : T}
                     </th>
                     ${Ot.map((n, r) => {
-				let i = t.find((t) => `${t.start_time}-${t.end_time}-${t.location ?? ""}` === e && t.day_of_week === r), a = this.cellDate(r), o = this.exceptionFor(a);
-				if (!i) return C`<td class="srg-cell-empty"></td>`;
-				if (o) return C`<td class="srg-cell-exception"><small>closed</small></td>`;
-				let s = this.assignmentsFor(i.id, a), c = s.length;
+				let i = kt(r), a = t.find((t) => `${t.start_time}-${t.end_time}-${t.location ?? ""}` === e && t.day_of_week === i), o = this.cellDate(r), s = this.exceptionFor(o);
+				if (!a) return C`<td class="srg-cell-empty"></td>`;
+				if (s) return C`<td class="srg-cell-exception"><small>closed</small></td>`;
+				let c = this.assignmentsFor(a.id, o), l = c.length;
 				return C`
                         <td
                           class="srg-cell"
@@ -1514,10 +1514,10 @@ var Et = 5e3, Dt = 10, Ot = [
 					e.currentTarget.classList.remove("srg-dropping");
 				}}
                           @drop=${async (e) => {
-					e.preventDefault(), e.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(i, a);
+					e.preventDefault(), e.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(a, o);
 				}}
                         >
-                          ${Ze(s, (e) => e.id, (e) => C`
+                          ${Ze(c, (e) => e.id, (e) => C`
                               <div
                                 class="srg-assignment srg-status-${e.status}"
                                 draggable="true"
@@ -1533,7 +1533,7 @@ var Et = 5e3, Dt = 10, Ot = [
                                 ${e.surname}, ${e.firstname}
                               </div>
                             `)}
-                          <small class="srg-capacity">${c}/${i.max_staff}</small>
+                          <small class="srg-capacity">${l}/${a.max_staff}</small>
                         </td>
                       `;
 			})}
@@ -1554,11 +1554,11 @@ Q([ze({
 	type: String,
 	attribute: "week-start"
 })], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), $ = Q([Ie("staff-roster-grid")], $);
-function kt(e) {
+function At(e) {
 	let t = (e.getDay() + 6) % 7, n = new Date(e);
 	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);
 }
-function At() {
+function jt() {
 	return new URLSearchParams(window.location.search).get("class") ?? "";
 }
 //#endregion
