@@ -8,18 +8,9 @@ _Empty — pick the next batch._
 
 ## Next (single-feature batches)
 
-- [ ] **Authorized values** opt-in for `staff_roster_slots.location`
-      (config: "Use authorized values for slot locations" + AV category,
-      default `STAFFROSTER_LOCATION`). Free-text fallback when off. Note:
-      desks already cover the per-branch case via the use_koha_desks
-      setting; AV would cover non-branch-bound rosters or libraries that
-      don't use desks.
 - [ ] **Additional fields** support on `staff_roster_assignments` first,
       then on `staff_roster`. Register the table in install hook; render
       dynamic fields in edit form; persist via `additional_field_values`.
-- [ ] **RRule phase 2**: monthly patterns (BYDAY=1MO), INTERVAL,
-      UNTIL. Hand-rolled parser stays for now; bring in a library
-      when monthly/interval lands.
 
 ## Phase 2 (planned features, each its own work block)
 
@@ -64,9 +55,10 @@ _Empty — pick the next batch._
 
 ## Backlog
 
-- [ ] **Tests**. Highest-risk areas: `_user_group_ids` (recursive group
-      walk), `_conflict_check` (overlap SQL), Lit `dayOfWeekForColumn`
-      mapping, calendar merge in `get_week`.
+- [ ] **Tests** for remaining hot paths: `_user_group_ids` (recursive
+      group walk), `_conflict_check` (overlap SQL), Lit
+      `dayOfWeekForColumn` mapping, calendar merge in `get_week`. RRule
+      helpers covered in `t/rrule.t`.
 - [ ] **Mobile schedule grid**: 8 columns × tall slot column means
       horizontal scroll on phones. Acceptable for v1, not polished.
 - [ ] **Slot delete confirm**: uses inline modal on the manage_slots
@@ -76,6 +68,16 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **RRule phase 2**: FREQ=MONTHLY (BYDAY=1MO/-1FR), INTERVAL,
+      UNTIL via DateTime::Event::ICal. Server emits per-date
+      applies_on_dates for the visible week; Lit grid filters on it.
+      Slot form gets Frequency/Interval/Ordinal/Until inputs.
+      Hot paths covered in `t/rrule.t` (9 subtests).
+- [x] **Authorized values** opt-in for `staff_roster_slots.location`:
+      `use_authorised_value_locations` + `authorised_value_location_category`
+      settings. Slot form renders <select> from AV category when on;
+      submit-side validation rejects values outside the category.
+      Free-text + desks fallback unchanged when off.
 - [x] **Lit grid a11y**: cell + chip + pill keyboard pickup-drop with
       Esc cancel, ARIA grid/listbox roles, sr-only live region, focus
       ring matching Koha accent. Mouse drag-drop preserved.

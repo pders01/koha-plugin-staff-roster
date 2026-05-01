@@ -499,6 +499,30 @@
                 <fieldset class="rows">
                     <legend id="slot_form_legend">Add Time Slot</legend>
                     <ol>
+                        <li>
+                            <label for="freq">Frequency:</label>
+                            <select name="freq" id="freq">
+                                <option value="WEEKLY">Weekly</option>
+                                <option value="MONTHLY">Monthly</option>
+                            </select>
+                            <span class="hint">Weekly = each picked weekday. Monthly = nth weekday of month.</span>
+                        </li>
+                        <li>
+                            <label for="interval">Repeat every:</label>
+                            <input type="number" name="interval" id="interval" value="1" min="1" max="52" />
+                            <span class="hint" id="interval_hint">week(s)</span>
+                        </li>
+                        <li id="ordinal_row" style="display: none;">
+                            <label for="ordinal">Which occurrence:</label>
+                            <select name="ordinal" id="ordinal">
+                                <option value="1">1st</option>
+                                <option value="2">2nd</option>
+                                <option value="3">3rd</option>
+                                <option value="4">4th</option>
+                                <option value="-1">Last</option>
+                            </select>
+                            <span class="hint">Applies to all picked weekdays (e.g. 1st Mon + 1st Wed).</span>
+                        </li>
                         <li class="day-picker">
                             <label class="required">Days of week:</label>
                             <div class="staff-roster-day-picker" role="group" aria-label="Days of week">
@@ -517,7 +541,12 @@
                                     </label>
                                 [% END %]
                             </div>
-                            <span class="hint">Pick one or more days; the slot recurs weekly on each.</span>
+                            <span class="hint">Pick one or more days. Combined with frequency above.</span>
+                        </li>
+                        <li>
+                            <label for="until_date">Until (optional):</label>
+                            <input type="date" name="until_date" id="until_date" />
+                            <span class="hint">No more occurrences after this date.</span>
                         </li>
                         <li>
                             <label for="start_time" class="required">Start time:</label>
@@ -607,7 +636,11 @@
                                            data-min="[% slot.min_staff | html %]"
                                            data-max="[% slot.max_staff | html %]"
                                            data-location="[% slot.location | html %]"
-                                           data-notes="[% slot.notes | html %]">
+                                           data-notes="[% slot.notes | html %]"
+                                           data-freq="[% slot.rrule_freq | html %]"
+                                           data-interval="[% slot.rrule_interval | html %]"
+                                           data-ordinal="[% slot.rrule_ordinal | html %]"
+                                           data-until="[% slot.rrule_until | html %]">
                                             <i class="fa fa-pencil"></i> Edit
                                         </a>
                                         <button type="button" class="btn btn-default btn-xs slot-delete-trigger"
@@ -721,7 +754,19 @@
                 $("#slot_form_legend").text("Add Time Slot");
                 $("#slot_form")[0].reset();
                 $("#slot_id").val("");
+                $("#freq").val("WEEKLY").trigger("change");
+                $("#interval").val(1);
+                $("#until_date").val("");
             });
+
+            // Toggle ordinal visibility + interval label based on frequency.
+            function syncFreqUI() {
+                var monthly = $("#freq").val() === "MONTHLY";
+                $("#ordinal_row").toggle(monthly);
+                $("#interval_hint").text(monthly ? "month(s)" : "week(s)");
+            }
+            $("#freq").on("change", syncFreqUI);
+            syncFreqUI();
 
             $("#cancel_slot").on("click", function() {
                 $("#slot_form_container").slideUp();
@@ -746,6 +791,12 @@
                 $("#max_staff").val($this.data("max"));
                 $("#location").val($this.data("location") || "");
                 $("#slot_notes").val($this.data("notes") || "");
+
+                $("#freq").val($this.data("freq") || "WEEKLY").trigger("change");
+                $("#interval").val($this.data("interval") || 1);
+                var ord = $this.data("ordinal");
+                $("#ordinal").val(ord || 1);
+                $("#until_date").val($this.data("until") || "");
 
                 $("#slot_form_legend").text("Edit Time Slot");
                 $("#slot_form_container").slideDown();

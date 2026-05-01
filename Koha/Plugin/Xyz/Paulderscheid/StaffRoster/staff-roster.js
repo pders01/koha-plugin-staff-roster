@@ -1452,7 +1452,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		return [...this.week?.slots ?? []].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.id - t.id);
 	}
 	cellApplies(e, t) {
-		return e.days_of_week.includes(At[t]);
+		return e.applies_on_dates ? e.applies_on_dates.includes(this.cellDate(t)) : e.days_of_week.includes(At[t]);
 	}
 	firstApplicableCellKey() {
 		let e = this.sortedSlots();
@@ -1736,35 +1736,35 @@ var Et = 5e3, Dt = 10, Ot = [
                       ${e.location ? C`<small class="text-muted d-block">${e.location}</small>` : T}
                     </th>
                     ${Ot.map((r, i) => {
-			let a = At[i], o = e.days_of_week.includes(a), s = this.cellDate(i), c = this.exceptionFor(s), l = i + 2;
+			let a = this.cellDate(i), o = this.cellApplies(e, i), s = this.exceptionFor(a), c = i + 2;
 			if (!o) return C`<td
                           class="srg-cell-empty"
                           role="gridcell"
-                          aria-colindex=${l}
+                          aria-colindex=${c}
                           aria-disabled="true"
                         ></td>`;
-			let u = `${e.id}-${i}`;
-			if (c) return C`<td
+			let l = `${e.id}-${i}`;
+			if (s) return C`<td
                           class="srg-cell-exception"
                           role="gridcell"
-                          aria-colindex=${l}
+                          aria-colindex=${c}
                           tabindex="0"
-                          data-cell-key=${u}
-                          aria-label=${this.cellAriaLabel(e, s, i, !0, [])}
-                          @keydown=${(n) => this.onCellKeyDown(n, e, s, t, i)}
-                          @focus=${() => this.focusedCellKey = u}
+                          data-cell-key=${l}
+                          aria-label=${this.cellAriaLabel(e, a, i, !0, [])}
+                          @keydown=${(n) => this.onCellKeyDown(n, e, a, t, i)}
+                          @focus=${() => this.focusedCellKey = l}
                         >
                           <small>closed</small>
                         </td>`;
-			let d = this.assignmentsFor(e.id, s), f = d.length;
+			let u = this.assignmentsFor(e.id, a), d = u.length;
 			return C`
                         <td
                           class="srg-cell ${n ? "srg-drop-target" : ""}"
                           role="gridcell"
-                          aria-colindex=${l}
+                          aria-colindex=${c}
                           tabindex="0"
-                          data-cell-key=${u}
-                          aria-label=${this.cellAriaLabel(e, s, i, !1, d)}
+                          data-cell-key=${l}
+                          aria-label=${this.cellAriaLabel(e, a, i, !1, u)}
                           @dragover=${(e) => {
 				e.preventDefault(), e.currentTarget.classList.add("srg-dropping");
 			}}
@@ -1772,12 +1772,12 @@ var Et = 5e3, Dt = 10, Ot = [
 				e.currentTarget.classList.remove("srg-dropping");
 			}}
                           @drop=${async (t) => {
-				t.preventDefault(), t.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(e, s);
+				t.preventDefault(), t.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(e, a);
 			}}
-                          @keydown=${(n) => this.onCellKeyDown(n, e, s, t, i)}
-                          @focus=${() => this.focusedCellKey = u}
+                          @keydown=${(n) => this.onCellKeyDown(n, e, a, t, i)}
+                          @focus=${() => this.focusedCellKey = l}
                         >
-                          ${Ze(d, (e) => e.id, (e) => {
+                          ${Ze(u, (e) => e.id, (e) => {
 				let t = this.pickedUp?.kind === "assignment" && this.pickedUp.assignment.id === e.id;
 				return C`
                                 <div
@@ -1800,7 +1800,7 @@ var Et = 5e3, Dt = 10, Ot = [
                                 </div>
                               `;
 			})}
-                          <small class="srg-capacity" aria-hidden="true">${f}/${e.max_staff}</small>
+                          <small class="srg-capacity" aria-hidden="true">${d}/${e.max_staff}</small>
                         </td>
                       `;
 		})}

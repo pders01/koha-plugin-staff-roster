@@ -258,6 +258,9 @@ export class StaffRosterGrid extends LitElement {
   }
 
   private cellApplies(slot: Slot, dayIdx: number): boolean {
+    if (slot.applies_on_dates) {
+      return slot.applies_on_dates.includes(this.cellDate(dayIdx));
+    }
     return slot.days_of_week.includes(ICAL_FOR_COLUMN[dayIdx]);
   }
 
@@ -641,9 +644,8 @@ export class StaffRosterGrid extends LitElement {
                         : nothing}
                     </th>
                     ${DAYS.map((_, day) => {
-                      const ical = ICAL_FOR_COLUMN[day];
-                      const applies = slot.days_of_week.includes(ical);
                       const date = this.cellDate(day);
+                      const applies = this.cellApplies(slot, day);
                       const isException = this.exceptionFor(date);
                       const colIdx = day + 2;
                       if (!applies) {
