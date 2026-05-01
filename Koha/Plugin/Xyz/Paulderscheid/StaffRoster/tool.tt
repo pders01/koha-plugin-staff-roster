@@ -505,20 +505,8 @@
             </a>
         </div>
 
-        <div class="filter-row">
-            <div>
-                <label for="week_date">Week of:</label>
-                <input type="text" id="week_date" name="week_date" class="flatpickr" value="[% week_start | html %]" />
-            </div>
-            <button class="btn btn-default" id="go_to_week">Go</button>
-            <button class="btn btn-default" id="prev_week"><i class="fa fa-arrow-left"></i> Previous</button>
-            <button class="btn btn-default" id="next_week">Next <i class="fa fa-arrow-right"></i></button>
-        </div>
-
-        <div class="page-section">
-            <p><em>Assignment management interface will be implemented in the next phase.</em></p>
-            <p>Current slots defined: [% slots.size || 0 %]</p>
-        </div>
+        <script type="module" src="/api/v1/contrib/staffroster/static/staff-roster.js"></script>
+        <staff-roster-grid roster-id="[% roster.id | html %]" week-start="[% week_start | html %]"></staff-roster-grid>
     [% END %]
 
 [% END %]
