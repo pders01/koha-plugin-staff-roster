@@ -7,5 +7,3 @@ templates/Koha/Plugin/
 .DS_Store
 *.bak
 koha-plugin-*.kpz
-
-TODO.md
