@@ -1,0 +1,12 @@
+---
+author: 'Paul Derscheid'
+date_authored: 2025-12-24
+date_updated: 2026-05-01
+description: 'Manage staff duty rosters and schedules across library branches'
+maximum_version: ''
+minimum_version: 24.05.00.000
+module: Koha::Plugin::Xyz::Paulderscheid::StaffRoster
+name: Koha::Plugin::Xyz::Paulderscheid::StaffRoster
+release_filename: koha-plugin-staff-roster
+static_dir_name: static
+version: 0.0.1

@@ -1,0 +1,606 @@
+[% USE raw %]
+[% USE Koha %]
+[% USE KohaDates %]
+[% USE Branches %]
+[% PROCESS 'i18n.inc' %]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>
+    [% IF op == 'manage_roster' %]
+        Manage Roster &rsaquo;
+    [% ELSIF op == 'add_roster' || op == 'edit_roster' %]
+        [% IF roster.id %]Edit[% ELSE %]New[% END %] Roster &rsaquo;
+    [% ELSIF op == 'manage_slots' %]
+        Manage Slots &rsaquo;
+    [% ELSIF op == 'view_assignments' %]
+        View Assignments &rsaquo;
+    [% END %]
+    Staff Roster | Plugins | Koha
+</title>
+[% INCLUDE 'doc-head-close.inc' %]
+<style>
+    .roster-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .roster-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .roster-card-title {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin: 0;
+    }
+    .roster-type-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 16px;
+        color: #fff;
+        font-size: 0.85em;
+    }
+    .roster-meta {
+        color: #666;
+        font-size: 0.9em;
+    }
+    .roster-dates {
+        margin-top: 8px;
+    }
+    .slot-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+        margin-top: 16px;
+    }
+    .slot-day {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 8px;
+        min-height: 100px;
+    }
+    .slot-day-header {
+        font-weight: bold;
+        text-align: center;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 8px;
+    }
+    .slot-item {
+        background: #fff;
+        border-left: 3px solid #3498db;
+        padding: 4px 8px;
+        margin-bottom: 4px;
+        font-size: 0.85em;
+        border-radius: 0 4px 4px 0;
+    }
+    .status-active { color: #27ae60; }
+    .status-inactive { color: #95a5a6; }
+    .filter-row {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 16px;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+    .filter-row label {
+        margin-bottom: 0;
+        margin-right: 8px;
+    }
+</style>
+</head>
+
+<body id="plugins_staff_roster_tool" class="plugins">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'cat-search.inc' %]
+[% END %]
+
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a>
+        [% END %]
+        [% IF op == 'list' %]
+            [% WRAPPER breadcrumb_item bc_active = 1 %]
+                <span>Staff Roster</span>
+            [% END %]
+        [% ELSE %]
+            [% WRAPPER breadcrumb_item %]
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Staff Roster</a>
+            [% END %]
+            [% WRAPPER breadcrumb_item bc_active = 1 %]
+                [% IF op == 'add_roster' %]New Roster
+                [% ELSIF op == 'edit_roster' %]Edit Roster
+                [% ELSIF op == 'manage_slots' %]Manage Slots
+                [% ELSIF op == 'view_assignments' %]View Assignments
+                [% ELSIF op == 'delete_confirm' %]Confirm Deletion
+                [% END %]
+            [% END %]
+        [% END %]
+    [% END %]
+[% END %]
+
+[% WRAPPER 'main-container.inc' %]
+
+    [% FOR m IN messages %]
+        <div class="alert alert-[% m.type | html %]">
+            [% SWITCH m.code %]
+            [% CASE 'success_on_insert' %]
+                <span>Roster created successfully.</span>
+            [% CASE 'success_on_update' %]
+                <span>Roster updated successfully.</span>
+            [% CASE 'success_on_delete' %]
+                <span>Roster deleted successfully.</span>
+            [% CASE 'error_on_insert' %]
+                <span>An error occurred when creating the roster.</span>
+            [% CASE 'error_on_update' %]
+                <span>An error occurred when updating the roster.</span>
+            [% CASE 'error_on_delete' %]
+                <span>An error occurred when deleting the roster.</span>
+            [% CASE 'slot_saved' %]
+                <span>Time slot saved successfully.</span>
+            [% CASE 'slot_deleted' %]
+                <span>Time slot deleted successfully.</span>
+            [% CASE %]
+                <span>[% m.code | html %]</span>
+            [% END %]
+        </div>
+    [% END %]
+
+    [% IF op == 'list' %]
+        <div id="toolbar" class="btn-toolbar">
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">
+                <i class="fa fa-plus"></i> New roster
+            </a>
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">
+                <i class="fa fa-cog"></i> Manage roster types
+            </a>
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">
+                <i class="fa fa-wrench"></i> Configuration
+            </a>
+        </div>
+
+        <h1>Staff Roster</h1>
+        <p>Manage staff duty schedules and assignments across library branches.</p>
+
+        <div class="filter-row">
+            <div>
+                <label for="filter_branch">Branch:</label>
+                <select id="filter_branch" name="filter_branch">
+                    <option value="">All branches</option>
+                    [% FOREACH branch IN branches %]
+                        <option value="[% branch.branchcode | html %]" [% IF filter_branch == branch.branchcode %]selected[% END %]>
+                            [% branch.branchname | html %]
+                        </option>
+                    [% END %]
+                </select>
+            </div>
+            <div>
+                <label for="filter_type">Roster type:</label>
+                <select id="filter_type" name="filter_type">
+                    <option value="">All types</option>
+                    [% FOREACH rt IN roster_types %]
+                        <option value="[% rt.id | html %]" [% IF filter_type == rt.id %]selected[% END %]>
+                            [% rt.name | html %]
+                        </option>
+                    [% END %]
+                </select>
+            </div>
+            <div>
+                <label for="filter_status">Status:</label>
+                <select id="filter_status" name="filter_status">
+                    <option value="">All</option>
+                    <option value="1" [% IF filter_status == '1' %]selected[% END %]>Active</option>
+                    <option value="0" [% IF filter_status == '0' %]selected[% END %]>Inactive</option>
+                </select>
+            </div>
+            <button class="btn btn-default" id="apply_filters">
+                <i class="fa fa-filter"></i> Apply
+            </button>
+        </div>
+
+        [% IF rosters.size %]
+            <div class="page-section">
+                [% FOREACH roster IN rosters %]
+                    <div class="roster-card">
+                        <div class="roster-card-header">
+                            <h3 class="roster-card-title">[% roster.name | html %]</h3>
+                            <span class="roster-type-badge" style="background-color: [% roster.type_color | html %];">
+                                [% roster.type_name | html %]
+                            </span>
+                        </div>
+                        <div class="roster-meta">
+                            [% IF roster.branch_name %]
+                                <i class="fa fa-building"></i> [% roster.branch_name | html %]
+                            [% ELSE %]
+                                <i class="fa fa-globe"></i> All branches
+                            [% END %]
+                            <span class="roster-dates">
+                                <i class="fa fa-calendar"></i>
+                                [% roster.effective_from | $KohaDates %]
+                                [% IF roster.effective_to %]
+                                    - [% roster.effective_to | $KohaDates %]
+                                [% ELSE %]
+                                    - ongoing
+                                [% END %]
+                            </span>
+                            &nbsp;
+                            [% IF roster.is_active %]
+                                <span class="status-active"><i class="fa fa-check-circle"></i> Active</span>
+                            [% ELSE %]
+                                <span class="status-inactive"><i class="fa fa-pause-circle"></i> Inactive</span>
+                            [% END %]
+                        </div>
+                        [% IF roster.description %]
+                            <p style="margin-top: 8px; color: #666;">[% roster.description | html | truncate(200) %]</p>
+                        [% END %]
+                        <div style="margin-top: 12px;">
+                            <a class="btn btn-default btn-sm" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]">
+                                <i class="fa fa-calendar-check"></i> View schedule
+                            </a>
+                            <a class="btn btn-default btn-sm" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">
+                                <i class="fa fa-clock"></i> Manage slots ([% roster.slot_count || 0 %])
+                            </a>
+                            <a class="btn btn-default btn-sm" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=edit_roster&roster_id=[% roster.id | uri %]">
+                                <i class="fa-solid fa-pencil"></i> Edit
+                            </a>
+                            <a class="btn btn-default btn-sm" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=delete_confirm&roster_id=[% roster.id | uri %]">
+                                <i class="fa fa-trash-can"></i> Delete
+                            </a>
+                        </div>
+                    </div>
+                [% END %]
+            </div>
+        [% ELSE %]
+            <div class="alert alert-info">
+                No rosters found. <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">Create your first roster</a>.
+            </div>
+        [% END %]
+    [% END %]
+
+    [% IF op == 'add_roster' || op == 'edit_roster' %]
+        <h1>[% IF roster.id %]Edit Roster[% ELSE %]New Roster[% END %]</h1>
+
+        <form method="post" action="/cgi-bin/koha/plugins/run.pl" class="validated">
+            [% INCLUDE 'csrf-token.inc' %]
+            <input type="hidden" name="class" value="[% CLASS | html %]" />
+            <input type="hidden" name="method" value="tool" />
+            <input type="hidden" name="op" value="cud-save_roster" />
+            <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+
+            <fieldset class="rows">
+                <legend>Roster Details</legend>
+                <ol>
+                    <li>
+                        <label for="roster_type_id" class="required">Roster type:</label>
+                        <select name="roster_type_id" id="roster_type_id" required="required" class="required">
+                            <option value="">-- Select type --</option>
+                            [% FOREACH rt IN roster_types %]
+                                <option value="[% rt.id | html %]" [% IF roster.roster_type_id == rt.id %]selected[% END %]>
+                                    [% rt.name | html %]
+                                </option>
+                            [% END %]
+                        </select>
+                        <span class="required">Required</span>
+                    </li>
+                    <li>
+                        <label for="name" class="required">Name:</label>
+                        <input type="text" name="name" id="name" value="[% roster.name | html %]"
+                               size="50" maxlength="255" required="required" class="required focus" />
+                        <span class="required">Required</span>
+                    </li>
+                    <li>
+                        <label for="branch_id">Branch:</label>
+                        <select name="branch_id" id="branch_id">
+                            <option value="">All branches</option>
+                            [% FOREACH branch IN branches %]
+                                <option value="[% branch.branchcode | html %]" [% IF roster.branch_id == branch.branchcode %]selected[% END %]>
+                                    [% branch.branchname | html %]
+                                </option>
+                            [% END %]
+                        </select>
+                        <span class="hint">Leave empty to apply to all branches</span>
+                    </li>
+                    <li>
+                        <label for="description">Description:</label>
+                        <textarea name="description" id="description" rows="3" cols="50">[% roster.description | html %]</textarea>
+                    </li>
+                    <li>
+                        <label for="effective_from" class="required">Effective from:</label>
+                        <input type="text" name="effective_from" id="effective_from"
+                               value="[% roster.effective_from | html %]" class="flatpickr required" required="required" />
+                        <span class="required">Required</span>
+                    </li>
+                    <li>
+                        <label for="effective_to">Effective to:</label>
+                        <input type="text" name="effective_to" id="effective_to"
+                               value="[% roster.effective_to | html %]" class="flatpickr" />
+                        <span class="hint">Leave empty for ongoing roster</span>
+                    </li>
+                    <li>
+                        <label for="is_active">Active:</label>
+                        <select name="is_active" id="is_active">
+                            <option value="1" [% IF roster.is_active || !roster.id %]selected[% END %]>Yes</option>
+                            <option value="0" [% IF roster.id && !roster.is_active %]selected[% END %]>No</option>
+                        </select>
+                    </li>
+                </ol>
+            </fieldset>
+
+            <fieldset class="action">
+                <input type="submit" class="btn btn-primary" value="Save roster" />
+                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Cancel</a>
+            </fieldset>
+        </form>
+    [% END %]
+
+    [% IF op == 'delete_confirm' %]
+        <div class="alert alert-warning">
+            <h1>Confirm deletion of roster '[% roster.name | html %]'</h1>
+            <p>Are you sure you want to delete this roster? This will also delete all associated time slots and assignments.</p>
+            <table>
+                <tr><th>Name</th><td>[% roster.name | html %]</td></tr>
+                <tr><th>Type</th><td>[% roster.type_name | html %]</td></tr>
+                <tr><th>Branch</th><td>[% roster.branch_name || 'All branches' | html %]</td></tr>
+                <tr><th>Time slots</th><td>[% roster.slot_count || 0 | html %]</td></tr>
+            </table>
+
+            <form action="/cgi-bin/koha/plugins/run.pl" method="post" style="display: inline;">
+                [% INCLUDE 'csrf-token.inc' %]
+                <input type="hidden" name="class" value="[% CLASS | html %]" />
+                <input type="hidden" name="method" value="tool" />
+                <input type="hidden" name="op" value="cud-delete_roster" />
+                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                <button type="submit" class="btn btn-danger"><i class="fa fa-fw fa-check"></i> Yes, delete</button>
+            </form>
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
+                <i class="fa fa-fw fa-times"></i> No, do not delete
+            </a>
+        </div>
+    [% END %]
+
+    [% IF op == 'manage_slots' %]
+        <h1>Manage Time Slots - [% roster.name | html %]</h1>
+        <p>
+            <span class="roster-type-badge" style="background-color: [% roster.type_color | html %];">[% roster.type_name | html %]</span>
+            [% IF roster.branch_name %][% roster.branch_name | html %][% ELSE %]All branches[% END %]
+        </p>
+
+        <div id="toolbar" class="btn-toolbar">
+            <a class="btn btn-default" href="#" id="add_slot_btn">
+                <i class="fa fa-plus"></i> Add time slot
+            </a>
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
+                <i class="fa fa-arrow-left"></i> Back to rosters
+            </a>
+        </div>
+
+        <!-- Slot form (hidden by default) -->
+        <div id="slot_form_container" style="display: none; margin: 16px 0;">
+            <form method="post" action="/cgi-bin/koha/plugins/run.pl" class="validated" id="slot_form">
+                [% INCLUDE 'csrf-token.inc' %]
+                <input type="hidden" name="class" value="[% CLASS | html %]" />
+                <input type="hidden" name="method" value="tool" />
+                <input type="hidden" name="op" value="cud-save_slot" />
+                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                <input type="hidden" name="slot_id" id="slot_id" value="" />
+
+                <fieldset class="rows">
+                    <legend id="slot_form_legend">Add Time Slot</legend>
+                    <ol>
+                        <li>
+                            <label for="day_of_week" class="required">Day of week:</label>
+                            <select name="day_of_week" id="day_of_week" required="required">
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </li>
+                        <li>
+                            <label for="start_time" class="required">Start time:</label>
+                            <input type="time" name="start_time" id="start_time" required="required" />
+                        </li>
+                        <li>
+                            <label for="end_time" class="required">End time:</label>
+                            <input type="time" name="end_time" id="end_time" required="required" />
+                        </li>
+                        <li>
+                            <label for="min_staff">Minimum staff:</label>
+                            <input type="number" name="min_staff" id="min_staff" value="1" min="1" max="20" />
+                        </li>
+                        <li>
+                            <label for="max_staff">Maximum staff:</label>
+                            <input type="number" name="max_staff" id="max_staff" value="1" min="1" max="20" />
+                        </li>
+                        <li>
+                            <label for="location">Location:</label>
+                            <input type="text" name="location" id="location" size="30" maxlength="255" />
+                            <span class="hint">Specific desk or area within the branch</span>
+                        </li>
+                        <li>
+                            <label for="slot_notes">Notes:</label>
+                            <textarea name="slot_notes" id="slot_notes" rows="2" cols="40"></textarea>
+                        </li>
+                    </ol>
+                </fieldset>
+
+                <fieldset class="action">
+                    <input type="submit" class="btn btn-primary" value="Save slot" />
+                    <button type="button" class="btn btn-default" id="cancel_slot">Cancel</button>
+                </fieldset>
+            </form>
+        </div>
+
+        <!-- Weekly slot overview -->
+        <div class="slot-grid">
+            [% FOREACH day IN ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %]
+                [% day_index = loop.index %]
+                <div class="slot-day" data-day="[% day_index %]">
+                    <div class="slot-day-header">[% day %]</div>
+                    [% FOREACH slot IN slots %]
+                        [% IF slot.day_of_week == day_index %]
+                            <div class="slot-item" style="border-left-color: [% roster.type_color | html %];">
+                                <strong>[% slot.start_time | html %] - [% slot.end_time | html %]</strong>
+                                [% IF slot.location %]<br><small>[% slot.location | html %]</small>[% END %]
+                                <br>
+                                <small>Staff: [% slot.min_staff %]-[% slot.max_staff %]</small>
+                                <div style="margin-top: 4px;">
+                                    <a href="#" class="edit-slot"
+                                       data-id="[% slot.id %]"
+                                       data-day="[% slot.day_of_week %]"
+                                       data-start="[% slot.start_time %]"
+                                       data-end="[% slot.end_time %]"
+                                       data-min="[% slot.min_staff %]"
+                                       data-max="[% slot.max_staff %]"
+                                       data-location="[% slot.location | html %]"
+                                       data-notes="[% slot.notes | html %]">
+                                        <i class="fa-solid fa-pencil fa-xs"></i>
+                                    </a>
+                                    <form method="post" action="/cgi-bin/koha/plugins/run.pl" style="display: inline;"
+                                          onsubmit="return confirm('Delete this slot?');">
+                                        [% INCLUDE 'csrf-token.inc' %]
+                                        <input type="hidden" name="class" value="[% CLASS | html %]" />
+                                        <input type="hidden" name="method" value="tool" />
+                                        <input type="hidden" name="op" value="cud-delete_slot" />
+                                        <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                                        <input type="hidden" name="slot_id" value="[% slot.id | html %]" />
+                                        <button type="submit" class="btn btn-link btn-xs" style="padding: 0;">
+                                            <i class="fa fa-trash-can fa-xs"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        [% END %]
+                    [% END %]
+                </div>
+            [% END %]
+        </div>
+    [% END %]
+
+    [% IF op == 'view_assignments' %]
+        <h1>Schedule - [% roster.name | html %]</h1>
+        <p>
+            <span class="roster-type-badge" style="background-color: [% roster.type_color | html %];">[% roster.type_name | html %]</span>
+            [% IF roster.branch_name %][% roster.branch_name | html %][% ELSE %]All branches[% END %]
+        </p>
+
+        <div id="toolbar" class="btn-toolbar">
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">
+                <i class="fa fa-clock"></i> Manage slots
+            </a>
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
+                <i class="fa fa-arrow-left"></i> Back to rosters
+            </a>
+        </div>
+
+        <div class="filter-row">
+            <div>
+                <label for="week_date">Week of:</label>
+                <input type="text" id="week_date" name="week_date" class="flatpickr" value="[% week_start | html %]" />
+            </div>
+            <button class="btn btn-default" id="go_to_week">Go</button>
+            <button class="btn btn-default" id="prev_week"><i class="fa fa-arrow-left"></i> Previous</button>
+            <button class="btn btn-default" id="next_week">Next <i class="fa fa-arrow-right"></i></button>
+        </div>
+
+        <div class="page-section">
+            <p><em>Assignment management interface will be implemented in the next phase.</em></p>
+            <p>Current slots defined: [% slots.size || 0 %]</p>
+        </div>
+    [% END %]
+
+[% END %]
+
+[% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'calendar.inc' %]
+    [% INCLUDE 'datatables.inc' %]
+    <script>
+        $(document).ready(function() {
+            // Initialize flatpickr for date inputs
+            $(".flatpickr").flatpickr({
+                dateFormat: "Y-m-d"
+            });
+
+            // Filter application
+            $("#apply_filters").on("click", function() {
+                var branch = $("#filter_branch").val();
+                var type = $("#filter_type").val();
+                var status = $("#filter_status").val();
+                var url = "/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool";
+                if (branch) url += "&filter_branch=" + encodeURIComponent(branch);
+                if (type) url += "&filter_type=" + encodeURIComponent(type);
+                if (status !== "") url += "&filter_status=" + encodeURIComponent(status);
+                window.location.href = url;
+            });
+
+            // Slot form toggle
+            $("#add_slot_btn").on("click", function(e) {
+                e.preventDefault();
+                $("#slot_form_container").slideDown();
+                $("#slot_form_legend").text("Add Time Slot");
+                $("#slot_form")[0].reset();
+                $("#slot_id").val("");
+            });
+
+            $("#cancel_slot").on("click", function() {
+                $("#slot_form_container").slideUp();
+            });
+
+            // Edit slot
+            $(".edit-slot").on("click", function(e) {
+                e.preventDefault();
+                var $this = $(this);
+
+                // Populate form with slot data
+                $("#slot_id").val($this.data("id"));
+                $("#day_of_week").val($this.data("day"));
+                $("#start_time").val($this.data("start"));
+                $("#end_time").val($this.data("end"));
+                $("#min_staff").val($this.data("min"));
+                $("#max_staff").val($this.data("max"));
+                $("#location").val($this.data("location") || "");
+                $("#slot_notes").val($this.data("notes") || "");
+
+                // Show form with edit title
+                $("#slot_form_legend").text("Edit Time Slot");
+                $("#slot_form_container").slideDown();
+
+                // Scroll to form
+                $('html, body').animate({
+                    scrollTop: $("#slot_form_container").offset().top - 100
+                }, 300);
+            });
+
+            // Week navigation
+            $("#prev_week, #next_week").on("click", function() {
+                var current = $("#week_date").val();
+                var date = new Date(current);
+                if ($(this).attr("id") === "prev_week") {
+                    date.setDate(date.getDate() - 7);
+                } else {
+                    date.setDate(date.getDate() + 7);
+                }
+                var newDate = date.toISOString().split('T')[0];
+                window.location.href = "/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]&week_start=" + newDate;
+            });
+
+            $("#go_to_week").on("click", function() {
+                var date = $("#week_date").val();
+                window.location.href = "/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]&week_start=" + date;
+            });
+        });
+    </script>
+[% END %]
+[% INCLUDE 'intranet-bottom.inc' %]

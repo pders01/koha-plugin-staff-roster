@@ -1,0 +1,151 @@
+[% USE raw %]
+[% USE Koha %]
+[% USE KohaDates %]
+[% PROCESS 'i18n.inc' %]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>Staff Roster - Configuration | Plugins | Koha</title>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="plugins_staff_roster_configure" class="plugins">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'prefs-admin-search.inc' %]
+[% END %]
+
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Staff Roster</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item bc_active = 1 %]
+            <span>Configuration</span>
+        [% END %]
+    [% END %]
+[% END %]
+
+[% WRAPPER 'main-container.inc' aside='admin-menu' %]
+    <h1>Staff Roster - Configuration</h1>
+
+    [% IF saved %]
+        <div class="alert alert-success">Configuration saved successfully.</div>
+    [% END %]
+
+    <form method="post" action="/cgi-bin/koha/plugins/run.pl">
+        [% INCLUDE 'csrf-token.inc' %]
+        <input type="hidden" name="class" value="[% CLASS | html %]" />
+        <input type="hidden" name="method" value="configure" />
+        <input type="hidden" name="op" value="cud-save" />
+
+        <fieldset class="rows">
+            <legend>General Settings</legend>
+            <ol>
+                <li>
+                    <label for="default_view">Default calendar view:</label>
+                    <select name="default_view" id="default_view">
+                        <option value="week" [% IF default_view == 'week' %]selected[% END %]>Week</option>
+                        <option value="day" [% IF default_view == 'day' %]selected[% END %]>Day</option>
+                        <option value="month" [% IF default_view == 'month' %]selected[% END %]>Month</option>
+                    </select>
+                    <span class="hint">Choose the default view when opening the roster calendar</span>
+                </li>
+                <li>
+                    <label for="week_start_day">Week starts on:</label>
+                    <select name="week_start_day" id="week_start_day">
+                        <option value="0" [% IF week_start_day == '0' %]selected[% END %]>Sunday</option>
+                        <option value="1" [% IF week_start_day == '1' %]selected[% END %]>Monday</option>
+                    </select>
+                </li>
+                <li>
+                    <label for="slot_duration">Default slot duration (minutes):</label>
+                    <input type="number" name="slot_duration" id="slot_duration" value="[% slot_duration || 60 | html %]" min="15" max="480" step="15" />
+                    <span class="hint">Default duration when creating new time slots</span>
+                </li>
+            </ol>
+        </fieldset>
+
+        <fieldset class="rows">
+            <legend>Display Settings</legend>
+            <ol>
+                <li>
+                    <label for="show_staff_photos">Show staff photos:</label>
+                    <select name="show_staff_photos" id="show_staff_photos">
+                        <option value="1" [% IF show_staff_photos == '1' %]selected[% END %]>Yes</option>
+                        <option value="0" [% IF show_staff_photos == '0' %]selected[% END %]>No</option>
+                    </select>
+                </li>
+                <li>
+                    <label for="day_start_hour">Day starts at:</label>
+                    <select name="day_start_hour" id="day_start_hour">
+                        [% FOR hour IN [0..23] %]
+                            <option value="[% hour %]" [% IF day_start_hour == hour %]selected[% END %]>[% hour | format('%02d') %]:00</option>
+                        [% END %]
+                    </select>
+                </li>
+                <li>
+                    <label for="day_end_hour">Day ends at:</label>
+                    <select name="day_end_hour" id="day_end_hour">
+                        [% FOR hour IN [1..24] %]
+                            <option value="[% hour %]" [% IF day_end_hour == hour %]selected[% END %]>[% hour | format('%02d') %]:00</option>
+                        [% END %]
+                    </select>
+                </li>
+            </ol>
+        </fieldset>
+
+        <fieldset class="rows">
+            <legend>Notification Settings</legend>
+            <ol>
+                <li>
+                    <label for="enable_email_reminders">Enable email reminders:</label>
+                    <select name="enable_email_reminders" id="enable_email_reminders">
+                        <option value="1" [% IF enable_email_reminders == '1' %]selected[% END %]>Yes</option>
+                        <option value="0" [% IF enable_email_reminders == '0' %]selected[% END %]>No</option>
+                    </select>
+                </li>
+                <li>
+                    <label for="reminder_days_before">Send reminders (days before):</label>
+                    <input type="number" name="reminder_days_before" id="reminder_days_before" value="[% reminder_days_before || 1 | html %]" min="0" max="7" />
+                    <span class="hint">Number of days before a shift to send reminder</span>
+                </li>
+                <li>
+                    <label for="enable_swap_notifications">Enable swap request notifications:</label>
+                    <select name="enable_swap_notifications" id="enable_swap_notifications">
+                        <option value="1" [% IF enable_swap_notifications == '1' %]selected[% END %]>Yes</option>
+                        <option value="0" [% IF enable_swap_notifications == '0' %]selected[% END %]>No</option>
+                    </select>
+                </li>
+            </ol>
+        </fieldset>
+
+        <fieldset class="rows">
+            <legend>Permission Settings</legend>
+            <ol>
+                <li>
+                    <label for="staff_can_self_assign">Staff can self-assign to open slots:</label>
+                    <select name="staff_can_self_assign" id="staff_can_self_assign">
+                        <option value="1" [% IF staff_can_self_assign == '1' %]selected[% END %]>Yes</option>
+                        <option value="0" [% IF staff_can_self_assign == '0' %]selected[% END %]>No</option>
+                    </select>
+                </li>
+                <li>
+                    <label for="require_swap_approval">Require manager approval for swaps:</label>
+                    <select name="require_swap_approval" id="require_swap_approval">
+                        <option value="1" [% IF require_swap_approval == '1' %]selected[% END %]>Yes</option>
+                        <option value="0" [% IF require_swap_approval == '0' %]selected[% END %]>No</option>
+                    </select>
+                </li>
+            </ol>
+        </fieldset>
+
+        <fieldset class="action">
+            <input type="submit" class="btn btn-primary" value="Save configuration" />
+            <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Cancel</a>
+        </fieldset>
+    </form>
+[% END %]
+
+[% INCLUDE 'intranet-bottom.inc' %]
