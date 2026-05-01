@@ -5,6 +5,46 @@
                 "application/json"
             ],
             "operationId": "createAssignment",
+            "parameters": [
+                {
+                    "in": "body",
+                    "name": "body",
+                    "required": true,
+                    "schema": {
+                        "properties": {
+                            "assignment_date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": "string"
+                            },
+                            "borrowernumber": {
+                                "type": "integer"
+                            },
+                            "notes": {
+                                "type": "string"
+                            },
+                            "slot_id": {
+                                "type": "integer"
+                            },
+                            "status": {
+                                "enum": [
+                                    "scheduled",
+                                    "confirmed",
+                                    "completed",
+                                    "cancelled",
+                                    "no_show"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "slot_id",
+                            "borrowernumber",
+                            "assignment_date"
+                        ],
+                        "type": "object"
+                    }
+                }
+            ],
             "produces": [
                 "application/json"
             ],
@@ -58,6 +98,51 @@
                 "application/json"
             ],
             "operationId": "bulkAssignments",
+            "parameters": [
+                {
+                    "in": "body",
+                    "name": "body",
+                    "required": true,
+                    "schema": {
+                        "properties": {
+                            "ids": {
+                                "items": {
+                                    "type": "integer"
+                                },
+                                "minItems": 1,
+                                "type": "array"
+                            },
+                            "op": {
+                                "enum": [
+                                    "move",
+                                    "clear"
+                                ],
+                                "type": "string"
+                            },
+                            "target": {
+                                "properties": {
+                                    "assignment_date": {
+                                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                        "type": "string"
+                                    },
+                                    "borrowernumber": {
+                                        "type": "integer"
+                                    },
+                                    "slot_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "required": [
+                            "op",
+                            "ids"
+                        ],
+                        "type": "object"
+                    }
+                }
+            ],
             "produces": [
                 "application/json"
             ],
@@ -184,6 +269,39 @@
                     "name": "assignment_id",
                     "required": true,
                     "type": "integer"
+                },
+                {
+                    "in": "body",
+                    "name": "body",
+                    "required": true,
+                    "schema": {
+                        "properties": {
+                            "assignment_date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": "string"
+                            },
+                            "borrowernumber": {
+                                "type": "integer"
+                            },
+                            "notes": {
+                                "type": "string"
+                            },
+                            "slot_id": {
+                                "type": "integer"
+                            },
+                            "status": {
+                                "enum": [
+                                    "scheduled",
+                                    "confirmed",
+                                    "completed",
+                                    "cancelled",
+                                    "no_show"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
                 }
             ],
             "produces": [
@@ -255,6 +373,14 @@
                     "name": "roster_id",
                     "required": true,
                     "type": "integer"
+                },
+                {
+                    "description": "Week start date (YYYY-MM-DD, defaults to current week's Monday)",
+                    "in": "query",
+                    "name": "start",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "required": false,
+                    "type": "string"
                 }
             ],
             "produces": [
@@ -319,6 +445,37 @@
     "/staff/available": {
         "get": {
             "operationId": "listAvailableStaff",
+            "parameters": [
+                {
+                    "description": "Assignment date",
+                    "in": "query",
+                    "name": "date",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "required": true,
+                    "type": "string"
+                },
+                {
+                    "description": "Filter by slot (excludes overlapping assignments)",
+                    "in": "query",
+                    "name": "slot_id",
+                    "required": false,
+                    "type": "integer"
+                },
+                {
+                    "description": "Filter by branchcode",
+                    "in": "query",
+                    "name": "branch",
+                    "required": false,
+                    "type": "string"
+                },
+                {
+                    "description": "Search firstname/surname/cardnumber",
+                    "in": "query",
+                    "name": "q",
+                    "required": false,
+                    "type": "string"
+                }
+            ],
             "produces": [
                 "application/json"
             ],
