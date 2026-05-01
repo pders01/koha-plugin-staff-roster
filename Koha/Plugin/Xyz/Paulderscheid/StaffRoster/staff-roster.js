@@ -1416,7 +1416,7 @@ var Et = 5e3, Dt = 10, Ot = [
 						borrowernumber: e.borrowernumber,
 						assignment_date: e.assignment_date,
 						status: e.status,
-						notes: e.notes
+						notes: e.notes ?? void 0
 					}
 				}), await this.refresh();
 			} catch (e) {

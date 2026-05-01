@@ -22,7 +22,7 @@ const ICAL_FOR_COLUMN = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
 
 type UndoOp =
   | { kind: "create"; id: number }
-  | { kind: "delete"; payload: { slot_id: number; borrowernumber: number; assignment_date: string; status: string; notes: string | null } }
+  | { kind: "delete"; payload: { slot_id: number; borrowernumber: number; assignment_date: string; status: string; notes?: string } }
   | { kind: "update"; id: number; before: Pick<Assignment, "slot_id" | "borrowernumber" | "assignment_date"> };
 
 @customElement("staff-roster-grid")
@@ -197,7 +197,7 @@ export class StaffRosterGrid extends LitElement {
           borrowernumber: a.borrowernumber,
           assignment_date: a.assignment_date,
           status: a.status,
-          notes: a.notes,
+          notes: a.notes ?? undefined,
         },
       });
       await this.refresh();
