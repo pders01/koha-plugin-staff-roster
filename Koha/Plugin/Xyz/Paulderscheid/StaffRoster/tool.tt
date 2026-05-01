@@ -456,28 +456,29 @@
     [% END %]
 
     [% IF op == 'delete_confirm' %]
-        <div class="alert alert-warning">
-            <h1>Confirm deletion of roster '[% roster.name | html %]'</h1>
-            <p>Are you sure you want to delete this roster? This will also delete all associated time slots and assignments.</p>
-            <table>
-                <tr><th>Name</th><td>[% roster.name | html %]</td></tr>
-                <tr><th>Type</th><td>[% roster.type_name | html %]</td></tr>
-                <tr><th>Branch</th><td>[% roster.branch_name || 'All branches' | html %]</td></tr>
-                <tr><th>Time slots</th><td>[% roster.slot_count || 0 | html %]</td></tr>
-            </table>
+        <h1>Delete roster '[% roster.name | html %]'?</h1>
+        <p class="text-muted">This will also delete all associated time slots and assignments.</p>
 
-            <form action="/cgi-bin/koha/plugins/run.pl" method="post" style="display: inline;">
-                [% INCLUDE 'csrf-token.inc' %]
-                <input type="hidden" name="class" value="[% CLASS | html %]" />
-                <input type="hidden" name="method" value="tool" />
-                <input type="hidden" name="op" value="cud-delete_roster" />
-                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
-                <button type="submit" class="btn btn-danger"><i class="fa fa-fw fa-check"></i> Yes, delete</button>
-            </form>
-            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
-                <i class="fa fa-fw fa-times"></i> No, do not delete
-            </a>
+        <div class="page-section">
+            <table>
+                <tr><th scope="row">Name:</th><td>[% roster.name | html %]</td></tr>
+                <tr><th scope="row">Type:</th><td>[% roster.type_name | html %]</td></tr>
+                <tr><th scope="row">Branch:</th><td>[% roster.branch_name || 'All branches' | html %]</td></tr>
+                <tr><th scope="row">Time slots:</th><td>[% roster.slot_count || 0 | html %]</td></tr>
+            </table>
         </div>
+
+        <form action="/cgi-bin/koha/plugins/run.pl" method="post">
+            [% INCLUDE 'csrf-token.inc' %]
+            <input type="hidden" name="class" value="[% CLASS | html %]" />
+            <input type="hidden" name="method" value="tool" />
+            <input type="hidden" name="op" value="cud-delete_roster" />
+            <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+            <fieldset class="action">
+                <input type="submit" class="btn btn-primary" value="Yes, delete this roster" />
+                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">No, do not delete</a>
+            </fieldset>
+        </form>
     [% END %]
 
     [% IF op == 'manage_slots' %]

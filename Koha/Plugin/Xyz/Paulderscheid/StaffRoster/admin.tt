@@ -175,28 +175,28 @@
     [% END %]
 
     [% IF op == 'delete_confirm' %]
-        <div class="alert alert-warning">
-            <h1>Confirm deletion of roster type '[% roster_type.name | html %]'</h1>
-            <p>Are you sure you want to delete this roster type?</p>
-            <table>
-                <tr><th>ID</th><td>[% roster_type.id | html %]</td></tr>
-                <tr><th>Code</th><td>[% roster_type.code | html %]</td></tr>
-                <tr><th>Name</th><td>[% roster_type.name | html %]</td></tr>
-                <tr><th>Description</th><td>[% roster_type.description | html %]</td></tr>
-            </table>
+        <h1>Delete roster type '[% roster_type.name | html %]'?</h1>
 
-            <form action="/cgi-bin/koha/plugins/run.pl" method="post" style="display: inline;">
-                [% INCLUDE 'csrf-token.inc' %]
-                <input type="hidden" name="class" value="[% CLASS | html %]" />
-                <input type="hidden" name="method" value="admin" />
-                <input type="hidden" name="op" value="cud-delete" />
-                <input type="hidden" name="id" value="[% roster_type.id | html %]" />
-                <button type="submit" class="btn btn-danger"><i class="fa fa-fw fa-check"></i> Yes, delete</button>
-            </form>
-            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">
-                <i class="fa fa-fw fa-times"></i> No, do not delete
-            </a>
+        <div class="page-section">
+            <table>
+                <tr><th scope="row">ID:</th><td>[% roster_type.id | html %]</td></tr>
+                <tr><th scope="row">Code:</th><td>[% roster_type.code | html %]</td></tr>
+                <tr><th scope="row">Name:</th><td>[% roster_type.name | html %]</td></tr>
+                <tr><th scope="row">Description:</th><td>[% roster_type.description | html %]</td></tr>
+            </table>
         </div>
+
+        <form action="/cgi-bin/koha/plugins/run.pl" method="post">
+            [% INCLUDE 'csrf-token.inc' %]
+            <input type="hidden" name="class" value="[% CLASS | html %]" />
+            <input type="hidden" name="method" value="admin" />
+            <input type="hidden" name="op" value="cud-delete" />
+            <input type="hidden" name="id" value="[% roster_type.id | html %]" />
+            <fieldset class="action">
+                <input type="submit" class="btn btn-primary" value="Yes, delete this roster type" />
+                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">No, do not delete</a>
+            </fieldset>
+        </form>
     [% END %]
 
     [% IF op == 'list' %]
