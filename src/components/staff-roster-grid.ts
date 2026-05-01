@@ -262,7 +262,7 @@ export class StaffRosterGrid extends LitElement {
         </div>
       </div>
 
-      <div class="srg-layout" style=${`--srg-type-color: ${color}`}>
+      <div class="page-section srg-layout" style=${`--srg-type-color: ${color}`}>
         <section class="srg-staff-panel">
           <h3 class="srg-panel-title">Available staff</h3>
           <input

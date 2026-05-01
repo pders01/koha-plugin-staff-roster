@@ -1460,7 +1460,7 @@ var Et = 5e3, Dt = 10, Ot = [
         </div>
       </div>
 
-      <div class="srg-layout" style=${`--srg-type-color: ${e}`}>
+      <div class="page-section srg-layout" style=${`--srg-type-color: ${e}`}>
         <section class="srg-staff-panel">
           <h3 class="srg-panel-title">Available staff</h3>
           <input
