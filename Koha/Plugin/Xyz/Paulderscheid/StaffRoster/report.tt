@@ -1,27 +1,71 @@
+[% USE raw %]
+[% USE Koha %]
+[% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>Koha: StaffRoster - Report</title>
+<title>Staff Roster - Report | Plugins | Koha</title>
 [% INCLUDE 'doc-head-close.inc' %]
+<style>
+    .col-md-10 > main {
+        padding: 1rem;
+    }
+    @media (min-width: 992px) {
+        .col-md-10 > main {
+            padding: 1rem 1.5rem;
+        }
+    }
+</style>
 </head>
 
-<body>
-    [% WRAPPER 'header.inc' %]
-        
+<body id="plugins_staff_roster_report" class="plugins">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'cat-search.inc' %]
+[% END %]
+
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Staff Roster</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item bc_active = 1 %]
+            <span>Report</span>
+        [% END %]
     [% END %]
+[% END %]
 
-    <nav aria-label="breadcrumb" id="breadcrumbs">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/cgi-bin/koha/mainpage.pl">Home</a></li>
-            <li class="breadcrumb-item"><a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a></li>
-            <li class="breadcrumb-item"><a href="#">StaffRoster</a></li>
-            <li class="breadcrumb-item active">Report</li>
-        </ol>
-    </nav>
+[% BLOCK staff_roster_aside %]
+<aside>
+    <div class="staff-roster-menu sidebar_menu">
+        <h5>Staff Roster</h5>
+        <ul>
+            <li><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Rosters</a></li>
+        </ul>
+        <h5>Administration</h5>
+        <ul>
+            <li><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">Roster types</a></li>
+            <li><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">Configuration</a></li>
+        </ul>
+    </div>
+</aside>
+[% END %]
 
-    <div class="main container-fluid">
-        <div class="row">
-            <div class="col-sm-12">Hello, StaffRoster!</div>
+<div class="main container-fluid">
+    <div class="row">
+        <div class="col-md-10 order-sm-1 order-md-2">
+            <main>
+                <h1>Staff Roster - Report</h1>
+                <div class="page-section">
+                    <p class="text-muted">Reports are not yet implemented.</p>
+                </div>
+            </main>
+        </div>
+        <div class="col-md-2 order-sm-2 order-md-1">
+            [% PROCESS staff_roster_aside %]
         </div>
     </div>
+</div>
 
 [% INCLUDE 'intranet-bottom.inc' %]
