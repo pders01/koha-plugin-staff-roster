@@ -295,6 +295,13 @@
                                     [% IF roster.description %]
                                         <div class="text-muted"><small>[% roster.description | html | truncate(120) %]</small></div>
                                     [% END %]
+                                    [% IF roster.additional_field_summary && roster.additional_field_summary.size %]
+                                        <div class="text-muted"><small>
+                                            [% FOREACH af IN roster.additional_field_summary %]
+                                                <span><strong>[% af.name | html %]:</strong> [% af.value | html %]</span>[% UNLESS loop.last %] · [% END %]
+                                            [% END %]
+                                        </small></div>
+                                    [% END %]
                                 </td>
                                 <td>
                                     <span class="staff-roster-type-swatch" style="background-color: [% roster.type_color | html %];" aria-hidden="true"></span>
@@ -436,6 +443,23 @@
                     </li>
                 </ol>
             </fieldset>
+
+            [% IF additional_fields_available && additional_fields_available.size %]
+                [% SET available = additional_fields_available %]
+                [% SET values    = additional_fields_values %]
+                [% INCLUDE 'additional-fields-entry.inc' %]
+            [% ELSE %]
+                <fieldset class="rows">
+                    <legend>Additional fields</legend>
+                    <ol>
+                        <li>
+                            <span class="hint">No custom fields defined for rosters.
+                                <a href="/cgi-bin/koha/admin/additional-fields.pl?tablename=staff_roster">Configure them in Koha admin</a>.
+                            </span>
+                        </li>
+                    </ol>
+                </fieldset>
+            [% END %]
 
             <fieldset class="action">
                 <input type="submit" class="btn btn-primary" value="Save roster" />

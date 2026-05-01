@@ -8,9 +8,11 @@ _Empty — pick the next batch._
 
 ## Next (single-feature batches)
 
-- [ ] **Additional fields** support on `staff_roster_assignments` first,
-      then on `staff_roster`. Register the table in install hook; render
-      dynamic fields in edit form; persist via `additional_field_values`.
+- [ ] **Additional fields on assignments**: same plumbing as the roster
+      version, but assignments only have a Lit-grid drag/drop UI today.
+      Needs an "edit assignment" modal (open on chip click) before the
+      fields surface anywhere useful. Helpers in StaffRoster.pm are
+      table-agnostic — pass `staff_roster_assignments` once the modal lands.
 
 ## Phase 2 (planned features, each its own work block)
 
@@ -68,6 +70,13 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Additional fields on rosters**: helpers
+      (`_load_additional_fields` / `_save_additional_fields` /
+      `_delete_additional_fields` / `_bulk_additional_field_values`)
+      backed by Koha's `additional_field_values` table. Roster edit
+      form INCLUDEs `additional-fields-entry.inc`; list view summarises
+      per-roster values; configure page links to admin/additional-fields.pl.
+      Assignment-level fields deferred (no edit UI for assignments yet).
 - [x] **RRule phase 2**: FREQ=MONTHLY (BYDAY=1MO/-1FR), INTERVAL,
       UNTIL via DateTime::Event::ICal. Server emits per-date
       applies_on_dates for the visible week; Lit grid filters on it.
