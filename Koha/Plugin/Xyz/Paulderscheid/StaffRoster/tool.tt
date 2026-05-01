@@ -128,7 +128,51 @@
     [% END %]
 [% END %]
 
-[% WRAPPER 'main-container.inc' %]
+[% BLOCK staff_roster_aside %]
+<aside>
+    <div class="staff-roster-menu sidebar_menu">
+        <h5>Staff Roster</h5>
+        <ul>
+            <li[% IF op == 'list' %] class="active"[% END %]>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Rosters</a>
+            </li>
+            <li[% IF op == 'add_roster' %] class="active"[% END %]>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">New roster</a>
+            </li>
+        </ul>
+
+        [% IF op == 'manage_slots' || op == 'view_assignments' || op == 'edit_roster' || op == 'delete_confirm' %]
+            <h5>This roster</h5>
+            <ul>
+                <li[% IF op == 'view_assignments' %] class="active"[% END %]>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]">Schedule</a>
+                </li>
+                <li[% IF op == 'manage_slots' %] class="active"[% END %]>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">Slots</a>
+                </li>
+                <li[% IF op == 'edit_roster' %] class="active"[% END %]>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=edit_roster&roster_id=[% roster.id | uri %]">Settings</a>
+                </li>
+            </ul>
+        [% END %]
+
+        <h5>Administration</h5>
+        <ul>
+            <li>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">Roster types</a>
+            </li>
+            <li>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">Configuration</a>
+            </li>
+        </ul>
+    </div>
+</aside>
+[% END %]
+
+<div class="main container-fluid">
+    <div class="row">
+        <div class="col-md-10 order-sm-1 order-md-2">
+            <main>
 
     [% FOR m IN messages %]
         <div class="alert alert-[% m.type | html %]">
@@ -505,11 +549,18 @@
             </a>
         </div>
 
+        <link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster.css">
         <script type="module" src="/api/v1/contrib/staffroster/static/staff-roster.js"></script>
         <staff-roster-grid roster-id="[% roster.id | html %]" week-start="[% week_start | html %]"></staff-roster-grid>
     [% END %]
 
-[% END %]
+            </main>
+        </div>
+        <div class="col-md-2 order-sm-2 order-md-1">
+            [% PROCESS staff_roster_aside %]
+        </div>
+    </div>
+</div>
 
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'calendar.inc' %]

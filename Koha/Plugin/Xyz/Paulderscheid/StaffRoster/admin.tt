@@ -65,7 +65,26 @@
     [% END %]
 [% END %]
 
-[% WRAPPER 'main-container.inc' aside='admin-menu' %]
+[% BLOCK staff_roster_aside %]
+<aside>
+    <div class="staff-roster-menu sidebar_menu">
+        <h5>Staff Roster</h5>
+        <ul>
+            <li><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Rosters</a></li>
+        </ul>
+        <h5>Administration</h5>
+        <ul>
+            <li class="active"><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">Roster types</a></li>
+            <li><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">Configuration</a></li>
+        </ul>
+    </div>
+</aside>
+[% END %]
+
+<div class="main container-fluid">
+    <div class="row">
+        <div class="col-md-10 order-sm-1 order-md-2">
+            <main>
 
     [% FOR m IN messages %]
         <div class="alert alert-[% m.type | html %]">
@@ -238,7 +257,14 @@
             </div>
         [% END %]
     [% END %]
-[% END %]
+
+            </main>
+        </div>
+        <div class="col-md-2 order-sm-2 order-md-1">
+            [% PROCESS staff_roster_aside %]
+        </div>
+    </div>
+</div>
 
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'datatables.inc' %]
