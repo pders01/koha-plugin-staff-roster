@@ -105,15 +105,26 @@ sub get_week {
         ) || [];
         if ( @{$assignment_fields} ) {
             require Koha::AuthorisedValues;
+            # Dedupe by category before hitting AuthorisedValues so two fields
+            # sharing a category (or the same field across many polls) only
+            # cost one query instead of one per field per poll.
+            my %by_cat;
             for my $f ( @{$assignment_fields} ) {
-                next if !$f->{authorised_value_category};
-                $f->{av_options} = [
+                $by_cat{ $f->{authorised_value_category} } = 1
+                    if $f->{authorised_value_category};
+            }
+            for my $cat ( keys %by_cat ) {
+                $by_cat{$cat} = [
                     map { { value => $_->authorised_value, lib => $_->lib } }
                         Koha::AuthorisedValues->search(
-                        { category => $f->{authorised_value_category} },
+                        { category => $cat },
                         { order_by => [ 'lib', 'authorised_value' ] }
                         )->as_list
                 ];
+            }
+            for my $f ( @{$assignment_fields} ) {
+                next if !$f->{authorised_value_category};
+                $f->{av_options} = $by_cat{ $f->{authorised_value_category} };
             }
         }
         if ( @{$assignments} && @{$assignment_fields} ) {
