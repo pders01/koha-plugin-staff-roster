@@ -1296,6 +1296,9 @@ var Et = 5e3, Dt = 10, Ot = [
 			(e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey && (e.preventDefault(), this.undo());
 		};
 	}
+	setError(e) {
+		this.error = e, this.errorDismissTimer && clearTimeout(this.errorDismissTimer), e && (this.errorDismissTimer = setTimeout(() => this.error = "", 5e3));
+	}
 	createRenderRoot() {
 		return this;
 	}
@@ -1309,7 +1312,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		if (this.rosterId) try {
 			this.week = await xt(this.rosterId, this.weekStart), this.error = "";
 		} catch (e) {
-			this.error = e.message;
+			this.setError(e.message);
 		}
 	}
 	async loadAvailable() {
@@ -1319,7 +1322,7 @@ var Et = 5e3, Dt = 10, Ot = [
 				q: this.staffQuery || void 0
 			});
 		} catch (e) {
-			this.error = e.message;
+			this.setError(e.message);
 		}
 	}
 	shiftWeek(e) {
@@ -1344,7 +1347,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		if (e) try {
 			e.kind === "create" ? await wt(e.id) : e.kind === "delete" ? await St(e.payload) : await Ct(e.id, e.before), await this.refresh();
 		} catch (e) {
-			this.error = `Undo failed: ${e.message}`;
+			this.setError(`Undo failed: ${e.message}`);
 		}
 	}
 	async dropOnCell(e, t) {
@@ -1362,7 +1365,7 @@ var Et = 5e3, Dt = 10, Ot = [
 						id: r.id
 					}), await this.refresh();
 				} catch (e) {
-					this.error = e.message;
+					this.setError(e.message);
 				}
 			} else {
 				let n = this.dragging.assignment;
@@ -1381,7 +1384,7 @@ var Et = 5e3, Dt = 10, Ot = [
 						}
 					}), await this.refresh();
 				} catch (e) {
-					this.error = e.message;
+					this.setError(e.message);
 				}
 			}
 			this.dragging = null;
@@ -1409,7 +1412,7 @@ var Et = 5e3, Dt = 10, Ot = [
 					}
 				}), await this.refresh();
 			} catch (e) {
-				this.error = e.message;
+				this.setError(e.message);
 			}
 		}
 	}
@@ -1420,7 +1423,17 @@ var Et = 5e3, Dt = 10, Ot = [
 		if (!this.week) return C`<div class="text-center text-muted py-4">Loading…</div>`;
 		let e = this.week.roster.type_color, t = [...this.week.slots].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.day_of_week - t.day_of_week), n = [...new Set(t.map((e) => `${e.start_time}-${e.end_time}-${e.location ?? ""}`))];
 		return C`
-      ${this.error ? C`<div class="alert alert-warning srg-error">${this.error}</div>` : T}
+      ${this.error ? C`
+            <div class="srg-toast alert alert-warning" role="alert" aria-live="assertive">
+              <span>${this.error}</span>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Dismiss"
+                @click=${() => this.error = ""}
+              ></button>
+            </div>
+          ` : T}
 
       <div class="btn-toolbar srg-toolbar" role="toolbar">
         <div class="btn-group" role="group">

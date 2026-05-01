@@ -165,6 +165,29 @@
     font-size: 0.75rem;
 }
 
+.srg-toast {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1080;
+    max-width: 420px;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: srg-toast-in 0.18s ease-out;
+}
+
+.srg-toast .btn-close {
+    margin-left: auto;
+}
+
+@keyframes srg-toast-in {
+    from { transform: translateY(-0.5rem); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
 .srg-empty {
     text-align: center;
     padding: 2.5rem 1rem;

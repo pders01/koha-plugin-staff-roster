@@ -41,6 +41,15 @@ export class StaffRosterGrid extends LitElement {
   private undoStack: UndoOp[] = [];
   private pollTimer?: ReturnType<typeof setInterval>;
   private staffDebounce?: ReturnType<typeof setTimeout>;
+  private errorDismissTimer?: ReturnType<typeof setTimeout>;
+
+  private setError(message: string): void {
+    this.error = message;
+    if (this.errorDismissTimer) clearTimeout(this.errorDismissTimer);
+    if (message) {
+      this.errorDismissTimer = setTimeout(() => (this.error = ""), 5000);
+    }
+  }
 
   // Render in light DOM so Koha's Bootstrap and intranet styles apply.
   override createRenderRoot(): HTMLElement {
@@ -74,7 +83,7 @@ export class StaffRosterGrid extends LitElement {
       this.week = await fetchWeek(this.rosterId, this.weekStart);
       this.error = "";
     } catch (err) {
-      this.error = (err as Error).message;
+      this.setError((err as Error).message);
     }
   }
 
@@ -83,7 +92,7 @@ export class StaffRosterGrid extends LitElement {
     try {
       this.available = await fetchAvailableStaff({ date: this.weekStart, q: this.staffQuery || undefined });
     } catch (err) {
-      this.error = (err as Error).message;
+      this.setError((err as Error).message);
     }
   }
 
@@ -130,7 +139,7 @@ export class StaffRosterGrid extends LitElement {
       }
       await this.refresh();
     } catch (err) {
-      this.error = `Undo failed: ${(err as Error).message}`;
+      this.setError(`Undo failed: ${(err as Error).message}`);
     }
   }
 
@@ -148,7 +157,7 @@ export class StaffRosterGrid extends LitElement {
         await this.pushUndo({ kind: "create", id: created.id });
         await this.refresh();
       } catch (err) {
-        this.error = (err as Error).message;
+        this.setError((err as Error).message);
       }
     } else {
       const a = this.dragging.assignment;
@@ -162,7 +171,7 @@ export class StaffRosterGrid extends LitElement {
         });
         await this.refresh();
       } catch (err) {
-        this.error = (err as Error).message;
+        this.setError((err as Error).message);
       }
     }
     this.dragging = null;
@@ -194,7 +203,7 @@ export class StaffRosterGrid extends LitElement {
       });
       await this.refresh();
     } catch (err) {
-      this.error = (err as Error).message;
+      this.setError((err as Error).message);
     }
   }
 
@@ -214,7 +223,19 @@ export class StaffRosterGrid extends LitElement {
     const slotKeys = [...new Set(slotsByTime.map((s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}`))];
 
     return html`
-      ${this.error ? html`<div class="alert alert-warning srg-error">${this.error}</div>` : nothing}
+      ${this.error
+        ? html`
+            <div class="srg-toast alert alert-warning" role="alert" aria-live="assertive">
+              <span>${this.error}</span>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Dismiss"
+                @click=${() => (this.error = "")}
+              ></button>
+            </div>
+          `
+        : nothing}
 
       <div class="btn-toolbar srg-toolbar" role="toolbar">
         <div class="btn-group" role="group">
