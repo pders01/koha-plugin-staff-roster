@@ -30,7 +30,12 @@ sub create {
                 openapi => { error => 'slot_id, borrowernumber, assignment_date required' } );
         }
 
-        my $dbh      = C4::Context->dbh;
+        my $dbh = C4::Context->dbh;
+
+        my $gate = _gate_slot( $dbh, $slot_id, $date );
+        return $c->render( status => $gate->{status}, openapi => { error => $gate->{error} } )
+            if $gate->{error};
+
         my $conflict = _conflict_check( $dbh, $slot_id, $borrowernumber, $date );
         if ($conflict) {
             return $c->render( status => 409, openapi => { error => $conflict } );
@@ -84,6 +89,10 @@ sub update {
             qw( slot_id borrowernumber assignment_date );
 
         if ($changed_keys) {
+            my $gate = _gate_slot( $dbh, $merged{slot_id}, $merged{assignment_date} );
+            return $c->render( status => $gate->{status}, openapi => { error => $gate->{error} } )
+                if $gate->{error};
+
             my $conflict
                 = _conflict_check( $dbh, $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $id );
             if ($conflict) {
@@ -187,6 +196,36 @@ sub bulk {
     catch {
         $c->unhandled_exception($_);
     };
+}
+
+# Gate a slot+date against visibility (parent roster) and Koha calendar hard mode.
+# Returns { status => HTTP, error => message } on rejection, empty hash on pass.
+sub _gate_slot {
+    my ( $dbh, $slot_id, $date ) = @_;
+    my $roster = $dbh->selectrow_hashref(
+        q{
+        SELECT r.* FROM staff_roster r
+        JOIN staff_roster_slots s ON s.roster_id = r.id
+        WHERE s.id = ?
+    }, undef, $slot_id
+    );
+    return { status => 404, error => 'Slot or roster not found' } if !$roster;
+
+    require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+    my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
+
+    if ( !$plugin->_can_view_roster($roster) ) {
+        return { status => 403, error => 'Not authorized for this roster' };
+    }
+
+    if (   $plugin->retrieve_data('use_koha_calendar')
+        && $plugin->retrieve_data('koha_calendar_strict')
+        && $plugin->_is_closed_for_roster( $roster, $date ) )
+    {
+        return { status => 409, error => 'Date is closed per Koha calendar' };
+    }
+
+    return {};
 }
 
 sub _changed {

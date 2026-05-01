@@ -31,19 +31,27 @@ sub get_week {
 
         my $roster = $dbh->selectrow_hashref(
             q{
-            SELECT r.id, r.name, r.description, r.branch_id, r.roster_type_id,
+            SELECT r.id, r.name, r.description, r.branch_id, r.library_group_id, r.roster_type_id,
                    r.effective_from, r.effective_to, r.is_active,
                    rt.name AS type_name, rt.code AS type_code, rt.color AS type_color,
-                   b.branchname AS branch_name
+                   b.branchname AS branch_name,
+                   lg.title AS group_name
             FROM staff_roster r
             JOIN staff_roster_types rt ON r.roster_type_id = rt.id
             LEFT JOIN branches b ON r.branch_id = b.branchcode
+            LEFT JOIN library_groups lg ON r.library_group_id = lg.id
             WHERE r.id = ?
         }, undef, $roster_id
         );
 
         if ( !$roster ) {
             return $c->render( status => 404, openapi => { error => 'Roster not found' } );
+        }
+
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
+        if ( !$plugin->_can_view_roster($roster) ) {
+            return $c->render( status => 403, openapi => { error => 'Not authorized for this roster' } );
         }
 
         my $slots = $dbh->selectall_arrayref(
@@ -79,6 +87,27 @@ sub get_week {
             ORDER BY exception_date
         }, { Slice => {} }, $roster_id, $week_start, $week_start
         );
+
+        # Merge Koha calendar closures (if enabled) into exceptions for the week.
+        if ( $plugin->retrieve_data('use_koha_calendar') ) {
+            require DateTime::Format::ISO8601;
+            my %seen = map { $_->{exception_date} => 1 } @{$exceptions};
+            my $start_dt = DateTime::Format::ISO8601->parse_datetime($week_start);
+            for my $i ( 0 .. 6 ) {
+                my $date = $start_dt->clone->add( days => $i )->ymd;
+                next if $seen{$date};
+                if ( $plugin->_is_closed_for_roster( $roster, $date ) ) {
+                    push @{$exceptions},
+                        {
+                        id             => undef,
+                        exception_date => $date,
+                        exception_type => 'closed',
+                        reason         => 'Koha calendar',
+                        source         => 'calendar',
+                        };
+                }
+            }
+        }
 
         return $c->render(
             status  => 200,

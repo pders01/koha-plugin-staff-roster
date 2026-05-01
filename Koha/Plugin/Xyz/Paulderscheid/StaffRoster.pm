@@ -87,12 +87,15 @@ sub install() {
     );
 
     # Table 2: Rosters (schedule definitions)
+    # branch_id and library_group_id are mutually exclusive (enforced in app):
+    # both NULL = all branches; branch_id set = single branch; library_group_id set = group.
     $dbh->do(
         q{
         CREATE TABLE IF NOT EXISTS staff_roster (
             id INT AUTO_INCREMENT PRIMARY KEY,
             roster_type_id INT NOT NULL,
             branch_id VARCHAR(10),
+            library_group_id INT,
             name VARCHAR(255) NOT NULL,
             description TEXT,
             effective_from DATE NOT NULL,
@@ -101,10 +104,13 @@ sub install() {
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL,
             KEY idx_roster_branch_active (branch_id, is_active, effective_from, effective_to),
+            KEY idx_roster_group (library_group_id),
             CONSTRAINT fk_roster_type FOREIGN KEY (roster_type_id)
                 REFERENCES staff_roster_types(id) ON DELETE RESTRICT ON UPDATE CASCADE,
             CONSTRAINT fk_roster_branch FOREIGN KEY (branch_id)
-                REFERENCES branches(branchcode) ON DELETE SET NULL ON UPDATE CASCADE
+                REFERENCES branches(branchcode) ON DELETE SET NULL ON UPDATE CASCADE,
+            CONSTRAINT fk_roster_group FOREIGN KEY (library_group_id)
+                REFERENCES library_groups(id) ON DELETE SET NULL ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     }
     );
@@ -531,6 +537,8 @@ sub configure {
         show_staff_photos day_start_hour day_end_hour
         enable_email_reminders reminder_days_before enable_swap_notifications
         staff_can_self_assign require_swap_approval
+        library_group_mode default_library_group_id
+        use_koha_calendar koha_calendar_branch koha_calendar_strict
     );
 
     my $template = $self->get_template( { file => 'configure.tt' } );
@@ -548,6 +556,10 @@ sub configure {
         $template->param( $key => $self->retrieve_data($key) );
     }
 
+    require Koha::Library::Groups;
+    require Koha::Libraries;
+    my $root_groups = Koha::Library::Groups->get_root_groups;
+
     $template->param(
         default_view              => $self->retrieve_data('default_view')              // 'week',
         week_start_day            => $self->retrieve_data('week_start_day')            // '1',
@@ -560,9 +572,38 @@ sub configure {
         enable_swap_notifications => $self->retrieve_data('enable_swap_notifications') // '1',
         staff_can_self_assign     => $self->retrieve_data('staff_can_self_assign')     // '0',
         require_swap_approval     => $self->retrieve_data('require_swap_approval')     // '1',
+        library_group_mode        => $self->retrieve_data('library_group_mode')        // 'off',
+        default_library_group_id  => $self->retrieve_data('default_library_group_id')  // q{},
+        use_koha_calendar         => $self->retrieve_data('use_koha_calendar')         // '1',
+        koha_calendar_branch      => $self->retrieve_data('koha_calendar_branch')      // q{},
+        koha_calendar_strict      => $self->retrieve_data('koha_calendar_strict')      // '1',
+        library_groups            => _flatten_groups( $root_groups, 0 ),
+        all_libraries             => [ Koha::Libraries->search( {}, { order_by => 'branchname' } )->as_list ],
     );
 
     return $self->output_html( $template->output );
+}
+
+# Flatten library group tree into list of { id, title, indent } for select rendering.
+# indent is a pre-built &nbsp; string so the template doesn't need to compute it.
+sub _flatten_groups {
+    my ( $groups, $depth ) = @_;
+    my @flat;
+    for my $g ( $groups->as_list ) {
+        next if defined $g->branchcode;    # skip leaf nodes (libraries)
+        push @flat,
+            {
+            id     => $g->id,
+            title  => $g->title,
+            depth  => $depth,
+            indent => '&nbsp;&nbsp;' x $depth,
+            };
+        my $children = $g->children;
+        if ($children) {
+            push @flat, _flatten_groups( $children, $depth + 1 );
+        }
+    }
+    return \@flat;
 }
 
 =head3 report
@@ -688,12 +729,22 @@ sub tool {
         = $dbh->selectall_arrayref( q{SELECT branchcode, branchname FROM branches ORDER BY branchname}, { Slice => {} } );
 
     if ( my $entry = $TOOL_ACTIONS{$op} ) {
-        $entry->{handler}->( $dbh, $cgi, \@messages );
+        $entry->{handler}->( $self, $dbh, $cgi, \@messages );
         $op = $entry->{next};
     }
 
+    # Visibility gate for ops accessing a specific roster
+    state $roster_scoped_ops = { map { $_ => 1 } qw(edit_roster manage_slots view_assignments delete_confirm) };
+    if ( $roster_scoped_ops->{$op} && ( my $rid = $cgi->param('roster_id') ) ) {
+        my $roster = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $rid );
+        if ( !$self->_can_view_roster($roster) ) {
+            push @messages, { type => 'danger', code => 'access_denied' };
+            $op = 'list';
+        }
+    }
+
     if ( my $renderer = $TOOL_VIEWS{$op} ) {
-        $renderer->( $dbh, $cgi, $template );
+        $renderer->( $self, $dbh, $cgi, $template );
     }
 
     $template->param( op => $op, messages => \@messages, roster_types => $roster_types, branches => $branches );
@@ -702,11 +753,21 @@ sub tool {
 }
 
 sub _tool_save_roster {
-    my ( $dbh, $cgi, $messages ) = @_;
+    my ( $self, $dbh, $cgi, $messages ) = @_;
+
+    my $target = $cgi->param('target') // 'all';
+    my ( $branch_id, $group_id );
+    if ( $target =~ /^branch:(.+)$/ ) {
+        $branch_id = $1;
+    }
+    elsif ( $target =~ /^group:(\d+)$/ ) {
+        $group_id = $1;
+    }
 
     my @fields = (
         $cgi->param('roster_type_id'),
-        $cgi->param('branch_id') || undef,
+        $branch_id,
+        $group_id,
         $cgi->param('name'),
         $cgi->param('description'),
         $cgi->param('effective_from'),
@@ -719,7 +780,7 @@ sub _tool_save_roster {
     if ($roster_id) {
         $sql = q{
             UPDATE staff_roster
-            SET roster_type_id = ?, branch_id = ?, name = ?, description = ?,
+            SET roster_type_id = ?, branch_id = ?, library_group_id = ?, name = ?, description = ?,
                 effective_from = ?, effective_to = ?, is_active = ?, updated_at = NOW()
             WHERE id = ?
         };
@@ -729,8 +790,9 @@ sub _tool_save_roster {
     else {
         $sql = q{
             INSERT INTO staff_roster
-            (roster_type_id, branch_id, name, description, effective_from, effective_to, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            (roster_type_id, branch_id, library_group_id, name, description,
+             effective_from, effective_to, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         };
         @params = @fields;
         $verb   = 'insert';
@@ -745,7 +807,7 @@ sub _tool_save_roster {
 }
 
 sub _tool_delete_roster {
-    my ( $dbh, $cgi, $messages ) = @_;
+    my ( $self, $dbh, $cgi, $messages ) = @_;
     my $ok = $dbh->do( q{DELETE FROM staff_roster WHERE id = ?}, undef, $cgi->param('roster_id') );
     push @{$messages}, $ok
         ? { type => 'success', code => 'success_on_delete' }
@@ -754,7 +816,7 @@ sub _tool_delete_roster {
 }
 
 sub _tool_save_slot {
-    my ( $dbh, $cgi, $messages ) = @_;
+    my ( $self, $dbh, $cgi, $messages ) = @_;
 
     my @fields = (
         $cgi->param('day_of_week'),
@@ -791,14 +853,14 @@ sub _tool_save_slot {
 }
 
 sub _tool_delete_slot {
-    my ( $dbh, $cgi, $messages ) = @_;
+    my ( $self, $dbh, $cgi, $messages ) = @_;
     $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $cgi->param('slot_id') );
     push @{$messages}, { type => 'success', code => 'slot_deleted' };
     return;
 }
 
 sub _tool_view_list {
-    my ( $dbh, $cgi, $template ) = @_;
+    my ( $self, $dbh, $cgi, $template ) = @_;
 
     my $filter_branch = $cgi->param('filter_branch');
     my $filter_type   = $cgi->param('filter_type');
@@ -808,10 +870,12 @@ sub _tool_view_list {
         SELECT r.*,
                rt.name AS type_name, rt.color AS type_color,
                b.branchname AS branch_name,
+               lg.title AS group_name,
                (SELECT COUNT(*) FROM staff_roster_slots WHERE roster_id = r.id) AS slot_count
         FROM staff_roster r
         JOIN staff_roster_types rt ON r.roster_type_id = rt.id
         LEFT JOIN branches b ON r.branch_id = b.branchcode
+        LEFT JOIN library_groups lg ON r.library_group_id = lg.id
         WHERE 1=1
     };
     my @params;
@@ -828,6 +892,12 @@ sub _tool_view_list {
         $sql .= q{ AND r.is_active = ?};
         push @params, $filter_status;
     }
+
+    my ( $vis_clause, $vis_params ) = $self->_visibility_clause;
+    if ($vis_clause) {
+        $sql .= " $vis_clause";
+        push @params, @{$vis_params};
+    }
     $sql .= q{ ORDER BY r.name};
 
     my $rosters = $dbh->selectall_arrayref( $sql, { Slice => {} }, @params );
@@ -842,7 +912,12 @@ sub _tool_view_list {
 }
 
 sub _tool_view_roster_form {
-    my ( $dbh, $cgi, $template ) = @_;
+    my ( $self, $dbh, $cgi, $template ) = @_;
+
+    require Koha::Library::Groups;
+    my $root_groups = Koha::Library::Groups->get_root_groups;
+    $template->param( library_groups => _flatten_groups( $root_groups, 0 ) );
+
     my $roster_id = $cgi->param('roster_id');
     return if !$roster_id;
     my $roster = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
@@ -851,7 +926,7 @@ sub _tool_view_roster_form {
 }
 
 sub _tool_view_delete_confirm {
-    my ( $dbh, $cgi, $template ) = @_;
+    my ( $self, $dbh, $cgi, $template ) = @_;
     my $roster = $dbh->selectrow_hashref(
         q{
         SELECT r.*, rt.name AS type_name, b.branchname AS branch_name,
@@ -867,7 +942,7 @@ sub _tool_view_delete_confirm {
 }
 
 sub _tool_view_manage_slots {
-    my ( $dbh, $cgi, $template ) = @_;
+    my ( $self, $dbh, $cgi, $template ) = @_;
     my $roster_id = $cgi->param('roster_id');
     my $roster    = $dbh->selectrow_hashref(
         q{
@@ -892,7 +967,7 @@ sub _tool_view_manage_slots {
 }
 
 sub _tool_view_assignments {
-    my ( $dbh, $cgi, $template ) = @_;
+    my ( $self, $dbh, $cgi, $template ) = @_;
     my $roster_id  = $cgi->param('roster_id');
     my $week_start = $cgi->param('week_start') // _get_current_week_start();
 
@@ -916,6 +991,129 @@ sub _tool_view_assignments {
 
     $template->param( roster => $roster, slots => $slots, week_start => $week_start );
     return;
+}
+
+sub _user_branch {
+    my $env = C4::Context->userenv;
+    return $env->{branch} if $env && $env->{branch};
+    if ( $env && $env->{number} ) {
+        require Koha::Patrons;
+        my $patron = Koha::Patrons->find( $env->{number} );
+        return $patron->branchcode if $patron;
+    }
+    return;
+}
+
+sub _is_superlib {
+    my $env = C4::Context->userenv or return 0;
+    my $flags = $env->{flags} // 0;
+    return ( $flags == 1 ) || ( $flags & 1 );
+}
+
+# Group ids whose subtree contains $branch (ancestors of the leaf node).
+sub _user_group_ids {
+    my ($branch) = @_;
+    return () if !$branch;
+    require Koha::Library::Groups;
+
+    my $leaves = Koha::Library::Groups->search( { branchcode => $branch } );
+    my %seen;
+    while ( my $leaf = $leaves->next ) {
+        my $node = $leaf;
+        while ($node) {
+            my $pid = $node->parent_id or last;
+            $seen{$pid} = 1;
+            $node = Koha::Library::Groups->find($pid);
+        }
+    }
+    return keys %seen;
+}
+
+# Returns ($sql_fragment, \@bind_params) appended to a WHERE clause to scope roster rows
+# to those visible to the current user. Empty fragment when filtering is off or user is superlib.
+sub _visibility_clause {
+    my ($self) = @_;
+    my $mode = $self->retrieve_data('library_group_mode') // 'off';
+    return ( q{}, [] ) if $mode eq 'off' || _is_superlib();
+
+    my $branch = _user_branch();
+    if ( !$branch ) {
+        return ( 'AND 1=0', [] ) if $mode eq 'strict';
+        return ( 'AND r.branch_id IS NULL AND r.library_group_id IS NULL', [] );
+    }
+
+    my @gids   = _user_group_ids($branch);
+    my $gfrag  = @gids ? 'OR r.library_group_id IN (' . join( q{,}, ('?') x @gids ) . ')' : q{};
+    my $clause = "AND ((r.branch_id IS NULL AND r.library_group_id IS NULL) OR r.branch_id = ? $gfrag)";
+    return ( $clause, [ $branch, @gids ] );
+}
+
+# True if current user can see this roster row (or undef if not found / hidden).
+sub _can_view_roster {
+    my ( $self, $roster ) = @_;
+    return 0 if !$roster;
+    my $mode = $self->retrieve_data('library_group_mode') // 'off';
+    return 1 if $mode eq 'off' || _is_superlib();
+
+    my $branch = _user_branch();
+    return 0 if !$branch;
+
+    return 1 if !$roster->{branch_id} && !$roster->{library_group_id};
+    return 1 if $roster->{branch_id} && $roster->{branch_id} eq $branch;
+    if ( $roster->{library_group_id} ) {
+        my %gids = map { $_ => 1 } _user_group_ids($branch);
+        return 1 if $gids{ $roster->{library_group_id} };
+    }
+    return 0;
+}
+
+# Resolve the list of branchcodes that a roster covers for calendar lookup.
+# Branch-bound roster -> [branch_id]
+# Group-bound roster -> all leaf branchcodes within the group (recursive)
+# All-branches roster -> [] (no calendar check)
+sub _branchcodes_for_roster {
+    my ( $self, $roster ) = @_;
+    return () if !$roster;
+
+    if ( $roster->{branch_id} ) {
+        return ( $roster->{branch_id} );
+    }
+
+    if ( $roster->{library_group_id} ) {
+        require Koha::Library::Groups;
+        my $group = Koha::Library::Groups->find( $roster->{library_group_id} ) or return ();
+        my $libs = $group->libraries;
+        return $libs ? $libs->get_column('branchcode') : ();
+    }
+
+    # All-branches roster: optional override via config
+    my $override = $self->retrieve_data('koha_calendar_branch');
+    return $override ? ($override) : ();
+}
+
+# Check if a date is closed per Koha calendar semantics for this roster.
+# - Branch-bound: closed iff that branch is closed.
+# - Group-bound: closed iff ALL branches in the group are closed (defensive).
+# - All-branches with config override: closed per the override branch.
+# - All-branches without override: never closed.
+# - Empty group (no branches resolved): never closed.
+sub _is_closed_for_roster {
+    my ( $self, $roster, $date ) = @_;
+    return 0 if !$self->retrieve_data('use_koha_calendar');
+
+    my @branches = $self->_branchcodes_for_roster($roster);
+    return 0 if !@branches;
+
+    require Koha::Calendar;
+    require DateTime::Format::ISO8601;
+    my $dt = eval { DateTime::Format::ISO8601->parse_datetime($date) };
+    return 0 if !$dt;
+
+    for my $b (@branches) {
+        my $cal = Koha::Calendar->new( branchcode => $b );
+        return 0 if !$cal->is_holiday($dt);    # at least one branch open -> not closed
+    }
+    return 1;
 }
 
 sub _get_current_week_start {

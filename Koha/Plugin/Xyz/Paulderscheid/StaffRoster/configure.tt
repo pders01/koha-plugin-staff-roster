@@ -6,6 +6,16 @@
 [% INCLUDE 'doc-head-open.inc' %]
 <title>Staff Roster - Configuration | Plugins | Koha</title>
 [% INCLUDE 'doc-head-close.inc' %]
+<style>
+    .col-md-10 > main {
+        padding: 1rem;
+    }
+    @media (min-width: 992px) {
+        .col-md-10 > main {
+            padding: 1rem 1.5rem;
+        }
+    }
+</style>
 </head>
 
 <body id="plugins_staff_roster_configure" class="plugins">
@@ -135,6 +145,59 @@
                     <select name="enable_swap_notifications" id="enable_swap_notifications">
                         <option value="1" [% IF enable_swap_notifications == '1' %]selected[% END %]>Yes</option>
                         <option value="0" [% IF enable_swap_notifications == '0' %]selected[% END %]>No</option>
+                    </select>
+                </li>
+            </ol>
+        </fieldset>
+
+        <fieldset class="rows">
+            <legend>Koha integration</legend>
+            <ol>
+                <li>
+                    <label for="library_group_mode">Library group enforcement:</label>
+                    <select name="library_group_mode" id="library_group_mode">
+                        <option value="off"    [% IF library_group_mode == 'off'    %]selected[% END %]>Off — groups ignored</option>
+                        <option value="filter" [% IF library_group_mode == 'filter' %]selected[% END %]>Filter — non-members don't see group rosters</option>
+                        <option value="strict" [% IF library_group_mode == 'strict' %]selected[% END %]>Strict — non-members get 403 on read and write</option>
+                    </select>
+                    <span class="hint">Superlibrarians always see all rosters regardless of mode.</span>
+                </li>
+                <li>
+                    <label for="default_library_group_id">Default library group for new rosters:</label>
+                    <select name="default_library_group_id" id="default_library_group_id">
+                        <option value="">— none —</option>
+                        [% FOREACH g IN library_groups %]
+                            <option value="[% g.id | html %]" [% IF default_library_group_id == g.id %]selected[% END %]>
+                                [% g.indent | $raw %][% g.title | html %]
+                            </option>
+                        [% END %]
+                    </select>
+                </li>
+                <li>
+                    <label for="use_koha_calendar">Use Koha calendar:</label>
+                    <select name="use_koha_calendar" id="use_koha_calendar">
+                        <option value="1" [% IF use_koha_calendar == '1' %]selected[% END %]>Yes</option>
+                        <option value="0" [% IF use_koha_calendar == '0' %]selected[% END %]>No</option>
+                    </select>
+                    <span class="hint">Merge Koha calendar closures into roster exceptions.</span>
+                </li>
+                <li>
+                    <label for="koha_calendar_branch">Calendar source:</label>
+                    <select name="koha_calendar_branch" id="koha_calendar_branch">
+                        <option value="">Roster's branch (or all branches in group)</option>
+                        [% FOREACH b IN all_libraries %]
+                            <option value="[% b.branchcode | html %]" [% IF koha_calendar_branch == b.branchcode %]selected[% END %]>
+                                [% b.branchname | html %]
+                            </option>
+                        [% END %]
+                    </select>
+                    <span class="hint">For multi-branch rosters, a date is closed only if all branches in the group are closed.</span>
+                </li>
+                <li>
+                    <label for="koha_calendar_strict">Closure handling:</label>
+                    <select name="koha_calendar_strict" id="koha_calendar_strict">
+                        <option value="1" [% IF koha_calendar_strict == '1' %]selected[% END %]>Hard — block assignment on closed dates</option>
+                        <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>Soft — show closure but allow assignment</option>
                     </select>
                 </li>
             </ol>
