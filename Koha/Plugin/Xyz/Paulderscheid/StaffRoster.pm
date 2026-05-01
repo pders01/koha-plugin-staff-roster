@@ -1273,6 +1273,70 @@ sub _tool_view_manage_exceptions {
     return;
 }
 
+# Nightly cron entry point. Invoke from cron/staff_roster_nightly.pl (or any
+# scheduler that can call into the plugin). Enqueues a reminder email per
+# upcoming assignment N days out, where N = reminder_days_before. Returns the
+# number of messages enqueued for callers that want to log it.
+sub cronjob_nightly {
+    my ($self) = @_;
+
+    return 0 if !$self->retrieve_data('enable_email_reminders');
+    my $days = $self->retrieve_data('reminder_days_before') // 1;
+    $days = ( $days =~ /^\d+$/sm ) ? int $days : 1;
+
+    my $dbh = C4::Context->dbh;
+    my $rows = $dbh->selectall_arrayref(
+        q{SELECT a.id, a.borrowernumber, a.assignment_date,
+                 s.start_time, s.end_time, s.location,
+                 r.name AS roster_name,
+                 b.email
+            FROM staff_roster_assignments a
+            JOIN staff_roster_slots s ON a.slot_id = s.id
+            JOIN staff_roster        r ON s.roster_id = r.id
+            JOIN borrowers           b ON a.borrowernumber = b.borrowernumber
+           WHERE a.assignment_date = DATE_ADD(CURRENT_DATE(), INTERVAL ? DAY)
+             AND a.status IN ('scheduled', 'confirmed')},
+        { Slice => {} }, $days
+    ) || [];
+
+    require C4::Letters;
+    my $sent = 0;
+    for my $a ( @{$rows} ) {
+        next if !$a->{email};
+        my $title   = "Reminder: roster shift on $a->{assignment_date}";
+        my $content = sprintf
+            "Hi,\n\nReminder of your upcoming shift:\n\n  Roster: %s\n  Date: %s\n  Time: %s - %s\n  Location: %s\n\nThanks.\n",
+            $a->{roster_name},
+            $a->{assignment_date},
+            substr( $a->{start_time}, 0, 5 ),
+            substr( $a->{end_time},   0, 5 ),
+            $a->{location} // '(unspecified)';
+
+        my $message_id = C4::Letters::EnqueueLetter(
+            {   letter => {
+                    title          => $title,
+                    content        => $content,
+                    'content-type' => 'text/plain; charset=utf-8',
+                },
+                borrowernumber         => $a->{borrowernumber},
+                message_transport_type => 'email',
+            }
+        );
+        if ($message_id) {
+            $sent++;
+            _audit(
+                'NOTICE', $a->{id},
+                {   entity         => 'reminder',
+                    borrowernumber => $a->{borrowernumber},
+                    message_id     => $message_id,
+                    days_ahead     => $days,
+                }
+            );
+        }
+    }
+    return $sent;
+}
+
 sub _user_branch {
     my $env = C4::Context->userenv;
     return $env->{branch} if $env && $env->{branch};
