@@ -849,8 +849,24 @@ sub _tool_delete_roster {
 sub _tool_save_slot {
     my ( $self, $dbh, $cgi, $messages ) = @_;
 
-    my @dows         = sort { $a <=> $b } grep { /^[0-6]$/sm } $cgi->multi_param('day_of_week');
-    my $rrule        = _rrule_from_dows(@dows);
+    my @dows = sort { $a <=> $b } grep { /^[0-6]$/sm } $cgi->multi_param('day_of_week');
+
+    my $freq       = $cgi->param('freq')       // 'WEEKLY';
+    $freq = 'WEEKLY' if $freq ne 'MONTHLY';
+    my $interval   = $cgi->param('interval')   // 1;
+    $interval = ( $interval =~ /^\d+$/sm && $interval > 0 ) ? int $interval : 1;
+    my $ordinal    = $cgi->param('ordinal');
+    $ordinal = ( defined $ordinal && $ordinal =~ /^-?\d+$/sm ) ? int $ordinal : undef;
+    my $until_date = $cgi->param('until_date');
+    $until_date = undef if !$until_date || $until_date !~ /^\d{4}-\d{2}-\d{2}$/sm;
+
+    my $rrule = _rrule_from_params(
+        freq       => $freq,
+        dows       => \@dows,
+        ordinal    => $ordinal,
+        interval   => $interval,
+        until_date => $until_date,
+    );
 
     if ( !$rrule ) {
         push @{$messages}, { type => 'danger', code => 'slot_no_days_selected' };
@@ -1015,12 +1031,15 @@ sub _tool_view_manage_slots {
     }, { Slice => {} }, $roster_id
     );
 
-    # Decorate slots with derived day info for the template
-    my @day_names = qw( Sunday Monday Tuesday Wednesday Thursday Friday Saturday );
+    # Decorate slots with derived recurrence info for the template
     for my $slot ( @{$slots} ) {
-        my $dows = _dows_from_rrule( $slot->{recurrence_rule} );
-        $slot->{days_of_week_set} = { map { $_ => 1 } @{$dows} };
-        $slot->{days_label} = join q{, }, map { substr $day_names[$_], 0, 3 } sort { $a <=> $b } @{$dows};
+        my $parsed = _parsed_rrule( $slot->{recurrence_rule} );
+        $slot->{days_of_week_set} = { map { $_ => 1 } @{ $parsed->{dows} } };
+        $slot->{days_label}       = _rrule_label( $slot->{recurrence_rule} );
+        $slot->{rrule_freq}       = $parsed->{freq};
+        $slot->{rrule_interval}   = $parsed->{interval};
+        $slot->{rrule_ordinal}    = $parsed->{ordinal};
+        $slot->{rrule_until}      = $parsed->{until_date};
     }
 
     # Optional Koha desks for the location field, when enabled and the roster
@@ -1205,50 +1224,153 @@ sub _is_closed_for_roster {
 }
 
 # RRule helpers -------------------------------------------------------------
-# Minimal subset of RFC 5545: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA,SU.
-# Keeps the plugin self-contained without pulling in DateTime::Format::ICal.
+# Subset of RFC 5545: FREQ=WEEKLY|MONTHLY, BYDAY (with optional ordinal
+# prefix for monthly: 1MO, -1FR), INTERVAL, UNTIL. Backed by
+# DateTime::Event::ICal for canonical apply-checks; the fast path below skips
+# the heavy machinery for the common weekly INTERVAL=1 + no-UNTIL case.
 
 # Map iCal weekday codes (BYDAY) <-> 0..6 with Sunday = 0 (Perl/JS convention).
 my %ICAL_TO_DOW = ( SU => 0, MO => 1, TU => 2, WE => 3, TH => 4, FR => 5, SA => 6 );
 my %DOW_TO_ICAL = reverse %ICAL_TO_DOW;
 
-# RRule string from a list of 0..6 day-of-week ints.
-sub _rrule_from_dows {
-    my (@dows) = @_;
+# RRule string from a structured params hash. Keys:
+#   freq       'WEEKLY' (default) or 'MONTHLY'
+#   dows       arrayref of 0..6 weekday ints (required)
+#   ordinal    signed int -1..4; only meaningful when freq=MONTHLY (1MO, -1FR)
+#   interval   positive int; omitted unless > 1
+#   until_date 'YYYY-MM-DD'; encoded as UTC end-of-day
+sub _rrule_from_params {
+    my (%p)  = @_;
+    my $freq = $p{freq} || 'WEEKLY';
+    my @dows = @{ $p{dows} || [] };
     return q{} if !@dows;
     my @codes = grep { defined } map { $DOW_TO_ICAL{$_} } @dows;
     return q{} if !@codes;
-    return 'FREQ=WEEKLY;BYDAY=' . join q{,}, @codes;
+    if ( $freq eq 'MONTHLY' && defined $p{ordinal} && $p{ordinal} != 0 ) {
+        my $ord = int $p{ordinal};
+        @codes = map { "$ord$_" } @codes;
+    }
+    my @parts = ("FREQ=$freq");
+    push @parts, "INTERVAL=$p{interval}" if $p{interval} && $p{interval} > 1;
+    push @parts, 'BYDAY=' . join q{,}, @codes;
+    if ( $p{until_date} && $p{until_date} =~ /^(\d{4})-(\d{2})-(\d{2})$/ ) {
+        push @parts, "UNTIL=$1$2${3}T235959Z";
+    }
+    return join q{;}, @parts;
 }
 
-# 0..6 day-of-week ints from an RRule string.
-sub _dows_from_rrule {
+# Parse RRULE into a structured hashref for UI prefill, validation, and
+# label rendering. Always returns the same shape (with sane defaults).
+sub _parsed_rrule {
     my ($rrule) = @_;
-    return [] if !$rrule;
-    my ($byday) = $rrule =~ /BYDAY=([A-Z,]+)/sm;
-    return [] if !$byday;
-    return [ grep { defined } map { $ICAL_TO_DOW{$_} } split /,/sm, $byday ];
+    my %out = (
+        freq        => 'WEEKLY',
+        interval    => 1,
+        dows        => [],
+        byday_codes => [],
+        ordinal     => undef,
+        until_date  => undef,
+    );
+    return \%out if !$rrule;
+    if ( $rrule =~ /FREQ=([A-Z]+)/sm )                { $out{freq}     = $1; }
+    if ( $rrule =~ /INTERVAL=(\d+)/sm )               { $out{interval} = $1 + 0; }
+    if ( $rrule =~ /UNTIL=(\d{4})(\d{2})(\d{2})/sm )  { $out{until_date} = "$1-$2-$3"; }
+    if ( $rrule =~ /BYDAY=([^;]+)/sm ) {
+        my @dows;
+        my @byday_codes;
+        my %ord_seen;
+        for my $tok ( split /,/sm, $1 ) {
+            next if $tok !~ /^(-?\d+)?([A-Z]{2})$/sm;
+            my ( $ord, $code ) = ( $1, $2 );
+            next if !defined $ICAL_TO_DOW{$code};
+            push @dows,        $ICAL_TO_DOW{$code};
+            push @byday_codes, $code;
+            $ord_seen{$ord} = 1 if defined $ord;
+        }
+        $out{dows}        = \@dows;
+        $out{byday_codes} = \@byday_codes;
+        my @ord_list = keys %ord_seen;
+        $out{ordinal} = $ord_list[0] + 0 if @ord_list == 1;
+    }
+    return \%out;
 }
 
-# iCal day codes from an RRule (for client serialization).
-sub _byday_from_rrule {
+# Thin shims kept for callers that only want one slice of the parse result.
+sub _dows_from_rrule  { return _parsed_rrule( $_[0] )->{dows}; }
+sub _byday_from_rrule { return _parsed_rrule( $_[0] )->{byday_codes}; }
+
+# Human-readable summary of an RRule, e.g. "Mon, Wed", "Every 2 weeks: Mon",
+# "1st Monday of month (until 2026-08-31)".
+sub _rrule_label {
     my ($rrule) = @_;
-    return [] if !$rrule;
-    my ($byday) = $rrule =~ /BYDAY=([A-Z,]+)/sm;
-    return [] if !$byday;
-    return [ split /,/sm, $byday ];
+    my $p       = _parsed_rrule($rrule);
+    return q{} if !@{ $p->{dows} };
+    my @day_names    = qw( Sunday Monday Tuesday Wednesday Thursday Friday Saturday );
+    my $days         = join q{, }, map { substr $day_names[$_], 0, 3 } @{ $p->{dows} };
+    my $until_suffix = $p->{until_date} ? " (until $p->{until_date})" : q{};
+    if ( $p->{freq} eq 'MONTHLY' ) {
+        my %ord_label = ( 1 => '1st', 2 => '2nd', 3 => '3rd', 4 => '4th', -1 => 'Last' );
+        my $ord       = $p->{ordinal} ? ( $ord_label{ $p->{ordinal} } || $p->{ordinal} ) : 'Each';
+        my $every     = $p->{interval} > 1 ? "Every $p->{interval} months: " : q{};
+        return "$every$ord $days of month$until_suffix";
+    }
+    my $every = $p->{interval} > 1 ? "Every $p->{interval} weeks: " : q{};
+    return "$every$days$until_suffix";
 }
 
 # Does the slot's RRule apply on the given ISO date?
+# $anchor_iso (optional, YYYY-MM-DD) is the recurrence dtstart; required for
+# INTERVAL>1 to be deterministic. Falls back to $date if omitted, which keeps
+# the old behavior for plain weekly rules.
 sub _slot_applies_on {
-    my ( $rrule, $date ) = @_;
-    my $dows = _dows_from_rrule($rrule);
-    return 0 if !@{$dows};
+    my ( $rrule, $date, $anchor_iso ) = @_;
+    return 0 if !$rrule || !$date;
     require Koha::DateUtils;
     my $dt = eval { Koha::DateUtils::dt_from_string( $date, 'iso' ) };
     return 0 if !$dt;
-    my $wday = $dt->day_of_week % 7;    # DateTime: 1=Mon..7=Sun -> 0..6 with Sunday=0
-    return scalar grep { $_ == $wday } @{$dows};
+
+    my $p = _parsed_rrule($rrule);
+    return 0 if !@{ $p->{dows} };
+
+    # Fast path: weekly + INTERVAL=1 + no UNTIL collapses to a weekday match,
+    # which is what nearly every existing slot stores. Avoid loading the
+    # DateTime::Event::ICal stack for it.
+    if ( $p->{freq} eq 'WEEKLY' && $p->{interval} == 1 && !$p->{until_date} ) {
+        my $wday = $dt->day_of_week % 7;    # 1=Mon..7=Sun -> 0..6 with Sunday=0
+        return scalar grep { $_ == $wday } @{ $p->{dows} };
+    }
+
+    require DateTime::Event::ICal;
+    require DateTime::Format::ICal;
+    my $anchor = $anchor_iso
+        ? eval { Koha::DateUtils::dt_from_string( $anchor_iso, 'iso' ) }
+        : $dt->clone;
+    $anchor ||= $dt->clone;
+    $anchor->truncate( to => 'day' );
+
+    my $set = eval {
+        DateTime::Format::ICal->parse_recurrence(
+            recurrence => $rrule,
+            dtstart    => $anchor,
+        );
+    };
+    return 0 if !$set;
+
+    my $check = $dt->clone->truncate( to => 'day' );
+    return $set->contains($check) ? 1 : 0;
+}
+
+# Lookup a slot's recurrence anchor (its parent roster's effective_from) for
+# deterministic INTERVAL handling. Cheap single-row read.
+sub _slot_anchor {
+    my ( $dbh, $slot_id ) = @_;
+    return if !$slot_id;
+    my ($anchor) = $dbh->selectrow_array(
+        q{SELECT r.effective_from FROM staff_roster_slots s
+          JOIN staff_roster r ON s.roster_id = r.id WHERE s.id = ?},
+        undef, $slot_id
+    );
+    return $anchor;
 }
 
 sub _get_current_week_start {
