@@ -535,8 +535,18 @@
                         </li>
                         <li>
                             <label for="location">Location:</label>
-                            <input type="text" name="location" id="location" size="30" maxlength="255" />
-                            <span class="hint">Specific desk or area within the branch</span>
+                            <input type="text" name="location" id="location" size="30" maxlength="255"
+                                   [% IF desks.size %]list="koha-desks-list"[% END %] />
+                            [% IF desks.size %]
+                                <datalist id="koha-desks-list">
+                                    [% FOREACH d IN desks %]
+                                        <option value="[% d.desk_name | html %]"></option>
+                                    [% END %]
+                                </datalist>
+                                <span class="hint">Suggestions are this branch's Koha desks; you can also type a custom value.</span>
+                            [% ELSE %]
+                                <span class="hint">Specific desk or area within the branch.</span>
+                            [% END %]
                         </li>
                         <li>
                             <label for="slot_notes">Notes:</label>

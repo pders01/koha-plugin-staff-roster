@@ -10,13 +10,19 @@ _Empty — pick the next batch._
 
 - [ ] **Authorized values** opt-in for `staff_roster_slots.location`
       (config: "Use authorized values for slot locations" + AV category,
-      default `STAFFROSTER_LOCATION`). Free-text fallback when off.
+      default `STAFFROSTER_LOCATION`). Free-text fallback when off. Note:
+      desks already cover the per-branch case via the use_koha_desks
+      setting; AV would cover non-branch-bound rosters or libraries that
+      don't use desks.
 - [ ] **Additional fields** support on `staff_roster_assignments` first,
       then on `staff_roster`. Register the table in install hook; render
       dynamic fields in edit form; persist via `additional_field_values`.
 - [ ] **Lit grid a11y**: drag-drop has no keyboard equivalent today.
       Add cell focus, Enter/Space pickup-and-drop, ARIA roles for the
       grid, and a screen-reader summary of cell content.
+- [ ] **RRule phase 2**: monthly patterns (BYDAY=1MO), INTERVAL,
+      UNTIL. Hand-rolled parser stays for now; bring in a library
+      when monthly/interval lands.
 
 ## Phase 2 (planned features, each its own work block)
 
@@ -73,6 +79,21 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **RRule recurrence** for slots (FREQ=WEEKLY;BYDAY=...) — single
+      slot row covers multiple days; assignment endpoint rejects drops
+      on days the slot doesn't run.
+- [x] **Patron categories** integration: configurable list of
+      categorycodes drives /staff/available.
+- [x] **Koha desks**: location field gets a desk datalist when
+      use_koha_desks is enabled and the roster targets a single branch.
+- [x] Toast error rendering (no layout shift), bottom-right danger
+      styling.
+- [x] Spec declares 400/409 responses on assignment endpoints (no
+      more spurious HTTP 501 on conflicts).
+- [x] Sidebar consistent across admin/configure/tool/report views.
+- [x] Each panel (staff list, schedule grid) gets its own .page-section
+      so the card sizes to its own content.
+- [x] Hatch pattern on day cells where the slot doesn't apply.
 - [x] Trim six dead POC settings (default_view, week_start_day,
       slot_duration, show_staff_photos, day_start_hour, day_end_hour).
 - [x] DRY shared TT styles into `staff-roster-plugin.css` static asset.

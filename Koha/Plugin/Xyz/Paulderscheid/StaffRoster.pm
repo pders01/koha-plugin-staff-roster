@@ -1004,7 +1004,15 @@ sub _tool_view_manage_slots {
         $slot->{days_label} = join q{, }, map { substr $day_names[$_], 0, 3 } sort { $a <=> $b } @{$dows};
     }
 
-    $template->param( roster => $roster, slots => $slots );
+    # Optional Koha desks for the location field, when enabled and the roster
+    # targets a single branch.
+    my @desks;
+    if ( $self->retrieve_data('use_koha_desks') && $roster && $roster->{branch_id} ) {
+        require Koha::Desks;
+        @desks = Koha::Desks->search( { branchcode => $roster->{branch_id} }, { order_by => 'desk_name' } )->as_list;
+    }
+
+    $template->param( roster => $roster, slots => $slots, desks => \@desks );
     return;
 }
 

@@ -136,6 +136,25 @@
                         <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>Soft: show closure but allow assignment</option>
                     </select>
                 </li>
+                <li>
+                    <label for="staff_categories">Staff patron categories:</label>
+                    <select name="staff_categories" id="staff_categories" multiple size="6">
+                        [% FOREACH cat IN patron_categories %]
+                            <option value="[% cat.code | html %]" [% IF cat.selected %]selected[% END %]>
+                                [% cat.description | html %] ([% cat.code | html %])
+                            </option>
+                        [% END %]
+                    </select>
+                    <span class="hint">Categories whose patrons can be assigned to slots. Hold Ctrl/Cmd to multi-select. Empty = fall back to all category_type='S' patrons.</span>
+                </li>
+                <li>
+                    <label for="use_koha_desks">Use Koha desks for slot locations:</label>
+                    <select name="use_koha_desks" id="use_koha_desks">
+                        <option value="1" [% IF use_koha_desks == '1' %]selected[% END %]>Yes</option>
+                        <option value="0" [% IF use_koha_desks == '0' %]selected[% END %]>No</option>
+                    </select>
+                    <span class="hint">When enabled and the roster targets a single branch, the slot location is picked from the branch's Koha desks. Free text otherwise.</span>
+                </li>
             </ol>
         </fieldset>
 

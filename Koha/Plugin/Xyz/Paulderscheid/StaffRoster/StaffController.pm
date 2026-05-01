@@ -34,6 +34,10 @@ sub available {
 
         my $dbh = C4::Context->dbh;
 
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
+        my @staff_categories = $plugin->_staff_categorycodes;
+
         # If slot_id given, scope staff to the parent roster's branches in strict group mode.
         my @group_branches;
         if ($slot_id) {
@@ -45,8 +49,6 @@ sub available {
             }, undef, $slot_id
             );
             if ($roster) {
-                require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
-                my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
                 if ( !$plugin->_can_view_roster($roster) ) {
                     return $c->render( status => 403, openapi => { error => 'Not authorized for this roster' } );
                 }
@@ -62,9 +64,17 @@ sub available {
             SELECT p.borrowernumber, p.firstname, p.surname, p.cardnumber, p.branchcode
             FROM borrowers p
             JOIN categories c ON p.categorycode = c.categorycode
-            WHERE c.category_type = 'S'
+            WHERE 1=1
         };
         my @params;
+
+        if (@staff_categories) {
+            $sql .= ' AND p.categorycode IN (' . join( q{,}, ('?') x @staff_categories ) . ')';
+            push @params, @staff_categories;
+        }
+        else {
+            $sql .= q{ AND c.category_type = 'S'};
+        }
 
         if (@group_branches) {
             $sql .= ' AND p.branchcode IN (' . join( q{,}, ('?') x @group_branches ) . ')';
