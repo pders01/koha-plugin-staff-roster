@@ -124,14 +124,24 @@
     height: 70px;
     transition: background-color 0.1s ease;
     position: relative;
+    background: #fff;
+    box-shadow: inset 3px 0 0 var(--srg-type-color, #418940);
 }
 
 .srg-cell:hover {
-    background: #f9f9f9;
+    background: #f9faf9;
 }
 
+/* Cells where the slot row doesn't apply (slot doesn't run that day). */
 .srg-cell-empty {
-    background: #fafafa;
+    background:
+        repeating-linear-gradient(
+            -45deg,
+            #f7f7f7 0,
+            #f7f7f7 6px,
+            #ececec 6px,
+            #ececec 12px
+        );
 }
 
 .srg-cell-exception {
