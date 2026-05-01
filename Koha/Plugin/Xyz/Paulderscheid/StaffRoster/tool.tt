@@ -584,18 +584,14 @@
                                                data-notes="[% slot.notes | html %]">
                                                 <i class="fa fa-pencil"></i>
                                             </a>
-                                            <form method="post" action="/cgi-bin/koha/plugins/run.pl" style="display:inline"
-                                                  onsubmit="return confirm('Delete this slot?');">
-                                                [% INCLUDE 'csrf-token.inc' %]
-                                                <input type="hidden" name="class" value="[% CLASS | html %]" />
-                                                <input type="hidden" name="method" value="tool" />
-                                                <input type="hidden" name="op" value="cud-delete_slot" />
-                                                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
-                                                <input type="hidden" name="slot_id" value="[% slot.id | html %]" />
-                                                <button type="submit" class="btn btn-link btn-xs" title="Delete slot">
-                                                    <i class="fa fa-trash"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-link btn-xs slot-delete-trigger"
+                                                    title="Delete slot"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#delete-slot-modal"
+                                                    data-slot-id="[% slot.id | html %]"
+                                                    data-slot-info="[% day | html %], [% slot.start_time.substr(0,5) | html %]–[% slot.end_time.substr(0,5) | html %]">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 [% END %]
@@ -606,6 +602,34 @@
                         </div>
                     </div>
                 [% END %]
+            </div>
+        </div>
+
+        <!-- Delete slot confirmation modal -->
+        <div class="modal" id="delete-slot-modal" tabindex="-1" aria-labelledby="delete-slot-modal-label" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post" action="/cgi-bin/koha/plugins/run.pl">
+                        [% INCLUDE 'csrf-token.inc' %]
+                        <input type="hidden" name="class" value="[% CLASS | html %]" />
+                        <input type="hidden" name="method" value="tool" />
+                        <input type="hidden" name="op" value="cud-delete_slot" />
+                        <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                        <input type="hidden" name="slot_id" id="delete-slot-id" value="" />
+                        <div class="modal-header">
+                            <h1 class="modal-title" id="delete-slot-modal-label">Delete time slot?</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete the slot <strong id="delete-slot-info"></strong>?</p>
+                            <p class="text-muted">Existing assignments on this slot will be removed too.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-danger"><i class="fa fa-trash"></i> Delete slot</button>
+                            <button type="button" class="btn btn-default" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cancel</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     [% END %]
@@ -657,6 +681,14 @@
                     order: [[0, "asc"]]
                 }));
             }
+
+            // Populate the delete-slot modal with the slot id and a label
+            // when one of the per-slot trash buttons is clicked.
+            $(document).on("click", ".slot-delete-trigger", function() {
+                var $btn = $(this);
+                $("#delete-slot-id").val($btn.data("slot-id"));
+                $("#delete-slot-info").text($btn.data("slot-info") || "");
+            });
 
             // Slot form toggle
             $("#add_slot_btn").on("click", function(e) {

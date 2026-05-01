@@ -1292,7 +1292,7 @@ var Et = 5e3, Dt = 10, Ot = [
 	"Sun"
 ], kt = (e) => (e + 1) % 7, $ = class extends k {
 	constructor(...e) {
-		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.staffQuery = "", this.error = "", this.dragging = null, this.undoStack = [], this.onKeyDown = (e) => {
+		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.staffQuery = "", this.error = "", this.dragging = null, this.pendingDelete = null, this.undoStack = [], this.onKeyDown = (e) => {
 			(e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey && (e.preventDefault(), this.undo());
 		};
 	}
@@ -1387,20 +1387,30 @@ var Et = 5e3, Dt = 10, Ot = [
 			this.dragging = null;
 		}
 	}
-	async deleteAssignment(e) {
-		if (confirm(`Remove ${e.firstname} ${e.surname}?`)) try {
-			await wt(e.id), await this.pushUndo({
-				kind: "delete",
-				payload: {
-					slot_id: e.slot_id,
-					borrowernumber: e.borrowernumber,
-					assignment_date: e.assignment_date,
-					status: e.status,
-					notes: e.notes
-				}
-			}), await this.refresh();
-		} catch (e) {
-			this.error = e.message;
+	requestDelete(e) {
+		this.pendingDelete = e;
+	}
+	cancelDelete() {
+		this.pendingDelete = null;
+	}
+	async confirmDelete() {
+		let e = this.pendingDelete;
+		if (e) {
+			this.pendingDelete = null;
+			try {
+				await wt(e.id), await this.pushUndo({
+					kind: "delete",
+					payload: {
+						slot_id: e.slot_id,
+						borrowernumber: e.borrowernumber,
+						assignment_date: e.assignment_date,
+						status: e.status,
+						notes: e.notes
+					}
+				}), await this.refresh();
+			} catch (e) {
+				this.error = e.message;
+			}
 		}
 	}
 	onStaffSearch(e) {
@@ -1528,7 +1538,7 @@ var Et = 5e3, Dt = 10, Ot = [
 						assignment: e
 					}, t.dataTransfer?.setData("text/plain", String(e.id));
 				}}
-                                @click=${() => void this.deleteAssignment(e)}
+                                @click=${() => this.requestDelete(e)}
                               >
                                 ${e.surname}, ${e.firstname}
                               </div>
@@ -1544,6 +1554,44 @@ var Et = 5e3, Dt = 10, Ot = [
           </table>
         </section>
       </div>
+
+      ${this.pendingDelete ? this.renderDeleteModal(this.pendingDelete) : T}
+    `;
+	}
+	renderDeleteModal(e) {
+		return C`
+      <div
+        class="modal show staff-roster-modal-open"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        style="display: block;"
+        @click=${(e) => {
+			e.target.classList.contains("modal") && this.cancelDelete();
+		}}
+      >
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title">Remove assignment?</h1>
+              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelDelete()}></button>
+            </div>
+            <div class="modal-body">
+              <p>Remove <strong>${e.surname}, ${e.firstname}</strong> from this slot on ${e.assignment_date}?</p>
+              <p class="text-muted">You can undo with Cmd-Z (or the Undo button) if this was a mistake.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-danger" @click=${() => void this.confirmDelete()}>
+                <i class="fa fa-trash"></i> Remove
+              </button>
+              <button type="button" class="btn btn-default" @click=${() => this.cancelDelete()}>
+                <i class="fa fa-times"></i> Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop fade show staff-roster-modal-backdrop"></div>
     `;
 	}
 };
@@ -1553,7 +1601,7 @@ Q([ze({
 })], $.prototype, "rosterId", void 0), Q([ze({
 	type: String,
 	attribute: "week-start"
-})], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), $ = Q([Ie("staff-roster-grid")], $);
+})], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), Q([A()], $.prototype, "pendingDelete", void 0), $ = Q([Ie("staff-roster-grid")], $);
 function At(e) {
 	let t = (e.getDay() + 6) % 7, n = new Date(e);
 	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);

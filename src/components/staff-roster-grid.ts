@@ -36,6 +36,7 @@ export class StaffRosterGrid extends LitElement {
   @state() private staffQuery = "";
   @state() private error = "";
   @state() private dragging: { kind: "staff"; staff: Staff } | { kind: "assignment"; assignment: Assignment } | null = null;
+  @state() private pendingDelete: Assignment | null = null;
 
   private undoStack: UndoOp[] = [];
   private pollTimer?: ReturnType<typeof setInterval>;
@@ -167,8 +168,18 @@ export class StaffRosterGrid extends LitElement {
     this.dragging = null;
   }
 
-  private async deleteAssignment(a: Assignment): Promise<void> {
-    if (!confirm(`Remove ${a.firstname} ${a.surname}?`)) return;
+  private requestDelete(a: Assignment): void {
+    this.pendingDelete = a;
+  }
+
+  private cancelDelete(): void {
+    this.pendingDelete = null;
+  }
+
+  private async confirmDelete(): Promise<void> {
+    const a = this.pendingDelete;
+    if (!a) return;
+    this.pendingDelete = null;
     try {
       await deleteAssignment(a.id);
       await this.pushUndo({
@@ -344,7 +355,7 @@ export class StaffRosterGrid extends LitElement {
                                   this.dragging = { kind: "assignment", assignment: a };
                                   e.dataTransfer?.setData("text/plain", String(a.id));
                                 }}
-                                @click=${() => void this.deleteAssignment(a)}
+                                @click=${() => this.requestDelete(a)}
                               >
                                 ${a.surname}, ${a.firstname}
                               </div>
@@ -361,6 +372,45 @@ export class StaffRosterGrid extends LitElement {
           </table>
         </section>
       </div>
+
+      ${this.pendingDelete ? this.renderDeleteModal(this.pendingDelete) : nothing}
+    `;
+  }
+
+  private renderDeleteModal(a: Assignment) {
+    return html`
+      <div
+        class="modal show staff-roster-modal-open"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        style="display: block;"
+        @click=${(e: MouseEvent) => {
+          if ((e.target as HTMLElement).classList.contains("modal")) this.cancelDelete();
+        }}
+      >
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title">Remove assignment?</h1>
+              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelDelete()}></button>
+            </div>
+            <div class="modal-body">
+              <p>Remove <strong>${a.surname}, ${a.firstname}</strong> from this slot on ${a.assignment_date}?</p>
+              <p class="text-muted">You can undo with Cmd-Z (or the Undo button) if this was a mistake.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-danger" @click=${() => void this.confirmDelete()}>
+                <i class="fa fa-trash"></i> Remove
+              </button>
+              <button type="button" class="btn btn-default" @click=${() => this.cancelDelete()}>
+                <i class="fa fa-times"></i> Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop fade show staff-roster-modal-backdrop"></div>
     `;
   }
 }

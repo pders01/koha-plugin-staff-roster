@@ -176,6 +176,18 @@
     margin: 0 0 0.75rem;
 }
 
+/* Bootstrap modals normally need JS to mount; the Lit grid renders the
+   confirm modal inline and shows it via inline display:block, so the
+   .modal-backdrop element here provides the dimmed background. */
+.staff-roster-modal-backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+}
+
+.staff-roster-modal-open {
+    z-index: 1050;
+}
+
 .staff-roster-menu h5 {
     margin-top: 0.75rem;
 }
