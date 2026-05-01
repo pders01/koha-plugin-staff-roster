@@ -276,6 +276,18 @@ export class StaffRosterGrid extends LitElement {
               </tr>
             </thead>
             <tbody>
+              ${slotKeys.length === 0
+                ? html`
+                    <tr>
+                      <td colspan="8" class="srg-empty">
+                        <p>No time slots defined for this roster yet.</p>
+                        <a class="btn btn-default btn-sm" href="?class=${getClass()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
+                          <i class="fa fa-clock" aria-hidden="true"></i> Manage slots
+                        </a>
+                      </td>
+                    </tr>
+                  `
+                : nothing}
               ${slotKeys.map((key) => {
                 const sample = slotsByTime.find(
                   (s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}` === key,
@@ -354,4 +366,9 @@ function isoMonday(d: Date): string {
   const m = new Date(d);
   m.setDate(d.getDate() - diff);
   return m.toISOString().slice(0, 10);
+}
+
+function getClass(): string {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("class") ?? "";
 }

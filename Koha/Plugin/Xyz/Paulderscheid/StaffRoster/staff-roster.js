@@ -1481,6 +1481,16 @@ var Et = 5e3, Dt = 10, Ot = [
               </tr>
             </thead>
             <tbody>
+              ${n.length === 0 ? C`
+                    <tr>
+                      <td colspan="8" class="srg-empty">
+                        <p>No time slots defined for this roster yet.</p>
+                        <a class="btn btn-default btn-sm" href="?class=${At()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
+                          <i class="fa fa-clock" aria-hidden="true"></i> Manage slots
+                        </a>
+                      </td>
+                    </tr>
+                  ` : T}
               ${n.map((e) => {
 			let n = t.find((t) => `${t.start_time}-${t.end_time}-${t.location ?? ""}` === e);
 			return C`
@@ -1547,5 +1557,8 @@ Q([ze({
 function kt(e) {
 	let t = (e.getDay() + 6) % 7, n = new Date(e);
 	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);
+}
+function At() {
+	return new URLSearchParams(window.location.search).get("class") ?? "";
 }
 //#endregion

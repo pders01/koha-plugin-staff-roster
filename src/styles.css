@@ -165,6 +165,17 @@
     font-size: 0.75rem;
 }
 
+.srg-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    background: #fafafa;
+}
+
+.srg-empty p {
+    color: #888;
+    margin: 0 0 0.75rem;
+}
+
 .staff-roster-menu h5 {
     margin-top: 0.75rem;
 }
