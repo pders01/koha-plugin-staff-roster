@@ -1,1 +1,372 @@
-{}
+{
+    "/assignments": {
+        "post": {
+            "consumes": [
+                "application/json"
+            ],
+            "operationId": "createAssignment",
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "201": {
+                    "description": "Assign staff to a slot on a date",
+                    "schema": {
+                        "type": "object"
+                    }
+                },
+                "403": {
+                    "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "Assign staff to a slot on a date",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "catalogue": "1"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#create"
+        }
+    },
+    "/assignments/bulk": {
+        "post": {
+            "consumes": [
+                "application/json"
+            ],
+            "operationId": "bulkAssignments",
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "201": {
+                    "description": "Bulk assignment ops (move/reassign/clear)",
+                    "schema": {
+                        "type": "object"
+                    }
+                },
+                "403": {
+                    "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "Bulk assignment ops (move/reassign/clear)",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "catalogue": "1"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#bulk"
+        }
+    },
+    "/assignments/{assignment_id}": {
+        "delete": {
+            "operationId": "deleteAssignment",
+            "parameters": [
+                {
+                    "description": "assignment_id identifier",
+                    "in": "path",
+                    "name": "assignment_id",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "204": {
+                    "description": "Unassign"
+                },
+                "403": {
+                    "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "404": {
+                    "description": "Not found",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "Unassign",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "catalogue": "1"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#delete"
+        },
+        "put": {
+            "consumes": [
+                "application/json"
+            ],
+            "operationId": "updateAssignment",
+            "parameters": [
+                {
+                    "description": "assignment_id identifier",
+                    "in": "path",
+                    "name": "assignment_id",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "200": {
+                    "description": "Reassign or update an assignment",
+                    "schema": {
+                        "type": "object"
+                    }
+                },
+                "403": {
+                    "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "404": {
+                    "description": "Not found",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "Reassign or update an assignment",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "catalogue": "1"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#update"
+        }
+    },
+    "/rosters/{roster_id}/week": {
+        "get": {
+            "operationId": "getRosterWeek",
+            "parameters": [
+                {
+                    "description": "roster_id identifier",
+                    "in": "path",
+                    "name": "roster_id",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "200": {
+                    "description": "Slots, assignments, and exceptions for a roster week",
+                    "schema": {
+                        "type": "object"
+                    }
+                },
+                "403": {
+                    "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "404": {
+                    "description": "Not found",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "Slots, assignments, and exceptions for a roster week",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "catalogue": "1"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::RosterController#get_week"
+        }
+    },
+    "/staff/available": {
+        "get": {
+            "operationId": "listAvailableStaff",
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "200": {
+                    "description": "List available staff for a slot/date",
+                    "schema": {
+                        "items": {
+                            "type": "object"
+                        },
+                        "type": "array"
+                    }
+                },
+                "403": {
+                    "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "List available staff for a slot/date",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "catalogue": "1"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::StaffController#available"
+        }
+    }
+}
