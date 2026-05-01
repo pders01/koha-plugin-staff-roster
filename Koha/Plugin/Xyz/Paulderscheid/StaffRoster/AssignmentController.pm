@@ -239,14 +239,17 @@ sub _changed {
 sub _conflict_check {
     my ( $dbh, $slot_id, $borrowernumber, $date, $exclude_id ) = @_;
 
-    my ( $max_staff, $rrule ) = $dbh->selectrow_array(
-        q{SELECT max_staff, recurrence_rule FROM staff_roster_slots WHERE id = ?},
+    my ( $max_staff, $rrule, $anchor ) = $dbh->selectrow_array(
+        q{SELECT s.max_staff, s.recurrence_rule, r.effective_from
+          FROM staff_roster_slots s
+          JOIN staff_roster r ON s.roster_id = r.id
+          WHERE s.id = ?},
         undef, $slot_id
     );
     return 'Slot not found' if !defined $max_staff;
 
     require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
-    if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $rrule, $date ) ) {
+    if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $rrule, $date, $anchor ) ) {
         return 'Slot does not run on that day';
     }
 

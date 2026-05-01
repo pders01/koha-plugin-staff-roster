@@ -64,10 +64,23 @@ sub get_week {
         }, { Slice => {} }, $roster_id
         );
 
-        # Decorate slots with iCal BYDAY codes for client-side filtering
+        # Decorate slots with iCal BYDAY codes (legacy weekday filter) plus the
+        # canonical per-date applies list for the visible week. The dates list
+        # honors INTERVAL/UNTIL/MONTHLY ordinals; the client should prefer it.
+        require Koha::DateUtils;
+        my $week_anchor = Koha::DateUtils::dt_from_string( $week_start, 'iso' );
+        my $rec_anchor  = $roster->{effective_from};
         for my $slot ( @{$slots} ) {
             $slot->{days_of_week} =
                 Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_byday_from_rrule( $slot->{recurrence_rule} );
+            my @applies;
+            for my $i ( 0 .. 6 ) {
+                my $date = $week_anchor->clone->add( days => $i )->ymd;
+                push @applies, $date
+                    if Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on(
+                    $slot->{recurrence_rule}, $date, $rec_anchor );
+            }
+            $slot->{applies_on_dates} = \@applies;
         }
 
         my $assignments = $dbh->selectall_arrayref(
