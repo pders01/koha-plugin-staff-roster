@@ -97,6 +97,33 @@ sub get_week {
         }, { Slice => {} }, $roster_id, $week_start, $week_start
         );
 
+        # Bulk-load per-assignment additional field values for the week.
+        my $assignment_fields = $dbh->selectall_arrayref(
+            q{SELECT id, name, authorised_value_category, repeatable
+              FROM additional_fields WHERE tablename = ? ORDER BY id},
+            { Slice => {} }, 'staff_roster_assignments'
+        ) || [];
+        if ( @{$assignment_fields} ) {
+            require Koha::AuthorisedValues;
+            for my $f ( @{$assignment_fields} ) {
+                next if !$f->{authorised_value_category};
+                $f->{av_options} = [
+                    map { { value => $_->authorised_value, lib => $_->lib } }
+                        Koha::AuthorisedValues->search(
+                        { category => $f->{authorised_value_category} },
+                        { order_by => [ 'lib', 'authorised_value' ] }
+                        )->as_list
+                ];
+            }
+        }
+        if ( @{$assignments} && @{$assignment_fields} ) {
+            my $af_values = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_bulk_additional_field_values(
+                $dbh, 'staff_roster_assignments', [ map { $_->{id} } @{$assignments} ] );
+            for my $a ( @{$assignments} ) {
+                $a->{additional_fields} = $af_values->{ $a->{id} } || {};
+            }
+        }
+
         my $exceptions = $dbh->selectall_arrayref(
             q{
             SELECT id, exception_date, exception_type, reason
@@ -131,11 +158,12 @@ sub get_week {
         return $c->render(
             status  => 200,
             openapi => {
-                roster      => $roster,
-                slots       => $slots,
-                assignments => $assignments,
-                exceptions  => $exceptions,
-                week_start  => $week_start,
+                roster            => $roster,
+                slots             => $slots,
+                assignments       => $assignments,
+                assignment_fields => $assignment_fields,
+                exceptions        => $exceptions,
+                week_start        => $week_start,
             },
         );
     }

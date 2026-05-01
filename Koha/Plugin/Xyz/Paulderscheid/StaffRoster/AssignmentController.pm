@@ -112,6 +112,13 @@ sub update {
             $id,
         );
 
+        if ( exists $body->{additional_fields} ) {
+            require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_save_additional_fields_from_map(
+                $dbh, 'staff_roster_assignments', $id, $body->{additional_fields}
+            );
+        }
+
         return $c->render( status => 200, openapi => _load( $dbh, $id ) );
     }
     catch {
@@ -286,7 +293,7 @@ sub _conflict_check {
 
 sub _load {
     my ( $dbh, $id ) = @_;
-    return $dbh->selectrow_hashref(
+    my $row = $dbh->selectrow_hashref(
         q{
         SELECT a.id, a.slot_id, a.borrowernumber, a.assignment_date, a.status,
                a.notes, a.assigned_by, a.updated_at,
@@ -296,6 +303,13 @@ sub _load {
         WHERE a.id = ?
     }, undef, $id
     );
+    return if !$row;
+
+    require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+    my $af = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_load_additional_fields(
+        $dbh, 'staff_roster_assignments', $id );
+    $row->{additional_fields} = $af->{values};
+    return $row;
 }
 
 1;
