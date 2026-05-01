@@ -142,7 +142,7 @@
             </li>
         </ul>
 
-        [% IF op == 'manage_slots' || op == 'view_assignments' || op == 'edit_roster' || op == 'delete_confirm' %]
+        [% IF op == 'manage_slots' || op == 'view_assignments' || op == 'edit_roster' || op == 'delete_confirm' || op == 'manage_exceptions' %]
             <h5>This roster</h5>
             <ul>
                 <li[% IF op == 'view_assignments' %] class="active"[% END %]>
@@ -150,6 +150,9 @@
                 </li>
                 <li[% IF op == 'manage_slots' %] class="active"[% END %]>
                     <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">Slots</a>
+                </li>
+                <li[% IF op == 'manage_exceptions' %] class="active"[% END %]>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_exceptions&roster_id=[% roster.id | uri %]">Exceptions</a>
                 </li>
                 <li[% IF op == 'edit_roster' %] class="active"[% END %]>
                     <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=edit_roster&roster_id=[% roster.id | uri %]">Settings</a>
@@ -245,6 +248,14 @@
                 <span>Time slot deleted successfully.</span>
             [% CASE 'slot_no_days_selected' %]
                 <span>Pick at least one day of the week for the slot.</span>
+            [% CASE 'exception_saved' %]
+                <span>Exception saved.</span>
+            [% CASE 'exception_deleted' %]
+                <span>Exception deleted.</span>
+            [% CASE 'exception_bad_date' %]
+                <span>Provide a valid date in YYYY-MM-DD format.</span>
+            [% CASE 'exception_bad_type' %]
+                <span>Pick one of the supported exception types.</span>
             [% CASE 'slot_location_not_in_av' %]
                 <span>Location &quot;[% m.value | html %]&quot; is not in authorised value category &quot;[% m.category | html %]&quot;. Pick a value from the list.</span>
             [% CASE 'access_denied' %]
@@ -715,10 +726,146 @@
         </div>
     [% END %]
 
+    [% IF op == 'manage_exceptions' %]
+        <div id="toolbar" class="btn-toolbar">
+            <a class="btn btn-default" href="#" id="add_exception_btn">
+                <i class="fa fa-plus"></i> Add exception
+            </a>
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
+                <i class="fa fa-arrow-left"></i> Back to rosters
+            </a>
+        </div>
+
+        <h1>Exceptions - [% roster.name | html %]</h1>
+        <p class="text-muted">
+            One-off date overrides for this roster (closures, holidays, special events). Koha calendar
+            closures merge in automatically when "Use Koha calendar" is on; rows here are non-calendar
+            additions.
+        </p>
+
+        <div id="exception_form_container" style="display: none; margin: 16px 0;">
+            <form method="post" action="/cgi-bin/koha/plugins/run.pl" class="validated" id="exception_form">
+                [% INCLUDE 'csrf-token.inc' %]
+                <input type="hidden" name="class" value="[% CLASS | html %]" />
+                <input type="hidden" name="method" value="tool" />
+                <input type="hidden" name="op" value="cud-save_exception" />
+                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                <input type="hidden" name="exception_id" id="exception_id" value="" />
+
+                <fieldset class="rows">
+                    <legend id="exception_form_legend">Add exception</legend>
+                    <ol>
+                        <li>
+                            <label for="exception_date" class="required">Date:</label>
+                            <input type="text" name="exception_date" id="exception_date" class="flatpickr required" required="required" />
+                            <span class="required">Required</span>
+                        </li>
+                        <li>
+                            <label for="exception_type" class="required">Type:</label>
+                            <select name="exception_type" id="exception_type" required="required">
+                                [% FOREACH t IN exception_types %]
+                                    <option value="[% t.code | html %]">[% t.label | html %]</option>
+                                [% END %]
+                            </select>
+                        </li>
+                        <li>
+                            <label for="reason">Reason:</label>
+                            <input type="text" name="reason" id="reason" size="40" maxlength="255" />
+                            <span class="hint">Optional note shown alongside the exception in the schedule.</span>
+                        </li>
+                    </ol>
+                </fieldset>
+
+                <fieldset class="action">
+                    <input type="submit" class="btn btn-primary" value="Save exception" />
+                    <button type="button" class="btn btn-default" id="cancel_exception">Cancel</button>
+                </fieldset>
+            </form>
+        </div>
+
+        <div class="page-section">
+            [% IF exceptions.size %]
+                <table id="exceptions_table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Date</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Reason</th>
+                            <th scope="col" class="noExport">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        [% FOREACH ex IN exceptions %]
+                            <tr>
+                                <td>[% ex.exception_date | html %]</td>
+                                <td>[% ex.exception_type | html %]</td>
+                                <td>[% ex.reason | html %]</td>
+                                <td class="actions">
+                                    <a href="#" class="btn btn-default btn-xs edit-exception"
+                                       data-id="[% ex.id | html %]"
+                                       data-date="[% ex.exception_date | html %]"
+                                       data-type="[% ex.exception_type | html %]"
+                                       data-reason="[% ex.reason | html %]">
+                                        <i class="fa fa-pencil"></i> Edit
+                                    </a>
+                                    <form method="post" action="/cgi-bin/koha/plugins/run.pl" style="display:inline;">
+                                        [% INCLUDE 'csrf-token.inc' %]
+                                        <input type="hidden" name="class" value="[% CLASS | html %]" />
+                                        <input type="hidden" name="method" value="tool" />
+                                        <input type="hidden" name="op" value="cud-delete_exception" />
+                                        <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                                        <input type="hidden" name="exception_id" value="[% ex.id | html %]" />
+                                        <button type="submit" class="btn btn-default btn-xs"
+                                                onclick="return confirm('Delete exception for [% ex.exception_date | html %]?');">
+                                            <i class="fa fa-trash"></i> Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        [% END %]
+                    </tbody>
+                </table>
+            [% ELSE %]
+                <div class="alert alert-info">
+                    No exceptions defined. Use <em>Add exception</em> to create one.
+                </div>
+            [% END %]
+        </div>
+
+        <script>
+            $(function() {
+                $("#add_exception_btn").on("click", function(e) {
+                    e.preventDefault();
+                    $("#exception_form_legend").text("Add exception");
+                    $("#exception_form")[0].reset();
+                    $("#exception_id").val("");
+                    $("#exception_form_container").slideDown();
+                });
+                $("#cancel_exception").on("click", function() {
+                    $("#exception_form_container").slideUp();
+                });
+                $(".edit-exception").on("click", function(e) {
+                    e.preventDefault();
+                    var $b = $(this);
+                    $("#exception_id").val($b.data("id"));
+                    $("#exception_date").val($b.data("date"));
+                    $("#exception_type").val($b.data("type"));
+                    $("#reason").val($b.data("reason") || "");
+                    $("#exception_form_legend").text("Edit exception");
+                    $("#exception_form_container").slideDown();
+                    $('html, body').animate({ scrollTop: $("#exception_form_container").offset().top - 100 }, 300);
+                });
+            });
+        </script>
+    [% END %]
+
     [% IF op == 'view_assignments' %]
         <div id="toolbar" class="btn-toolbar">
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">
                 <i class="fa fa-clock"></i> Manage slots
+            </a>
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_exceptions&roster_id=[% roster.id | uri %]">
+                <i class="fa fa-calendar-times"></i> Exceptions
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
                 <i class="fa fa-arrow-left"></i> Back to rosters

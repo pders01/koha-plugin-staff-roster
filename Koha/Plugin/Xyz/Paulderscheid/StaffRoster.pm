@@ -729,19 +729,22 @@ Void (HTML output via output_html)
 =cut
 
 my %TOOL_ACTIONS = (
-    'cud-save_roster'   => { handler => \&_tool_save_roster,   next => 'list' },
-    'cud-delete_roster' => { handler => \&_tool_delete_roster, next => 'list' },
-    'cud-save_slot'     => { handler => \&_tool_save_slot,     next => 'manage_slots' },
-    'cud-delete_slot'   => { handler => \&_tool_delete_slot,   next => 'manage_slots' },
+    'cud-save_roster'    => { handler => \&_tool_save_roster,    next => 'list' },
+    'cud-delete_roster'  => { handler => \&_tool_delete_roster,  next => 'list' },
+    'cud-save_slot'      => { handler => \&_tool_save_slot,      next => 'manage_slots' },
+    'cud-delete_slot'    => { handler => \&_tool_delete_slot,    next => 'manage_slots' },
+    'cud-save_exception' => { handler => \&_tool_save_exception,    next => 'manage_exceptions' },
+    'cud-delete_exception' => { handler => \&_tool_delete_exception, next => 'manage_exceptions' },
 );
 
 my %TOOL_VIEWS = (
-    list             => \&_tool_view_list,
-    add_roster       => \&_tool_view_roster_form,
-    edit_roster      => \&_tool_view_roster_form,
-    delete_confirm   => \&_tool_view_delete_confirm,
-    manage_slots     => \&_tool_view_manage_slots,
-    view_assignments => \&_tool_view_assignments,
+    list               => \&_tool_view_list,
+    add_roster         => \&_tool_view_roster_form,
+    edit_roster        => \&_tool_view_roster_form,
+    delete_confirm     => \&_tool_view_delete_confirm,
+    manage_slots       => \&_tool_view_manage_slots,
+    view_assignments   => \&_tool_view_assignments,
+    manage_exceptions  => \&_tool_view_manage_exceptions,
 );
 
 sub tool {
@@ -765,7 +768,7 @@ sub tool {
     }
 
     # Visibility gate for ops accessing a specific roster
-    state $roster_scoped_ops = { map { $_ => 1 } qw(edit_roster manage_slots view_assignments delete_confirm) };
+    state $roster_scoped_ops = { map { $_ => 1 } qw(edit_roster manage_slots manage_exceptions view_assignments delete_confirm) };
     if ( $roster_scoped_ops->{$op} && ( my $rid = $cgi->param('roster_id') ) ) {
         my $roster = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $rid );
         if ( !$self->_can_view_roster($roster) ) {
@@ -931,6 +934,64 @@ sub _tool_delete_slot {
     my ( $self, $dbh, $cgi, $messages ) = @_;
     $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $cgi->param('slot_id') );
     push @{$messages}, { type => 'success', code => 'slot_deleted' };
+    return;
+}
+
+# Allowed exception_type ENUM values from the schema. Anything else is rejected
+# rather than silently coerced to keep the column tight.
+my %EXCEPTION_TYPES = map { $_ => 1 } qw( closed holiday special reduced_hours );
+
+sub _tool_save_exception {
+    my ( $self, $dbh, $cgi, $messages ) = @_;
+
+    my $roster_id      = $cgi->param('roster_id');
+    my $exception_date = $cgi->param('exception_date') // q{};
+    my $exception_type = $cgi->param('exception_type') // q{};
+    my $reason         = $cgi->param('reason');
+
+    if ( $exception_date !~ /^\d{4}-\d{2}-\d{2}$/sm ) {
+        push @{$messages}, { type => 'danger', code => 'exception_bad_date' };
+        return;
+    }
+    if ( !$EXCEPTION_TYPES{$exception_type} ) {
+        push @{$messages}, { type => 'danger', code => 'exception_bad_type' };
+        return;
+    }
+
+    my $env       = C4::Context->userenv;
+    my $created_by = $env ? $env->{number} : undef;
+    my $exception_id = $cgi->param('exception_id');
+
+    if ($exception_id) {
+        $dbh->do(
+            q{UPDATE staff_roster_exceptions
+              SET exception_date = ?, exception_type = ?, reason = ?, updated_at = NOW()
+              WHERE id = ? AND roster_id = ?},
+            undef, $exception_date, $exception_type, $reason, $exception_id, $roster_id
+        );
+        push @{$messages}, { type => 'success', code => 'exception_saved' };
+    }
+    else {
+        $dbh->do(
+            q{INSERT INTO staff_roster_exceptions
+              (roster_id, exception_date, exception_type, reason, created_by, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, NOW(), NOW())},
+            undef, $roster_id, $exception_date, $exception_type, $reason, $created_by
+        );
+        push @{$messages}, { type => 'success', code => 'exception_saved' };
+    }
+    return;
+}
+
+sub _tool_delete_exception {
+    my ( $self, $dbh, $cgi, $messages ) = @_;
+    my $roster_id    = $cgi->param('roster_id');
+    my $exception_id = $cgi->param('exception_id');
+    $dbh->do(
+        q{DELETE FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
+        undef, $exception_id, $roster_id
+    );
+    push @{$messages}, { type => 'success', code => 'exception_deleted' };
     return;
 }
 
@@ -1130,6 +1191,37 @@ sub _tool_view_assignments {
     );
 
     $template->param( roster => $roster, slots => $slots, week_start => $week_start );
+    return;
+}
+
+sub _tool_view_manage_exceptions {
+    my ( $self, $dbh, $cgi, $template ) = @_;
+    my $roster_id = $cgi->param('roster_id');
+    my $roster    = $dbh->selectrow_hashref(
+        q{SELECT r.*, rt.name AS type_name, rt.color AS type_color, b.branchname AS branch_name
+          FROM staff_roster r
+          JOIN staff_roster_types rt ON r.roster_type_id = rt.id
+          LEFT JOIN branches b ON r.branch_id = b.branchcode
+          WHERE r.id = ?},
+        undef, $roster_id
+    );
+    my $exceptions = $dbh->selectall_arrayref(
+        q{SELECT id, exception_date, exception_type, reason, created_by, created_at, updated_at
+          FROM staff_roster_exceptions
+          WHERE roster_id = ?
+          ORDER BY exception_date DESC},
+        { Slice => {} }, $roster_id
+    );
+    $template->param(
+        roster          => $roster,
+        exceptions      => $exceptions,
+        exception_types => [
+            { code => 'closed',         label => 'Closed' },
+            { code => 'holiday',        label => 'Holiday' },
+            { code => 'special',        label => 'Special event' },
+            { code => 'reduced_hours',  label => 'Reduced hours' },
+        ],
+    );
     return;
 }
 
