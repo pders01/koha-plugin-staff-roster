@@ -1854,7 +1854,19 @@ var Et = 5e3, Dt = 10, Ot = [
     `;
 	}
 	renderEditModal(e) {
-		let t = this.week?.assignment_fields ?? [];
+		let t = this.week?.assignment_fields ?? [], n = [
+			"scheduled",
+			"confirmed",
+			"completed",
+			"cancelled",
+			"no_show"
+		], r = {
+			scheduled: "Scheduled",
+			confirmed: "Confirmed",
+			completed: "Completed",
+			cancelled: "Cancelled",
+			no_show: "No-show"
+		};
 		return C`
       <div
         class="modal show staff-roster-modal-open"
@@ -1866,59 +1878,56 @@ var Et = 5e3, Dt = 10, Ot = [
 			e.target.classList.contains("modal") && this.cancelEdit();
 		}}
       >
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-lg srg-edit-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header">
-              <h1 class="modal-title">Edit assignment — ${e.surname}, ${e.firstname}</h1>
+              <h1 class="modal-title">Edit assignment</h1>
               <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelEdit()}></button>
             </div>
-            <div class="modal-body">
-              <p class="text-muted">${e.assignment_date}</p>
-              <fieldset class="rows">
-                <ol>
-                  <li>
-                    <label for="srg-edit-status">Status:</label>
-                    <select
-                      id="srg-edit-status"
-                      .value=${this.editForm.status}
-                      @change=${(e) => this.editForm = {
+            <div class="modal-body srg-edit-body">
+              <p class="srg-edit-subject">
+                <strong>${e.surname}, ${e.firstname}</strong>
+                <span class="text-muted"> · ${kt[this.dayIdxForDate(e.assignment_date)]} ${e.assignment_date}</span>
+              </p>
+              <div class="srg-edit-grid">
+                <div class="srg-edit-row">
+                  <label for="srg-edit-status">Status</label>
+                  <select
+                    id="srg-edit-status"
+                    class="form-select"
+                    .value=${this.editForm.status}
+                    @change=${(e) => this.editForm = {
 			...this.editForm,
 			status: e.target.value
 		}}
-                    >
-                      ${[
-			"scheduled",
-			"confirmed",
-			"completed",
-			"cancelled",
-			"no_show"
-		].map((e) => C`<option value=${e} ?selected=${e === this.editForm.status}>${e}</option>`)}
-                    </select>
-                  </li>
-                  <li>
-                    <label for="srg-edit-notes">Notes:</label>
-                    <textarea
-                      id="srg-edit-notes"
-                      rows="2"
-                      cols="40"
-                      .value=${this.editForm.notes}
-                      @input=${(e) => this.editForm = {
+                  >
+                    ${n.map((e) => C`<option value=${e} ?selected=${e === this.editForm.status}>${r[e]}</option>`)}
+                  </select>
+                </div>
+                <div class="srg-edit-row">
+                  <label for="srg-edit-notes">Notes</label>
+                  <textarea
+                    id="srg-edit-notes"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Optional notes shown on the chip and in handoffs"
+                    .value=${this.editForm.notes}
+                    @input=${(e) => this.editForm = {
 			...this.editForm,
 			notes: e.target.value
 		}}
-                    ></textarea>
-                  </li>
-                  ${t.map((e) => this.renderEditField(e))}
-                </ol>
-              </fieldset>
+                  ></textarea>
+                </div>
+                ${t.map((e) => this.renderEditField(e))}
+              </div>
             </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-primary" @click=${() => void this.saveEdit()}>
-                <i class="fa fa-save"></i> Save
+            <div class="modal-footer srg-edit-footer">
+              <button type="button" class="btn btn-danger me-auto" @click=${() => this.deleteFromEdit()}>
+                <i class="fa fa-trash"></i> Remove
               </button>
               <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>Cancel</button>
-              <button type="button" class="btn btn-danger" @click=${() => this.deleteFromEdit()}>
-                <i class="fa fa-trash"></i> Remove
+              <button type="button" class="btn btn-primary" @click=${() => void this.saveEdit()}>
+                <i class="fa fa-save"></i> Save
               </button>
             </div>
           </div>
@@ -1940,10 +1949,11 @@ var Et = 5e3, Dt = 10, Ot = [
 		if (e.av_options && e.av_options.length) {
 			let i = n[0] ?? "";
 			return C`
-        <li>
-          <label for=${t}>${e.name}:</label>
+        <div class="srg-edit-row">
+          <label for=${t}>${e.name}</label>
           <select
             id=${t}
+            class="form-select"
             .value=${i}
             @change=${(e) => {
 				let t = e.target.value;
@@ -1953,24 +1963,25 @@ var Et = 5e3, Dt = 10, Ot = [
             <option value="">— None —</option>
             ${e.av_options.map((e) => C`<option value=${e.value} ?selected=${e.value === i}>${e.lib || e.value}</option>`)}
           </select>
-        </li>
+        </div>
       `;
 		}
-		let i = n.join(", "), a = e.repeatable ? C`<span class="hint">Separate multiple values with commas.</span>` : T;
+		let i = n.join(", ");
 		return C`
-      <li>
-        <label for=${t}>${e.name}:</label>
+      <div class="srg-edit-row">
+        <label for=${t}>${e.name}</label>
         <input
           id=${t}
           type="text"
+          class="form-control"
+          placeholder=${e.repeatable ? "comma-separated values" : ""}
           .value=${i}
           @input=${(t) => {
 			let n = t.target.value;
 			r(e.repeatable ? n.split(",").map((e) => e.trim()).filter(Boolean) : n === "" ? [] : [n]);
 		}}
         />
-        ${a}
-      </li>
+      </div>
     `;
 	}
 	renderDeleteModal(e) {

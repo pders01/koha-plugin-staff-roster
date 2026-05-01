@@ -806,6 +806,13 @@ export class StaffRosterGrid extends LitElement {
   private renderEditModal(a: Assignment) {
     const fields = this.week?.assignment_fields ?? [];
     const STATUSES: Assignment["status"][] = ["scheduled", "confirmed", "completed", "cancelled", "no_show"];
+    const STATUS_LABELS: Record<Assignment["status"], string> = {
+      scheduled: "Scheduled",
+      confirmed: "Confirmed",
+      completed: "Completed",
+      cancelled: "Cancelled",
+      no_show: "No-show",
+    };
     return html`
       <div
         class="modal show staff-roster-modal-open"
@@ -817,47 +824,50 @@ export class StaffRosterGrid extends LitElement {
           if ((e.target as HTMLElement).classList.contains("modal")) this.cancelEdit();
         }}
       >
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-lg srg-edit-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header">
-              <h1 class="modal-title">Edit assignment — ${a.surname}, ${a.firstname}</h1>
+              <h1 class="modal-title">Edit assignment</h1>
               <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelEdit()}></button>
             </div>
-            <div class="modal-body">
-              <p class="text-muted">${a.assignment_date}</p>
-              <fieldset class="rows">
-                <ol>
-                  <li>
-                    <label for="srg-edit-status">Status:</label>
-                    <select
-                      id="srg-edit-status"
-                      .value=${this.editForm.status}
-                      @change=${(e: Event) => (this.editForm = { ...this.editForm, status: (e.target as HTMLSelectElement).value })}
-                    >
-                      ${STATUSES.map((s) => html`<option value=${s} ?selected=${s === this.editForm.status}>${s}</option>`)}
-                    </select>
-                  </li>
-                  <li>
-                    <label for="srg-edit-notes">Notes:</label>
-                    <textarea
-                      id="srg-edit-notes"
-                      rows="2"
-                      cols="40"
-                      .value=${this.editForm.notes}
-                      @input=${(e: Event) => (this.editForm = { ...this.editForm, notes: (e.target as HTMLTextAreaElement).value })}
-                    ></textarea>
-                  </li>
-                  ${fields.map((f) => this.renderEditField(f))}
-                </ol>
-              </fieldset>
+            <div class="modal-body srg-edit-body">
+              <p class="srg-edit-subject">
+                <strong>${a.surname}, ${a.firstname}</strong>
+                <span class="text-muted"> · ${FULL_DAYS[this.dayIdxForDate(a.assignment_date)]} ${a.assignment_date}</span>
+              </p>
+              <div class="srg-edit-grid">
+                <div class="srg-edit-row">
+                  <label for="srg-edit-status">Status</label>
+                  <select
+                    id="srg-edit-status"
+                    class="form-select"
+                    .value=${this.editForm.status}
+                    @change=${(e: Event) => (this.editForm = { ...this.editForm, status: (e.target as HTMLSelectElement).value })}
+                  >
+                    ${STATUSES.map((s) => html`<option value=${s} ?selected=${s === this.editForm.status}>${STATUS_LABELS[s]}</option>`)}
+                  </select>
+                </div>
+                <div class="srg-edit-row">
+                  <label for="srg-edit-notes">Notes</label>
+                  <textarea
+                    id="srg-edit-notes"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Optional notes shown on the chip and in handoffs"
+                    .value=${this.editForm.notes}
+                    @input=${(e: Event) => (this.editForm = { ...this.editForm, notes: (e.target as HTMLTextAreaElement).value })}
+                  ></textarea>
+                </div>
+                ${fields.map((f) => this.renderEditField(f))}
+              </div>
             </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-primary" @click=${() => void this.saveEdit()}>
-                <i class="fa fa-save"></i> Save
+            <div class="modal-footer srg-edit-footer">
+              <button type="button" class="btn btn-danger me-auto" @click=${() => this.deleteFromEdit()}>
+                <i class="fa fa-trash"></i> Remove
               </button>
               <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>Cancel</button>
-              <button type="button" class="btn btn-danger" @click=${() => this.deleteFromEdit()}>
-                <i class="fa fa-trash"></i> Remove
+              <button type="button" class="btn btn-primary" @click=${() => void this.saveEdit()}>
+                <i class="fa fa-save"></i> Save
               </button>
             </div>
           </div>
@@ -874,13 +884,13 @@ export class StaffRosterGrid extends LitElement {
       this.editForm = { ...this.editForm, fields: { ...this.editForm.fields, [f.id]: vals } };
     };
     if (f.av_options && f.av_options.length) {
-      // Single-select dropdown; repeatable AVs collapse to first value (rare in practice).
       const value = current[0] ?? "";
       return html`
-        <li>
-          <label for=${id}>${f.name}:</label>
+        <div class="srg-edit-row">
+          <label for=${id}>${f.name}</label>
           <select
             id=${id}
+            class="form-select"
             .value=${value}
             @change=${(e: Event) => {
               const v = (e.target as HTMLSelectElement).value;
@@ -890,20 +900,18 @@ export class StaffRosterGrid extends LitElement {
             <option value="">— None —</option>
             ${f.av_options.map((opt) => html`<option value=${opt.value} ?selected=${opt.value === value}>${opt.lib || opt.value}</option>`)}
           </select>
-        </li>
+        </div>
       `;
     }
-    // Free-text: comma-separated for repeatable, single line for non-repeatable.
     const text = current.join(", ");
-    const hint = f.repeatable
-      ? html`<span class="hint">Separate multiple values with commas.</span>`
-      : nothing;
     return html`
-      <li>
-        <label for=${id}>${f.name}:</label>
+      <div class="srg-edit-row">
+        <label for=${id}>${f.name}</label>
         <input
           id=${id}
           type="text"
+          class="form-control"
+          placeholder=${f.repeatable ? "comma-separated values" : ""}
           .value=${text}
           @input=${(e: Event) => {
             const raw = (e.target as HTMLInputElement).value;
@@ -915,8 +923,7 @@ export class StaffRosterGrid extends LitElement {
             setValues(vals);
           }}
         />
-        ${hint}
-      </li>
+      </div>
     `;
   }
 

@@ -260,6 +260,57 @@
     z-index: 1050;
 }
 
+/* Edit-assignment modal: roomy two-column form on tablet+, stack on mobile.
+   Fixes the cramped Koha-default layout where labels and tiny controls
+   get jammed against each other. */
+.srg-edit-dialog .modal-body {
+    padding: 1.25rem 1.5rem;
+}
+
+.srg-edit-subject {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+}
+
+.srg-edit-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+}
+
+.srg-edit-row {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.srg-edit-row > label {
+    padding-top: 0.4rem;
+    font-weight: 600;
+    color: #444;
+}
+
+.srg-edit-row > .form-control,
+.srg-edit-row > .form-select {
+    width: 100%;
+}
+
+.srg-edit-footer {
+    border-top: 1px solid #e5e5e5;
+    padding: 0.75rem 1.5rem;
+}
+
+@media (max-width: 575px) {
+    .srg-edit-row {
+        grid-template-columns: 1fr;
+    }
+
+    .srg-edit-row > label {
+        padding-top: 0;
+    }
+}
+
 .staff-roster-menu h5 {
     margin-top: 0.75rem;
 }
