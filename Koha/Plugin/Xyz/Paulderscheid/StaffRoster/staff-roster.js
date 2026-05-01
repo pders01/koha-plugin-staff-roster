@@ -1471,10 +1471,10 @@ var Et = 5e3, Dt = 10, Ot = [
             @input=${this.onStaffSearch}
             @focus=${() => void this.loadAvailable()}
           />
-          <ul class="srg-staff-list" role="list">
+          <ul class="list-group srg-staff-list" role="list">
             ${Ze(this.available, (e) => e.borrowernumber, (e) => C`
                 <li
-                  class="srg-staff-pill"
+                  class="list-group-item srg-staff-pill"
                   draggable="true"
                   @dragstart=${(t) => {
 			this.dragging = {
@@ -1483,16 +1483,17 @@ var Et = 5e3, Dt = 10, Ot = [
 			}, t.dataTransfer?.setData("text/plain", String(e.borrowernumber));
 		}}
                 >
-                  <i class="fa fa-user" aria-hidden="true"></i>
-                  ${e.surname}, ${e.firstname}
+                  <i class="fa fa-user text-muted" aria-hidden="true"></i>
+                  <span>${e.surname}, ${e.firstname}</span>
+                  <i class="fa fa-grip-vertical text-muted srg-grip" aria-hidden="true"></i>
                 </li>
               `)}
-            ${this.available.length === 0 && this.staffQuery ? C`<li class="text-muted">No matches</li>` : T}
+            ${this.available.length === 0 && this.staffQuery ? C`<li class="list-group-item text-muted">No matches</li>` : T}
           </ul>
         </section>
 
         <section class="srg-grid-wrap">
-          <table class="table table-bordered srg-grid">
+          <table class="table srg-grid">
             <thead>
               <tr>
                 <th class="srg-slot-col">Slot</th>

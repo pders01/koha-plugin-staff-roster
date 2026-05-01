@@ -273,32 +273,33 @@ export class StaffRosterGrid extends LitElement {
             @input=${this.onStaffSearch}
             @focus=${() => void this.loadAvailable()}
           />
-          <ul class="srg-staff-list" role="list">
+          <ul class="list-group srg-staff-list" role="list">
             ${repeat(
               this.available,
               (s) => s.borrowernumber,
               (s) => html`
                 <li
-                  class="srg-staff-pill"
+                  class="list-group-item srg-staff-pill"
                   draggable="true"
                   @dragstart=${(e: DragEvent) => {
                     this.dragging = { kind: "staff", staff: s };
                     e.dataTransfer?.setData("text/plain", String(s.borrowernumber));
                   }}
                 >
-                  <i class="fa fa-user" aria-hidden="true"></i>
-                  ${s.surname}, ${s.firstname}
+                  <i class="fa fa-user text-muted" aria-hidden="true"></i>
+                  <span>${s.surname}, ${s.firstname}</span>
+                  <i class="fa fa-grip-vertical text-muted srg-grip" aria-hidden="true"></i>
                 </li>
               `,
             )}
             ${this.available.length === 0 && this.staffQuery
-              ? html`<li class="text-muted">No matches</li>`
+              ? html`<li class="list-group-item text-muted">No matches</li>`
               : nothing}
           </ul>
         </section>
 
         <section class="srg-grid-wrap">
-          <table class="table table-bordered srg-grid">
+          <table class="table srg-grid">
             <thead>
               <tr>
                 <th class="srg-slot-col">Slot</th>
