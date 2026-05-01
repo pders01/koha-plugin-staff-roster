@@ -1450,30 +1450,55 @@ sub _load_additional_fields {
 # the values posted as additional_field_<id>. Mirrors set_additional_fields in
 # Koha::Object::Mixin::AdditionalFields. No-op when there are no fields
 # defined for $tablename, so admins can opt in by creating fields and
-# pre-existing rosters keep working.
+# pre-existing rows keep working.
 sub _save_additional_fields {
     my ( $dbh, $tablename, $record_id, $cgi ) = @_;
     return if !$record_id;
+    my $fields = _additional_field_defs( $dbh, $tablename );
+    return if !@{$fields};
+    my %values_by_id =
+        map { $_->{id} => [ $cgi->multi_param( 'additional_field_' . $_->{id} ) ] } @{$fields};
+    return _store_additional_field_values( $dbh, $tablename, $record_id, \%values_by_id );
+}
 
-    my $fields = $dbh->selectall_arrayref(
+# Same as _save_additional_fields but accepts a pre-built map
+# { field_id => [values, ...] }. Used by JSON API endpoints.
+sub _save_additional_fields_from_map {
+    my ( $dbh, $tablename, $record_id, $map ) = @_;
+    return if !$record_id || !$map;
+    my $fields = _additional_field_defs( $dbh, $tablename );
+    return if !@{$fields};
+    my %allowed   = map { $_->{id} => 1 } @{$fields};
+    my %values_by_id;
+    for my $fid ( keys %{$map} ) {
+        next if !$allowed{$fid};
+        my $v = $map->{$fid};
+        $values_by_id{$fid} = ref $v eq 'ARRAY' ? $v : [$v];
+    }
+    return _store_additional_field_values( $dbh, $tablename, $record_id, \%values_by_id );
+}
+
+sub _additional_field_defs {
+    my ( $dbh, $tablename ) = @_;
+    return $dbh->selectall_arrayref(
         q{SELECT id, repeatable FROM additional_fields WHERE tablename = ?},
         { Slice => {} }, $tablename
     ) || [];
-    return if !@{$fields};
+}
 
+sub _store_additional_field_values {
+    my ( $dbh, $tablename, $record_id, $values_by_id ) = @_;
     $dbh->do(
         q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
         undef, $tablename, $record_id
     );
-
-    for my $f ( @{$fields} ) {
-        my @posted = $cgi->multi_param( 'additional_field_' . $f->{id} );
-        for my $v (@posted) {
+    for my $fid ( keys %{$values_by_id} ) {
+        for my $v ( @{ $values_by_id->{$fid} } ) {
             next if !defined $v || $v eq q{};
             $dbh->do(
                 q{INSERT INTO additional_field_values (field_id, record_table, record_id, value)
                   VALUES (?, ?, ?, ?)},
-                undef, $f->{id}, $tablename, $record_id, $v
+                undef, $fid, $tablename, $record_id, $v
             );
         }
     }
