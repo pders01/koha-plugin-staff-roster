@@ -1291,6 +1291,14 @@ var Et = 5e3, Dt = 10, Ot = [
 	"Sat",
 	"Sun"
 ], kt = [
+	"Monday",
+	"Tuesday",
+	"Wednesday",
+	"Thursday",
+	"Friday",
+	"Saturday",
+	"Sunday"
+], At = [
 	"MO",
 	"TU",
 	"WE",
@@ -1300,8 +1308,18 @@ var Et = 5e3, Dt = 10, Ot = [
 	"SU"
 ], $ = class extends k {
 	constructor(...e) {
-		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.staffQuery = "", this.error = "", this.dragging = null, this.pendingDelete = null, this.undoStack = [], this.onKeyDown = (e) => {
-			(e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey && (e.preventDefault(), this.undo());
+		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.staffQuery = "", this.error = "", this.dragging = null, this.pickedUp = null, this.pendingDelete = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
+			if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+				e.preventDefault(), this.undo();
+				return;
+			}
+			if (e.key === "Escape") {
+				if (this.pendingDelete) {
+					e.preventDefault(), this.cancelDelete();
+					return;
+				}
+				this.pickedUp && (e.preventDefault(), this.cancelPickup());
+			}
 		};
 	}
 	setError(e) {
@@ -1311,7 +1329,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		return this;
 	}
 	connectedCallback() {
-		super.connectedCallback(), this.weekStart ||= At(/* @__PURE__ */ new Date()), this.refresh(), this.pollTimer = setInterval(() => void this.refresh(), Et), document.addEventListener("keydown", this.onKeyDown);
+		super.connectedCallback(), this.weekStart ||= jt(/* @__PURE__ */ new Date()), this.refresh(), this.loadAvailable(), this.pollTimer = setInterval(() => void this.refresh(), Et), document.addEventListener("keydown", this.onKeyDown);
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this.pollTimer && clearInterval(this.pollTimer), document.removeEventListener("keydown", this.onKeyDown);
@@ -1399,38 +1417,200 @@ var Et = 5e3, Dt = 10, Ot = [
 		}
 	}
 	requestDelete(e) {
-		this.pendingDelete = e;
+		this.pendingDelete = e, this.pendingFocusModal = !0;
 	}
 	cancelDelete() {
 		this.pendingDelete = null;
+		let e = this.deleteOriginEl;
+		this.deleteOriginEl = null, e && requestAnimationFrame(() => e.focus());
 	}
 	async confirmDelete() {
 		let e = this.pendingDelete;
-		if (e) {
-			this.pendingDelete = null;
-			try {
-				await wt(e.id), await this.pushUndo({
-					kind: "delete",
-					payload: {
-						slot_id: e.slot_id,
-						borrowernumber: e.borrowernumber,
-						assignment_date: e.assignment_date,
-						status: e.status,
-						notes: e.notes ?? void 0
-					}
-				}), await this.refresh();
-			} catch (e) {
-				this.setError(e.message);
-			}
+		if (!e) return;
+		this.pendingDelete = null;
+		let t = this.dayIdxForDate(e.assignment_date), n = `${e.slot_id}-${t}`;
+		try {
+			await wt(e.id), await this.pushUndo({
+				kind: "delete",
+				payload: {
+					slot_id: e.slot_id,
+					borrowernumber: e.borrowernumber,
+					assignment_date: e.assignment_date,
+					status: e.status,
+					notes: e.notes ?? void 0
+				}
+			}), this.liveMessage = `Removed ${e.firstname} ${e.surname} from ${kt[t]} ${e.assignment_date}.`, await this.refresh();
+		} catch (e) {
+			this.setError(e.message);
 		}
+		this.deleteOriginEl = null, this.focusedCellKey = n, this.pendingFocusCellKey = n;
 	}
 	onStaffSearch(e) {
 		this.staffQuery = e.target.value, this.staffDebounce && clearTimeout(this.staffDebounce), this.staffDebounce = setTimeout(() => void this.loadAvailable(), 300);
 	}
+	sortedSlots() {
+		return [...this.week?.slots ?? []].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.id - t.id);
+	}
+	cellApplies(e, t) {
+		return e.days_of_week.includes(At[t]);
+	}
+	firstApplicableCellKey() {
+		let e = this.sortedSlots();
+		for (let t = 0; t < e.length; t++) for (let n = 0; n < 7; n++) if (this.cellApplies(e[t], n)) return `${e[t].id}-${n}`;
+		return "";
+	}
+	cargoName(e) {
+		return e.kind === "staff" ? `${e.staff.firstname} ${e.staff.surname}` : `${e.assignment.firstname} ${e.assignment.surname}`;
+	}
+	cellAriaLabel(e, t, n, r, i) {
+		let a = kt[n], o = `${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}`;
+		if (r) return `${a} ${t}, ${o} slot, closed.`;
+		let s = i.length, c = `${a} ${t}, ${o} slot, ${s} of ${e.max_staff} staff assigned`;
+		return s === 0 ? `${c}.` : `${c}: ${i.map((e) => `${e.firstname} ${e.surname}`).join(", ")}.`;
+	}
+	pickUpStaff(e, t) {
+		this.pickedUp = {
+			kind: "staff",
+			staff: e
+		}, this.pickupOriginEl = t, this.liveMessage = `Picked up ${e.firstname} ${e.surname}. Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.`;
+		let n = this.firstApplicableCellKey();
+		n && (this.focusedCellKey = n, this.pendingFocusCellKey = n);
+	}
+	pickUpAssignment(e, t) {
+		this.pickedUp = {
+			kind: "assignment",
+			assignment: e
+		}, this.pickupOriginEl = t, this.liveMessage = `Picked up ${e.firstname} ${e.surname}. Use arrow keys to move. Press Enter to drop, Esc to cancel.`;
+		let n = this.firstApplicableCellKey();
+		n && (this.focusedCellKey = n, this.pendingFocusCellKey = n);
+	}
+	cancelPickup() {
+		this.pickedUp = null, this.liveMessage = "Cancelled.";
+		let e = this.pickupOriginEl;
+		this.pickupOriginEl = null, e && requestAnimationFrame(() => e.focus());
+	}
+	async dropFromKeyboard(e, t) {
+		if (!this.pickedUp) return;
+		let n = this.pickedUp, r = this.cargoName(n), i = e.start_time.slice(0, 5);
+		this.dragging = n, this.pickedUp = null, this.pickupOriginEl = null;
+		let a = this.error;
+		await this.dropOnCell(e, t), this.error && this.error !== a ? this.liveMessage = `Cannot drop here. ${this.error}` : this.liveMessage = `Moved ${r} to ${kt[this.dayIdxForDate(t)]} ${t}, ${i} slot.`;
+		let o = `${e.id}-${this.dayIdxForDate(t)}`;
+		this.focusedCellKey = o, this.pendingFocusCellKey = o;
+	}
+	dayIdxForDate(e) {
+		let t = new Date(this.weekStart), n = new Date(e).getTime() - t.getTime();
+		return Math.round(n / (1e3 * 60 * 60 * 24));
+	}
+	moveCellFocus(e, t, n) {
+		let r = this.sortedSlots(), i = (e, i) => {
+			let a = t + e, o = n + i;
+			for (; a >= 0 && a < r.length && o >= 0 && o < 7;) {
+				if (this.cellApplies(r[a], o)) return [a, o];
+				a += e, o += i;
+			}
+			return null;
+		}, a = null;
+		switch (e) {
+			case "ArrowUp":
+				a = i(-1, 0);
+				break;
+			case "ArrowDown":
+				a = i(1, 0);
+				break;
+			case "ArrowLeft":
+				a = i(0, -1);
+				break;
+			case "ArrowRight":
+				a = i(0, 1);
+				break;
+			case "Home":
+				for (let e = 0; e < 7; e++) if (this.cellApplies(r[t], e)) {
+					a = [t, e];
+					break;
+				}
+				break;
+			case "End":
+				for (let e = 6; e >= 0; e--) if (this.cellApplies(r[t], e)) {
+					a = [t, e];
+					break;
+				}
+				break;
+			case "PageUp":
+				this.shiftWeek(-7), this.pendingFocusCellKey = this.focusedCellKey;
+				return;
+			case "PageDown":
+				this.shiftWeek(7), this.pendingFocusCellKey = this.focusedCellKey;
+				return;
+		}
+		if (a) {
+			let [e, t] = a, n = `${r[e].id}-${t}`;
+			this.focusedCellKey = n, this.pendingFocusCellKey = n;
+		}
+	}
+	onCellKeyDown(e, t, n, r, i) {
+		if (e.target === e.currentTarget) {
+			if ([
+				"ArrowUp",
+				"ArrowDown",
+				"ArrowLeft",
+				"ArrowRight",
+				"Home",
+				"End",
+				"PageUp",
+				"PageDown"
+			].includes(e.key)) {
+				e.preventDefault(), this.moveCellFocus(e.key, r, i);
+				return;
+			}
+			if ((e.key === "Enter" || e.key === " ") && this.pickedUp) {
+				e.preventDefault(), this.dropFromKeyboard(t, n);
+				return;
+			}
+			if ((e.key === "Delete" || e.key === "Backspace") && !this.pickedUp) {
+				let r = this.assignmentsFor(t.id, n);
+				r.length > 0 && (e.preventDefault(), this.deleteOriginEl = e.currentTarget, this.requestDelete(r[0]));
+			}
+		}
+	}
+	onPillKeyDown(e, t, n) {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault(), e.stopPropagation(), this.pickUpStaff(t, e.currentTarget);
+			return;
+		}
+		if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+			e.preventDefault(), e.stopPropagation();
+			let t = e.key === "ArrowDown" ? Math.min(this.available.length - 1, n + 1) : Math.max(0, n - 1);
+			this.focusedPillIdx = t, this.pendingFocusPillIdx = t;
+		}
+	}
+	onAssignmentKeyDown(e, t) {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault(), e.stopPropagation(), this.pickUpAssignment(t, e.currentTarget);
+			return;
+		}
+		(e.key === "Delete" || e.key === "Backspace") && (e.preventDefault(), e.stopPropagation(), this.deleteOriginEl = e.currentTarget, this.requestDelete(t));
+	}
+	updated(e) {
+		if (this.week && !this.focusedCellKey && (this.focusedCellKey = this.firstApplicableCellKey()), this.pendingFocusCellKey) {
+			let e = `[data-cell-key="${this.pendingFocusCellKey}"]`, t = this.querySelector(e);
+			t && t.focus(), this.pendingFocusCellKey = null;
+		}
+		if (this.pendingFocusPillIdx !== null) {
+			let e = this.pendingFocusPillIdx, t = this.querySelector(`[data-pill-idx="${e}"]`);
+			t && t.focus(), this.pendingFocusPillIdx = null;
+		}
+		if (this.pendingFocusModal) {
+			let e = this.querySelector(".staff-roster-modal-open .modal-footer .btn-default");
+			e && e.focus(), this.pendingFocusModal = !1;
+		}
+	}
 	render() {
 		if (!this.week) return C`<div class="text-center text-muted py-4">Loading…</div>`;
-		let e = this.week.roster.type_color, t = [...this.week.slots].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.id - t.id);
+		let e = this.week.roster.type_color, t = this.sortedSlots(), n = this.pickedUp !== null;
 		return C`
+      <div class="srg-sr-only" aria-live="polite" aria-atomic="true">${this.liveMessage}</div>
+
       ${this.error ? C`
             <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
               <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
@@ -1470,7 +1650,7 @@ var Et = 5e3, Dt = 10, Ot = [
 
       <div class="srg-layout" style=${`--srg-type-color: ${e}`}>
         <section class="page-section srg-staff-panel">
-          <h3 class="srg-panel-title">Available staff</h3>
+          <h3 class="srg-panel-title" id="srg-staff-list-label">Available staff</h3>
           <input
             type="search"
             class="form-control input-sm"
@@ -1479,34 +1659,54 @@ var Et = 5e3, Dt = 10, Ot = [
             @input=${this.onStaffSearch}
             @focus=${() => void this.loadAvailable()}
           />
-          <ul class="list-group srg-staff-list" role="list">
-            ${Ze(this.available, (e) => e.borrowernumber, (e) => C`
-                <li
-                  class="list-group-item srg-staff-pill"
-                  draggable="true"
-                  @dragstart=${(t) => {
-			this.dragging = {
-				kind: "staff",
-				staff: e
-			}, t.dataTransfer?.setData("text/plain", String(e.borrowernumber));
-		}}
-                >
-                  <i class="fa fa-user text-muted" aria-hidden="true"></i>
-                  <span>${e.surname}, ${e.firstname}</span>
-                  <i class="fa fa-grip-vertical text-muted srg-grip" aria-hidden="true"></i>
-                </li>
-              `)}
+          <ul
+            class="list-group srg-staff-list"
+            role="listbox"
+            aria-labelledby="srg-staff-list-label"
+          >
+            ${Ze(this.available, (e) => e.borrowernumber, (e, t) => {
+			let n = this.pickedUp?.kind === "staff" && this.pickedUp.staff.borrowernumber === e.borrowernumber;
+			return C`
+                  <li
+                    class="list-group-item srg-staff-pill ${n ? "srg-picked-up" : ""}"
+                    role="option"
+                    tabindex="0"
+                    data-pill-idx=${t}
+                    aria-selected=${n ? "true" : "false"}
+                    aria-label="${e.surname}, ${e.firstname}. Press Enter to pick up."
+                    draggable="true"
+                    @dragstart=${(t) => {
+				this.dragging = {
+					kind: "staff",
+					staff: e
+				}, t.dataTransfer?.setData("text/plain", String(e.borrowernumber));
+			}}
+                    @keydown=${(n) => this.onPillKeyDown(n, e, t)}
+                    @focus=${() => this.focusedPillIdx = t}
+                  >
+                    <i class="fa fa-user text-muted" aria-hidden="true"></i>
+                    <span>${e.surname}, ${e.firstname}</span>
+                    <i class="fa fa-grip-vertical text-muted srg-grip" aria-hidden="true"></i>
+                  </li>
+                `;
+		})}
             ${this.available.length === 0 && this.staffQuery ? C`<li class="list-group-item text-muted">No matches</li>` : T}
           </ul>
         </section>
 
         <section class="page-section srg-grid-wrap">
-          <table class="table srg-grid">
+          <table
+            class="table srg-grid ${n ? "srg-pickup-active" : ""}"
+            role="grid"
+            aria-label="Staff roster schedule"
+            aria-rowcount=${t.length + 1}
+            aria-colcount="8"
+          >
             <thead>
-              <tr>
-                <th class="srg-slot-col">Slot</th>
+              <tr role="row" aria-rowindex="1">
+                <th class="srg-slot-col" role="columnheader" aria-colindex="1">Slot</th>
                 ${Ot.map((e, t) => C`
-                    <th>
+                    <th role="columnheader" aria-colindex=${t + 2}>
                       <span class="srg-day">${e}</span>
                       <small class="text-muted">${this.cellDate(t).slice(5)}</small>
                     </th>
@@ -1515,29 +1715,56 @@ var Et = 5e3, Dt = 10, Ot = [
             </thead>
             <tbody>
               ${t.length === 0 ? C`
-                    <tr>
-                      <td colspan="8" class="srg-empty">
+                    <tr role="row">
+                      <td colspan="8" class="srg-empty" role="gridcell">
                         <p>No time slots defined for this roster yet.</p>
-                        <a class="btn btn-default btn-sm" href="?class=${jt()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
+                        <a class="btn btn-default btn-sm" href="?class=${Mt()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
                           <i class="fa fa-clock" aria-hidden="true"></i> Manage slots
                         </a>
                       </td>
                     </tr>
                   ` : T}
-              ${t.map((e) => C`
-                  <tr>
-                    <th scope="row" class="srg-slot-cell">
+              ${t.map((e, t) => C`
+                  <tr role="row" aria-rowindex=${t + 2}>
+                    <th
+                      scope="row"
+                      role="rowheader"
+                      class="srg-slot-cell"
+                      aria-colindex="1"
+                    >
                       <span class="srg-slot-time">${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</span>
                       ${e.location ? C`<small class="text-muted d-block">${e.location}</small>` : T}
                     </th>
-                    ${Ot.map((t, n) => {
-			let r = kt[n], i = e.days_of_week.includes(r), a = this.cellDate(n), o = this.exceptionFor(a);
-			if (!i) return C`<td class="srg-cell-empty"></td>`;
-			if (o) return C`<td class="srg-cell-exception"><small>closed</small></td>`;
-			let s = this.assignmentsFor(e.id, a), c = s.length;
+                    ${Ot.map((r, i) => {
+			let a = At[i], o = e.days_of_week.includes(a), s = this.cellDate(i), c = this.exceptionFor(s), l = i + 2;
+			if (!o) return C`<td
+                          class="srg-cell-empty"
+                          role="gridcell"
+                          aria-colindex=${l}
+                          aria-disabled="true"
+                        ></td>`;
+			let u = `${e.id}-${i}`;
+			if (c) return C`<td
+                          class="srg-cell-exception"
+                          role="gridcell"
+                          aria-colindex=${l}
+                          tabindex="0"
+                          data-cell-key=${u}
+                          aria-label=${this.cellAriaLabel(e, s, i, !0, [])}
+                          @keydown=${(n) => this.onCellKeyDown(n, e, s, t, i)}
+                          @focus=${() => this.focusedCellKey = u}
+                        >
+                          <small>closed</small>
+                        </td>`;
+			let d = this.assignmentsFor(e.id, s), f = d.length;
 			return C`
                         <td
-                          class="srg-cell"
+                          class="srg-cell ${n ? "srg-drop-target" : ""}"
+                          role="gridcell"
+                          aria-colindex=${l}
+                          tabindex="0"
+                          data-cell-key=${u}
+                          aria-label=${this.cellAriaLabel(e, s, i, !1, d)}
                           @dragover=${(e) => {
 				e.preventDefault(), e.currentTarget.classList.add("srg-dropping");
 			}}
@@ -1545,26 +1772,35 @@ var Et = 5e3, Dt = 10, Ot = [
 				e.currentTarget.classList.remove("srg-dropping");
 			}}
                           @drop=${async (t) => {
-				t.preventDefault(), t.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(e, a);
+				t.preventDefault(), t.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(e, s);
 			}}
+                          @keydown=${(n) => this.onCellKeyDown(n, e, s, t, i)}
+                          @focus=${() => this.focusedCellKey = u}
                         >
-                          ${Ze(s, (e) => e.id, (e) => C`
-                              <div
-                                class="srg-assignment srg-status-${e.status}"
-                                draggable="true"
-                                title="${e.firstname} ${e.surname} (${e.status}). Click to remove."
-                                @dragstart=${(t) => {
-				this.dragging = {
-					kind: "assignment",
-					assignment: e
-				}, t.dataTransfer?.setData("text/plain", String(e.id));
-			}}
-                                @click=${() => this.requestDelete(e)}
-                              >
-                                ${e.surname}, ${e.firstname}
-                              </div>
-                            `)}
-                          <small class="srg-capacity">${c}/${e.max_staff}</small>
+                          ${Ze(d, (e) => e.id, (e) => {
+				let t = this.pickedUp?.kind === "assignment" && this.pickedUp.assignment.id === e.id;
+				return C`
+                                <div
+                                  class="srg-assignment srg-status-${e.status} ${t ? "srg-picked-up" : ""}"
+                                  role="button"
+                                  tabindex="0"
+                                  draggable="true"
+                                  aria-label="${e.firstname} ${e.surname}, ${e.status}. Press Enter to move, Delete to remove."
+                                  title="${e.firstname} ${e.surname} (${e.status}). Click to remove."
+                                  @dragstart=${(t) => {
+					this.dragging = {
+						kind: "assignment",
+						assignment: e
+					}, t.dataTransfer?.setData("text/plain", String(e.id));
+				}}
+                                  @click=${() => this.requestDelete(e)}
+                                  @keydown=${(t) => this.onAssignmentKeyDown(t, e)}
+                                >
+                                  ${e.surname}, ${e.firstname}
+                                </div>
+                              `;
+			})}
+                          <small class="srg-capacity" aria-hidden="true">${f}/${e.max_staff}</small>
                         </td>
                       `;
 		})}
@@ -1621,12 +1857,12 @@ Q([ze({
 })], $.prototype, "rosterId", void 0), Q([ze({
 	type: String,
 	attribute: "week-start"
-})], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), Q([A()], $.prototype, "pendingDelete", void 0), $ = Q([Ie("staff-roster-grid")], $);
-function At(e) {
+})], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), Q([A()], $.prototype, "pickedUp", void 0), Q([A()], $.prototype, "pendingDelete", void 0), Q([A()], $.prototype, "liveMessage", void 0), Q([A()], $.prototype, "focusedCellKey", void 0), Q([A()], $.prototype, "focusedPillIdx", void 0), $ = Q([Ie("staff-roster-grid")], $);
+function jt(e) {
 	let t = (e.getDay() + 6) % 7, n = new Date(e);
 	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);
 }
-function jt() {
+function Mt() {
 	return new URLSearchParams(window.location.search).get("class") ?? "";
 }
 //#endregion

@@ -17,9 +17,6 @@ _Empty — pick the next batch._
 - [ ] **Additional fields** support on `staff_roster_assignments` first,
       then on `staff_roster`. Register the table in install hook; render
       dynamic fields in edit form; persist via `additional_field_values`.
-- [ ] **Lit grid a11y**: drag-drop has no keyboard equivalent today.
-      Add cell focus, Enter/Space pickup-and-drop, ARIA roles for the
-      grid, and a screen-reader summary of cell content.
 - [ ] **RRule phase 2**: monthly patterns (BYDAY=1MO), INTERVAL,
       UNTIL. Hand-rolled parser stays for now; bring in a library
       when monthly/interval lands.
@@ -79,6 +76,11 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Lit grid a11y**: cell + chip + pill keyboard pickup-drop with
+      Esc cancel, ARIA grid/listbox roles, sr-only live region, focus
+      ring matching Koha accent. Mouse drag-drop preserved.
+- [x] **Fix conflict overlap query**: ambiguous `id` column when
+      joining slots twice — qualified to `a.id`.
 - [x] **RRule recurrence** for slots (FREQ=WEEKLY;BYDAY=...) — single
       slot row covers multiple days; assignment endpoint rejects drops
       on days the slot doesn't run.

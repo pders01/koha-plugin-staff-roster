@@ -1,4 +1,4 @@
-import { LitElement, html, nothing } from "lit";
+import { LitElement, html, nothing, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import {
@@ -16,9 +16,16 @@ import {
 const POLL_MS = 5000;
 const UNDO_LIMIT = 10;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const FULL_DAYS = [
+  "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+];
 
 // iCal BYDAY codes per Monday-anchored column index.
 const ICAL_FOR_COLUMN = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+
+type Cargo =
+  | { kind: "staff"; staff: Staff }
+  | { kind: "assignment"; assignment: Assignment };
 
 type UndoOp =
   | { kind: "create"; id: number }
@@ -34,13 +41,22 @@ export class StaffRosterGrid extends LitElement {
   @state() private available: Staff[] = [];
   @state() private staffQuery = "";
   @state() private error = "";
-  @state() private dragging: { kind: "staff"; staff: Staff } | { kind: "assignment"; assignment: Assignment } | null = null;
+  @state() private dragging: Cargo | null = null;
+  @state() private pickedUp: Cargo | null = null;
   @state() private pendingDelete: Assignment | null = null;
+  @state() private liveMessage = "";
+  @state() private focusedCellKey = "";
+  @state() private focusedPillIdx = 0;
 
   private undoStack: UndoOp[] = [];
   private pollTimer?: ReturnType<typeof setInterval>;
   private staffDebounce?: ReturnType<typeof setTimeout>;
   private errorDismissTimer?: ReturnType<typeof setTimeout>;
+  private pickupOriginEl: HTMLElement | null = null;
+  private deleteOriginEl: HTMLElement | null = null;
+  private pendingFocusCellKey: string | null = null;
+  private pendingFocusPillIdx: number | null = null;
+  private pendingFocusModal = false;
 
   private setError(message: string): void {
     this.error = message;
@@ -59,6 +75,7 @@ export class StaffRosterGrid extends LitElement {
     super.connectedCallback();
     if (!this.weekStart) this.weekStart = isoMonday(new Date());
     void this.refresh();
+    void this.loadAvailable();
     this.pollTimer = setInterval(() => void this.refresh(), POLL_MS);
     document.addEventListener("keydown", this.onKeyDown);
   }
@@ -73,6 +90,18 @@ export class StaffRosterGrid extends LitElement {
     if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
       e.preventDefault();
       void this.undo();
+      return;
+    }
+    if (e.key === "Escape") {
+      if (this.pendingDelete) {
+        e.preventDefault();
+        this.cancelDelete();
+        return;
+      }
+      if (this.pickedUp) {
+        e.preventDefault();
+        this.cancelPickup();
+      }
     }
   };
 
@@ -178,16 +207,22 @@ export class StaffRosterGrid extends LitElement {
 
   private requestDelete(a: Assignment): void {
     this.pendingDelete = a;
+    this.pendingFocusModal = true;
   }
 
   private cancelDelete(): void {
     this.pendingDelete = null;
+    const origin = this.deleteOriginEl;
+    this.deleteOriginEl = null;
+    if (origin) requestAnimationFrame(() => origin.focus());
   }
 
   private async confirmDelete(): Promise<void> {
     const a = this.pendingDelete;
     if (!a) return;
     this.pendingDelete = null;
+    const dayIdx = this.dayIdxForDate(a.assignment_date);
+    const cellKey = `${a.slot_id}-${dayIdx}`;
     try {
       await deleteAssignment(a.id);
       await this.pushUndo({
@@ -200,10 +235,14 @@ export class StaffRosterGrid extends LitElement {
           notes: a.notes ?? undefined,
         },
       });
+      this.liveMessage = `Removed ${a.firstname} ${a.surname} from ${FULL_DAYS[dayIdx]} ${a.assignment_date}.`;
       await this.refresh();
     } catch (err) {
       this.setError((err as Error).message);
     }
+    this.deleteOriginEl = null;
+    this.focusedCellKey = cellKey;
+    this.pendingFocusCellKey = cellKey;
   }
 
   private onStaffSearch(e: Event): void {
@@ -212,17 +251,256 @@ export class StaffRosterGrid extends LitElement {
     this.staffDebounce = setTimeout(() => void this.loadAvailable(), 300);
   }
 
+  private sortedSlots(): Slot[] {
+    return [...(this.week?.slots ?? [])].sort(
+      (a, b) => a.start_time.localeCompare(b.start_time) || a.id - b.id,
+    );
+  }
+
+  private cellApplies(slot: Slot, dayIdx: number): boolean {
+    return slot.days_of_week.includes(ICAL_FOR_COLUMN[dayIdx]);
+  }
+
+  private firstApplicableCellKey(): string {
+    const slots = this.sortedSlots();
+    for (let s = 0; s < slots.length; s++) {
+      for (let d = 0; d < 7; d++) {
+        if (this.cellApplies(slots[s], d)) return `${slots[s].id}-${d}`;
+      }
+    }
+    return "";
+  }
+
+  private cargoName(c: Cargo): string {
+    return c.kind === "staff"
+      ? `${c.staff.firstname} ${c.staff.surname}`
+      : `${c.assignment.firstname} ${c.assignment.surname}`;
+  }
+
+  private cellAriaLabel(
+    slot: Slot,
+    date: string,
+    dayIdx: number,
+    isException: boolean,
+    assignments: Assignment[],
+  ): string {
+    const day = FULL_DAYS[dayIdx];
+    const time = `${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}`;
+    if (isException) return `${day} ${date}, ${time} slot, closed.`;
+    const filled = assignments.length;
+    const base = `${day} ${date}, ${time} slot, ${filled} of ${slot.max_staff} staff assigned`;
+    if (filled === 0) return `${base}.`;
+    const names = assignments.map((a) => `${a.firstname} ${a.surname}`).join(", ");
+    return `${base}: ${names}.`;
+  }
+
+  private pickUpStaff(staff: Staff, origin: HTMLElement): void {
+    this.pickedUp = { kind: "staff", staff };
+    this.pickupOriginEl = origin;
+    this.liveMessage = `Picked up ${staff.firstname} ${staff.surname}. Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.`;
+    const target = this.firstApplicableCellKey();
+    if (target) {
+      this.focusedCellKey = target;
+      this.pendingFocusCellKey = target;
+    }
+  }
+
+  private pickUpAssignment(a: Assignment, origin: HTMLElement): void {
+    this.pickedUp = { kind: "assignment", assignment: a };
+    this.pickupOriginEl = origin;
+    this.liveMessage = `Picked up ${a.firstname} ${a.surname}. Use arrow keys to move. Press Enter to drop, Esc to cancel.`;
+    const target = this.firstApplicableCellKey();
+    if (target) {
+      this.focusedCellKey = target;
+      this.pendingFocusCellKey = target;
+    }
+  }
+
+  private cancelPickup(): void {
+    this.pickedUp = null;
+    this.liveMessage = "Cancelled.";
+    const origin = this.pickupOriginEl;
+    this.pickupOriginEl = null;
+    if (origin) requestAnimationFrame(() => origin.focus());
+  }
+
+  private async dropFromKeyboard(slot: Slot, date: string): Promise<void> {
+    if (!this.pickedUp) return;
+    const cargo = this.pickedUp;
+    const name = this.cargoName(cargo);
+    const time = slot.start_time.slice(0, 5);
+    this.dragging = cargo;
+    this.pickedUp = null;
+    this.pickupOriginEl = null;
+    const errBefore = this.error;
+    await this.dropOnCell(slot, date);
+    if (this.error && this.error !== errBefore) {
+      this.liveMessage = `Cannot drop here. ${this.error}`;
+    } else {
+      this.liveMessage = `Moved ${name} to ${FULL_DAYS[this.dayIdxForDate(date)]} ${date}, ${time} slot.`;
+    }
+    const cellKey = `${slot.id}-${this.dayIdxForDate(date)}`;
+    this.focusedCellKey = cellKey;
+    this.pendingFocusCellKey = cellKey;
+  }
+
+  private dayIdxForDate(date: string): number {
+    const start = new Date(this.weekStart);
+    const d = new Date(date);
+    const ms = d.getTime() - start.getTime();
+    return Math.round(ms / (1000 * 60 * 60 * 24));
+  }
+
+  private moveCellFocus(key: string, slotIdx: number, dayIdx: number): void {
+    const slots = this.sortedSlots();
+    const step = (
+      ds: number,
+      dd: number,
+    ): [number, number] | null => {
+      let ns = slotIdx + ds;
+      let nd = dayIdx + dd;
+      while (ns >= 0 && ns < slots.length && nd >= 0 && nd < 7) {
+        if (this.cellApplies(slots[ns], nd)) return [ns, nd];
+        ns += ds;
+        nd += dd;
+      }
+      return null;
+    };
+    let target: [number, number] | null = null;
+    switch (key) {
+      case "ArrowUp": target = step(-1, 0); break;
+      case "ArrowDown": target = step(1, 0); break;
+      case "ArrowLeft": target = step(0, -1); break;
+      case "ArrowRight": target = step(0, 1); break;
+      case "Home":
+        for (let d = 0; d < 7; d++) {
+          if (this.cellApplies(slots[slotIdx], d)) { target = [slotIdx, d]; break; }
+        }
+        break;
+      case "End":
+        for (let d = 6; d >= 0; d--) {
+          if (this.cellApplies(slots[slotIdx], d)) { target = [slotIdx, d]; break; }
+        }
+        break;
+      case "PageUp":
+        this.shiftWeek(-7);
+        this.pendingFocusCellKey = this.focusedCellKey;
+        return;
+      case "PageDown":
+        this.shiftWeek(7);
+        this.pendingFocusCellKey = this.focusedCellKey;
+        return;
+    }
+    if (target) {
+      const [ns, nd] = target;
+      const newKey = `${slots[ns].id}-${nd}`;
+      this.focusedCellKey = newKey;
+      this.pendingFocusCellKey = newKey;
+    }
+  }
+
+  private onCellKeyDown(
+    e: KeyboardEvent,
+    slot: Slot,
+    date: string,
+    slotIdx: number,
+    dayIdx: number,
+  ): void {
+    if (e.target !== e.currentTarget) return;
+    const navKeys = [
+      "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+      "Home", "End", "PageUp", "PageDown",
+    ];
+    if (navKeys.includes(e.key)) {
+      e.preventDefault();
+      this.moveCellFocus(e.key, slotIdx, dayIdx);
+      return;
+    }
+    if ((e.key === "Enter" || e.key === " ") && this.pickedUp) {
+      e.preventDefault();
+      void this.dropFromKeyboard(slot, date);
+      return;
+    }
+    if ((e.key === "Delete" || e.key === "Backspace") && !this.pickedUp) {
+      const assignments = this.assignmentsFor(slot.id, date);
+      if (assignments.length > 0) {
+        e.preventDefault();
+        this.deleteOriginEl = e.currentTarget as HTMLElement;
+        this.requestDelete(assignments[0]);
+      }
+    }
+  }
+
+  private onPillKeyDown(e: KeyboardEvent, staff: Staff, idx: number): void {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      this.pickUpStaff(staff, e.currentTarget as HTMLElement);
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      e.stopPropagation();
+      const next = e.key === "ArrowDown"
+        ? Math.min(this.available.length - 1, idx + 1)
+        : Math.max(0, idx - 1);
+      this.focusedPillIdx = next;
+      this.pendingFocusPillIdx = next;
+    }
+  }
+
+  private onAssignmentKeyDown(e: KeyboardEvent, a: Assignment): void {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      this.pickUpAssignment(a, e.currentTarget as HTMLElement);
+      return;
+    }
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      e.stopPropagation();
+      this.deleteOriginEl = e.currentTarget as HTMLElement;
+      this.requestDelete(a);
+    }
+  }
+
+  override updated(_changed: PropertyValues): void {
+    if (this.week && !this.focusedCellKey) {
+      this.focusedCellKey = this.firstApplicableCellKey();
+    }
+    if (this.pendingFocusCellKey) {
+      const sel = `[data-cell-key="${this.pendingFocusCellKey}"]`;
+      const el = this.querySelector(sel) as HTMLElement | null;
+      if (el) el.focus();
+      this.pendingFocusCellKey = null;
+    }
+    if (this.pendingFocusPillIdx !== null) {
+      const idx = this.pendingFocusPillIdx;
+      const el = this.querySelector(
+        `[data-pill-idx="${idx}"]`,
+      ) as HTMLElement | null;
+      if (el) el.focus();
+      this.pendingFocusPillIdx = null;
+    }
+    if (this.pendingFocusModal) {
+      const el = this.querySelector(
+        ".staff-roster-modal-open .modal-footer .btn-default",
+      ) as HTMLElement | null;
+      if (el) el.focus();
+      this.pendingFocusModal = false;
+    }
+  }
+
   override render() {
     if (!this.week) return html`<div class="text-center text-muted py-4">Loading…</div>`;
 
     const color = this.week.roster.type_color;
-    // One row per slot (no time-based dedup needed now that a single slot
-    // covers multiple days via its RRule).
-    const slotsByTime = [...this.week.slots].sort((a, b) =>
-      a.start_time.localeCompare(b.start_time) || a.id - b.id,
-    );
+    const slotsByTime = this.sortedSlots();
+    const pickupActive = this.pickedUp !== null;
 
     return html`
+      <div class="srg-sr-only" aria-live="polite" aria-atomic="true">${this.liveMessage}</div>
+
       ${this.error
         ? html`
             <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
@@ -264,7 +542,7 @@ export class StaffRosterGrid extends LitElement {
 
       <div class="srg-layout" style=${`--srg-type-color: ${color}`}>
         <section class="page-section srg-staff-panel">
-          <h3 class="srg-panel-title">Available staff</h3>
+          <h3 class="srg-panel-title" id="srg-staff-list-label">Available staff</h3>
           <input
             type="search"
             class="form-control input-sm"
@@ -273,24 +551,40 @@ export class StaffRosterGrid extends LitElement {
             @input=${this.onStaffSearch}
             @focus=${() => void this.loadAvailable()}
           />
-          <ul class="list-group srg-staff-list" role="list">
+          <ul
+            class="list-group srg-staff-list"
+            role="listbox"
+            aria-labelledby="srg-staff-list-label"
+          >
             ${repeat(
               this.available,
               (s) => s.borrowernumber,
-              (s) => html`
-                <li
-                  class="list-group-item srg-staff-pill"
-                  draggable="true"
-                  @dragstart=${(e: DragEvent) => {
-                    this.dragging = { kind: "staff", staff: s };
-                    e.dataTransfer?.setData("text/plain", String(s.borrowernumber));
-                  }}
-                >
-                  <i class="fa fa-user text-muted" aria-hidden="true"></i>
-                  <span>${s.surname}, ${s.firstname}</span>
-                  <i class="fa fa-grip-vertical text-muted srg-grip" aria-hidden="true"></i>
-                </li>
-              `,
+              (s, i) => {
+                const isPicked =
+                  this.pickedUp?.kind === "staff" &&
+                  this.pickedUp.staff.borrowernumber === s.borrowernumber;
+                return html`
+                  <li
+                    class="list-group-item srg-staff-pill ${isPicked ? "srg-picked-up" : ""}"
+                    role="option"
+                    tabindex="0"
+                    data-pill-idx=${i}
+                    aria-selected=${isPicked ? "true" : "false"}
+                    aria-label="${s.surname}, ${s.firstname}. Press Enter to pick up."
+                    draggable="true"
+                    @dragstart=${(e: DragEvent) => {
+                      this.dragging = { kind: "staff", staff: s };
+                      e.dataTransfer?.setData("text/plain", String(s.borrowernumber));
+                    }}
+                    @keydown=${(e: KeyboardEvent) => this.onPillKeyDown(e, s, i)}
+                    @focus=${() => (this.focusedPillIdx = i)}
+                  >
+                    <i class="fa fa-user text-muted" aria-hidden="true"></i>
+                    <span>${s.surname}, ${s.firstname}</span>
+                    <i class="fa fa-grip-vertical text-muted srg-grip" aria-hidden="true"></i>
+                  </li>
+                `;
+              },
             )}
             ${this.available.length === 0 && this.staffQuery
               ? html`<li class="list-group-item text-muted">No matches</li>`
@@ -299,13 +593,19 @@ export class StaffRosterGrid extends LitElement {
         </section>
 
         <section class="page-section srg-grid-wrap">
-          <table class="table srg-grid">
+          <table
+            class="table srg-grid ${pickupActive ? "srg-pickup-active" : ""}"
+            role="grid"
+            aria-label="Staff roster schedule"
+            aria-rowcount=${slotsByTime.length + 1}
+            aria-colcount="8"
+          >
             <thead>
-              <tr>
-                <th class="srg-slot-col">Slot</th>
+              <tr role="row" aria-rowindex="1">
+                <th class="srg-slot-col" role="columnheader" aria-colindex="1">Slot</th>
                 ${DAYS.map(
                   (d, i) => html`
-                    <th>
+                    <th role="columnheader" aria-colindex=${i + 2}>
                       <span class="srg-day">${d}</span>
                       <small class="text-muted">${this.cellDate(i).slice(5)}</small>
                     </th>
@@ -316,8 +616,8 @@ export class StaffRosterGrid extends LitElement {
             <tbody>
               ${slotsByTime.length === 0
                 ? html`
-                    <tr>
-                      <td colspan="8" class="srg-empty">
+                    <tr role="row">
+                      <td colspan="8" class="srg-empty" role="gridcell">
                         <p>No time slots defined for this roster yet.</p>
                         <a class="btn btn-default btn-sm" href="?class=${getClass()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
                           <i class="fa fa-clock" aria-hidden="true"></i> Manage slots
@@ -326,10 +626,15 @@ export class StaffRosterGrid extends LitElement {
                     </tr>
                   `
                 : nothing}
-              ${slotsByTime.map((slot) => {
+              ${slotsByTime.map((slot, slotIdx) => {
                 return html`
-                  <tr>
-                    <th scope="row" class="srg-slot-cell">
+                  <tr role="row" aria-rowindex=${slotIdx + 2}>
+                    <th
+                      scope="row"
+                      role="rowheader"
+                      class="srg-slot-cell"
+                      aria-colindex="1"
+                    >
                       <span class="srg-slot-time">${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}</span>
                       ${slot.location
                         ? html`<small class="text-muted d-block">${slot.location}</small>`
@@ -340,14 +645,41 @@ export class StaffRosterGrid extends LitElement {
                       const applies = slot.days_of_week.includes(ical);
                       const date = this.cellDate(day);
                       const isException = this.exceptionFor(date);
-                      if (!applies) return html`<td class="srg-cell-empty"></td>`;
-                      if (isException)
-                        return html`<td class="srg-cell-exception"><small>closed</small></td>`;
+                      const colIdx = day + 2;
+                      if (!applies) {
+                        return html`<td
+                          class="srg-cell-empty"
+                          role="gridcell"
+                          aria-colindex=${colIdx}
+                          aria-disabled="true"
+                        ></td>`;
+                      }
+                      const cellKey = `${slot.id}-${day}`;
+                      if (isException) {
+                        return html`<td
+                          class="srg-cell-exception"
+                          role="gridcell"
+                          aria-colindex=${colIdx}
+                          tabindex="0"
+                          data-cell-key=${cellKey}
+                          aria-label=${this.cellAriaLabel(slot, date, day, true, [])}
+                          @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, slot, date, slotIdx, day)}
+                          @focus=${() => (this.focusedCellKey = cellKey)}
+                        >
+                          <small>closed</small>
+                        </td>`;
+                      }
                       const assignments = this.assignmentsFor(slot.id, date);
                       const filled = assignments.length;
+                      const isDropTarget = pickupActive;
                       return html`
                         <td
-                          class="srg-cell"
+                          class="srg-cell ${isDropTarget ? "srg-drop-target" : ""}"
+                          role="gridcell"
+                          aria-colindex=${colIdx}
+                          tabindex="0"
+                          data-cell-key=${cellKey}
+                          aria-label=${this.cellAriaLabel(slot, date, day, false, assignments)}
                           @dragover=${(e: DragEvent) => {
                             e.preventDefault();
                             (e.currentTarget as HTMLElement).classList.add("srg-dropping");
@@ -360,26 +692,37 @@ export class StaffRosterGrid extends LitElement {
                             (e.currentTarget as HTMLElement).classList.remove("srg-dropping");
                             await this.dropOnCell(slot, date);
                           }}
+                          @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, slot, date, slotIdx, day)}
+                          @focus=${() => (this.focusedCellKey = cellKey)}
                         >
                           ${repeat(
                             assignments,
                             (a) => a.id,
-                            (a) => html`
-                              <div
-                                class="srg-assignment srg-status-${a.status}"
-                                draggable="true"
-                                title="${a.firstname} ${a.surname} (${a.status}). Click to remove."
-                                @dragstart=${(e: DragEvent) => {
-                                  this.dragging = { kind: "assignment", assignment: a };
-                                  e.dataTransfer?.setData("text/plain", String(a.id));
-                                }}
-                                @click=${() => this.requestDelete(a)}
-                              >
-                                ${a.surname}, ${a.firstname}
-                              </div>
-                            `,
+                            (a) => {
+                              const isAsgPicked =
+                                this.pickedUp?.kind === "assignment" &&
+                                this.pickedUp.assignment.id === a.id;
+                              return html`
+                                <div
+                                  class="srg-assignment srg-status-${a.status} ${isAsgPicked ? "srg-picked-up" : ""}"
+                                  role="button"
+                                  tabindex="0"
+                                  draggable="true"
+                                  aria-label="${a.firstname} ${a.surname}, ${a.status}. Press Enter to move, Delete to remove."
+                                  title="${a.firstname} ${a.surname} (${a.status}). Click to remove."
+                                  @dragstart=${(e: DragEvent) => {
+                                    this.dragging = { kind: "assignment", assignment: a };
+                                    e.dataTransfer?.setData("text/plain", String(a.id));
+                                  }}
+                                  @click=${() => this.requestDelete(a)}
+                                  @keydown=${(e: KeyboardEvent) => this.onAssignmentKeyDown(e, a)}
+                                >
+                                  ${a.surname}, ${a.firstname}
+                                </div>
+                              `;
+                            },
                           )}
-                          <small class="srg-capacity">${filled}/${slot.max_staff}</small>
+                          <small class="srg-capacity" aria-hidden="true">${filled}/${slot.max_staff}</small>
                         </td>
                       `;
                     })}
