@@ -830,6 +830,10 @@ sub _tool_save_roster {
     }
 
     my $ok = $dbh->do( $sql, undef, @params );
+    if ($ok) {
+        $roster_id ||= $dbh->last_insert_id( undef, undef, 'staff_roster', undef );
+        _save_additional_fields( $dbh, 'staff_roster', $roster_id, $cgi );
+    }
     push @{$messages}, $ok
         ? { type => 'success', code => "success_on_$verb" }
         : { type => 'danger',  code => "error_on_$verb" };
@@ -839,7 +843,9 @@ sub _tool_save_roster {
 
 sub _tool_delete_roster {
     my ( $self, $dbh, $cgi, $messages ) = @_;
-    my $ok = $dbh->do( q{DELETE FROM staff_roster WHERE id = ?}, undef, $cgi->param('roster_id') );
+    my $roster_id = $cgi->param('roster_id');
+    _delete_additional_fields( $dbh, 'staff_roster', $roster_id );
+    my $ok = $dbh->do( q{DELETE FROM staff_roster WHERE id = ?}, undef, $roster_id );
     push @{$messages}, $ok
         ? { type => 'success', code => 'success_on_delete' }
         : { type => 'danger',  code => 'error_on_delete' };
@@ -971,6 +977,24 @@ sub _tool_view_list {
 
     my $rosters = $dbh->selectall_arrayref( $sql, { Slice => {} }, @params );
 
+    # Decorate rosters with their additional-field summaries (one query for the page).
+    my $af_defs = $dbh->selectall_arrayref(
+        q{SELECT id, name FROM additional_fields WHERE tablename = ? ORDER BY id},
+        { Slice => {} }, 'staff_roster'
+    ) || [];
+    if ( @{$af_defs} && @{$rosters} ) {
+        my %name_for = map { $_->{id} => $_->{name} } @{$af_defs};
+        my $bulk = _bulk_additional_field_values( $dbh, 'staff_roster', [ map { $_->{id} } @{$rosters} ] );
+        for my $r ( @{$rosters} ) {
+            my $vals = $bulk->{ $r->{id} } || {};
+            my @summary;
+            for my $fid ( sort { $a <=> $b } keys %{$vals} ) {
+                push @summary, { name => $name_for{$fid}, value => join q{, }, @{ $vals->{$fid} } };
+            }
+            $r->{additional_field_summary} = \@summary;
+        }
+    }
+
     $template->param(
         rosters       => $rosters,
         filter_branch => $filter_branch,
@@ -988,9 +1012,18 @@ sub _tool_view_roster_form {
     $template->param( library_groups => _flatten_groups( $root_groups, 0 ) );
 
     my $roster_id = $cgi->param('roster_id');
-    return if !$roster_id;
-    my $roster = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
-    $template->param( roster => $roster );
+    my $roster;
+    if ($roster_id) {
+        $roster = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
+        $template->param( roster => $roster );
+    }
+
+    my $af = _load_additional_fields( $dbh, 'staff_roster', $roster_id );
+    $template->param(
+        additional_fields_table     => 'staff_roster',
+        additional_fields_available => $af->{available},
+        additional_fields_values    => $af->{values},
+    );
     return;
 }
 
@@ -1371,6 +1404,109 @@ sub _slot_anchor {
         undef, $slot_id
     );
     return $anchor;
+}
+
+# Additional fields helpers --------------------------------------------------
+# Plumbing on top of Koha's additional_fields / additional_field_values tables.
+# The plugin uses raw DBI rather than Koha::Object, so we can't pull in the
+# Koha::Object::Mixin::AdditionalFields mixin; we do the equivalent reads /
+# writes ourselves. Admins manage field definitions via the standard
+# admin/additional-fields.pl page (deep-link with tablename=...).
+
+# Returns { available => [field_hash, ...], values => { field_id => [val,..] } }
+# where 'available' is what the additional-fields-entry.inc include expects:
+# field hashes carry the same keys (id, name, authorised_value_category,
+# repeatable, marcfield, marcfield_mode) that the include reads.
+sub _load_additional_fields {
+    my ( $dbh, $tablename, $record_id ) = @_;
+    my $available = $dbh->selectall_arrayref(
+        q{SELECT id, name, authorised_value_category, marcfield, marcfield_mode, searchable, repeatable
+          FROM additional_fields WHERE tablename = ? ORDER BY id},
+        { Slice => {} }, $tablename
+    ) || [];
+
+    # The TT include calls $field->effective_authorised_value_category as a
+    # method. Wrap each hash so the include works without changes.
+    for my $f ( @{$available} ) {
+        my $cat = $f->{authorised_value_category};
+        $f->{effective_authorised_value_category} = $cat;
+    }
+
+    my %values;
+    if ($record_id) {
+        my $rows = $dbh->selectall_arrayref(
+            q{SELECT field_id, value FROM additional_field_values
+              WHERE record_table = ? AND record_id = ?},
+            { Slice => {} }, $tablename, $record_id
+        ) || [];
+        for my $r ( @{$rows} ) {
+            push @{ $values{ $r->{field_id} } }, $r->{value};
+        }
+    }
+    return { available => $available, values => \%values };
+}
+
+# Replaces every additional_field_value row for ($tablename, $record_id) with
+# the values posted as additional_field_<id>. Mirrors set_additional_fields in
+# Koha::Object::Mixin::AdditionalFields. No-op when there are no fields
+# defined for $tablename, so admins can opt in by creating fields and
+# pre-existing rosters keep working.
+sub _save_additional_fields {
+    my ( $dbh, $tablename, $record_id, $cgi ) = @_;
+    return if !$record_id;
+
+    my $fields = $dbh->selectall_arrayref(
+        q{SELECT id, repeatable FROM additional_fields WHERE tablename = ?},
+        { Slice => {} }, $tablename
+    ) || [];
+    return if !@{$fields};
+
+    $dbh->do(
+        q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
+        undef, $tablename, $record_id
+    );
+
+    for my $f ( @{$fields} ) {
+        my @posted = $cgi->multi_param( 'additional_field_' . $f->{id} );
+        for my $v (@posted) {
+            next if !defined $v || $v eq q{};
+            $dbh->do(
+                q{INSERT INTO additional_field_values (field_id, record_table, record_id, value)
+                  VALUES (?, ?, ?, ?)},
+                undef, $f->{id}, $tablename, $record_id, $v
+            );
+        }
+    }
+    return;
+}
+
+# Removes all additional_field_value rows attached to ($tablename, $record_id).
+sub _delete_additional_fields {
+    my ( $dbh, $tablename, $record_id ) = @_;
+    return if !$record_id;
+    $dbh->do(
+        q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
+        undef, $tablename, $record_id
+    );
+    return;
+}
+
+# Convenience: { record_id => { field_id => [vals,...] } } for a list view that
+# wants to render every roster's additional field summary in one query.
+sub _bulk_additional_field_values {
+    my ( $dbh, $tablename, $record_ids ) = @_;
+    return {} if !$record_ids || !@{$record_ids};
+    my $placeholders = join q{,}, ('?') x @{$record_ids};
+    my $rows         = $dbh->selectall_arrayref(
+        qq{SELECT record_id, field_id, value FROM additional_field_values
+           WHERE record_table = ? AND record_id IN ($placeholders)},
+        { Slice => {} }, $tablename, @{$record_ids}
+    ) || [];
+    my %out;
+    for my $r ( @{$rows} ) {
+        push @{ $out{ $r->{record_id} }{ $r->{field_id} } }, $r->{value};
+    }
+    return \%out;
 }
 
 sub _get_current_week_start {
