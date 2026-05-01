@@ -1387,7 +1387,13 @@ sub _slot_applies_on {
             dtstart    => $anchor,
         );
     };
-    return 0 if !$set;
+    if ( !$set ) {
+        # Surface the failure to the plack error log so corrupt RRULEs are
+        # noticed rather than silently making slots disappear from every week.
+        my $err = $@ || 'unknown';
+        warn "StaffRoster: RRule parse failed for '$rrule': $err";
+        return 0;
+    }
 
     my $check = $dt->clone->truncate( to => 'day' );
     return $set->contains($check) ? 1 : 0;
@@ -1488,20 +1494,35 @@ sub _additional_field_defs {
 
 sub _store_additional_field_values {
     my ( $dbh, $tablename, $record_id, $values_by_id ) = @_;
-    $dbh->do(
-        q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
-        undef, $tablename, $record_id
-    );
-    for my $fid ( keys %{$values_by_id} ) {
-        for my $v ( @{ $values_by_id->{$fid} } ) {
-            next if !defined $v || $v eq q{};
-            $dbh->do(
-                q{INSERT INTO additional_field_values (field_id, record_table, record_id, value)
-                  VALUES (?, ?, ?, ?)},
-                undef, $fid, $tablename, $record_id, $v
-            );
+
+    # Wrap delete + reinsert in a single transaction so a failed insert leaves
+    # the prior values untouched. The default plack handler runs with
+    # AutoCommit=1, so the bare delete-then-loop above could otherwise commit a
+    # partial state if any insert blew up.
+    my $autocommit_was = $dbh->{AutoCommit};
+    $dbh->begin_work if $autocommit_was;
+    eval {
+        $dbh->do(
+            q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
+            undef, $tablename, $record_id
+        );
+        for my $fid ( keys %{$values_by_id} ) {
+            for my $v ( @{ $values_by_id->{$fid} } ) {
+                next if !defined $v || $v eq q{};
+                $dbh->do(
+                    q{INSERT INTO additional_field_values (field_id, record_table, record_id, value)
+                      VALUES (?, ?, ?, ?)},
+                    undef, $fid, $tablename, $record_id, $v
+                );
+            }
         }
-    }
+        $dbh->commit if $autocommit_was;
+        1;
+    } or do {
+        my $err = $@ || 'unknown error';
+        $dbh->rollback if $autocommit_was;
+        die $err;
+    };
     return;
 }
 
