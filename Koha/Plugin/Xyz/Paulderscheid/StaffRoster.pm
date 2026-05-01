@@ -533,8 +533,6 @@ sub configure {
     my $op  = $cgi->param('op') // q{};
 
     my @config_keys = qw(
-        default_view week_start_day slot_duration
-        show_staff_photos day_start_hour day_end_hour
         enable_email_reminders reminder_days_before enable_swap_notifications
         staff_can_self_assign require_swap_approval
         library_group_mode default_library_group_id
@@ -561,12 +559,6 @@ sub configure {
     my $root_groups = Koha::Library::Groups->get_root_groups;
 
     $template->param(
-        default_view              => $self->retrieve_data('default_view')              // 'week',
-        week_start_day            => $self->retrieve_data('week_start_day')            // '1',
-        slot_duration             => $self->retrieve_data('slot_duration')             // '60',
-        show_staff_photos         => $self->retrieve_data('show_staff_photos')         // '1',
-        day_start_hour            => $self->retrieve_data('day_start_hour')            // '8',
-        day_end_hour              => $self->retrieve_data('day_end_hour')              // '18',
         enable_email_reminders    => $self->retrieve_data('enable_email_reminders')    // '0',
         reminder_days_before      => $self->retrieve_data('reminder_days_before')      // '1',
         enable_swap_notifications => $self->retrieve_data('enable_swap_notifications') // '1',

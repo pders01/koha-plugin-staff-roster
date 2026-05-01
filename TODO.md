@@ -4,15 +4,7 @@ Open work items, grouped by priority. Items get crossed off as commits land.
 
 ## Now (small, cohesive)
 
-- [ ] Trim dead POC settings from `configure.tt` (default_view, week_start_day,
-      slot_duration, show_staff_photos, day_start_hour, day_end_hour). Keep
-      the workflow ones (reminders × 2, swap notifications, self-assign,
-      swap approval) since they map onto planned features.
-- [ ] DRY the inline `<style>` blocks duplicated across admin/configure/
-      tool/report — body padding rule, swatch rule, etc. Move to a single
-      stylesheet served as a static asset and linked from each template.
-- [ ] Add `class="validated"` to the configure form so client-side
-      validation behaves consistently with the other forms.
+_Empty — pick the next batch._
 
 ## Next (single-feature batches)
 
@@ -81,6 +73,10 @@ Open work items, grouped by priority. Items get crossed off as commits land.
 
 ## Done (recent — prune periodically)
 
+- [x] Trim six dead POC settings (default_view, week_start_day,
+      slot_duration, show_staff_photos, day_start_hour, day_end_hour).
+- [x] DRY shared TT styles into `staff-roster-plugin.css` static asset.
+- [x] `class="validated"` on the configure form.
 - [x] Replace native `confirm()` dialogs with Bootstrap modals.
 - [x] Replace `alert alert-warning` wrappers on delete-confirm pages with
       the Koha standard `<h1>` + `.page-section` + `<fieldset class="action">`

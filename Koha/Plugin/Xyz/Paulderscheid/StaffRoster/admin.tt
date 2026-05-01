@@ -13,30 +13,7 @@
     Staff Roster - Roster Types | Plugins | Koha
 </title>
 [% INCLUDE 'doc-head-close.inc' %]
-<style>
-    .col-md-10 > main {
-        padding: 1rem;
-    }
-    @media (min-width: 992px) {
-        .col-md-10 > main {
-            padding: 1rem 1.5rem;
-        }
-    }
-    .staff-roster-type-swatch {
-        display: inline-block;
-        width: 0.7em;
-        height: 0.7em;
-        border-radius: 2px;
-        margin-right: 0.35em;
-        vertical-align: middle;
-    }
-    .staff-roster-type-swatch--lg {
-        width: 1.5em;
-        height: 1.5em;
-        border-radius: 3px;
-        border: 1px solid #ccc;
-    }
-</style>
+<link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster-plugin.css" />
 </head>
 
 <body id="plugins_staff_roster_admin" class="plugins">

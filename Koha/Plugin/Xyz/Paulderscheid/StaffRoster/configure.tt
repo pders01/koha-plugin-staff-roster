@@ -6,16 +6,7 @@
 [% INCLUDE 'doc-head-open.inc' %]
 <title>Staff Roster - Configuration | Plugins | Koha</title>
 [% INCLUDE 'doc-head-close.inc' %]
-<style>
-    .col-md-10 > main {
-        padding: 1rem;
-    }
-    @media (min-width: 992px) {
-        .col-md-10 > main {
-            padding: 1rem 1.5rem;
-        }
-    }
-</style>
+<link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster-plugin.css" />
 </head>
 
 <body id="plugins_staff_roster_configure" class="plugins">
@@ -64,67 +55,11 @@
         <div class="alert alert-success">Configuration saved successfully.</div>
     [% END %]
 
-    <form method="post" action="/cgi-bin/koha/plugins/run.pl">
+    <form method="post" action="/cgi-bin/koha/plugins/run.pl" class="validated">
         [% INCLUDE 'csrf-token.inc' %]
         <input type="hidden" name="class" value="[% CLASS | html %]" />
         <input type="hidden" name="method" value="configure" />
         <input type="hidden" name="op" value="cud-save" />
-
-        <fieldset class="rows">
-            <legend>General Settings</legend>
-            <ol>
-                <li>
-                    <label for="default_view">Default calendar view:</label>
-                    <select name="default_view" id="default_view">
-                        <option value="week" [% IF default_view == 'week' %]selected[% END %]>Week</option>
-                        <option value="day" [% IF default_view == 'day' %]selected[% END %]>Day</option>
-                        <option value="month" [% IF default_view == 'month' %]selected[% END %]>Month</option>
-                    </select>
-                    <span class="hint">Choose the default view when opening the roster calendar</span>
-                </li>
-                <li>
-                    <label for="week_start_day">Week starts on:</label>
-                    <select name="week_start_day" id="week_start_day">
-                        <option value="0" [% IF week_start_day == '0' %]selected[% END %]>Sunday</option>
-                        <option value="1" [% IF week_start_day == '1' %]selected[% END %]>Monday</option>
-                    </select>
-                </li>
-                <li>
-                    <label for="slot_duration">Default slot duration (minutes):</label>
-                    <input type="number" name="slot_duration" id="slot_duration" value="[% slot_duration || 60 | html %]" min="15" max="480" step="15" />
-                    <span class="hint">Default duration when creating new time slots</span>
-                </li>
-            </ol>
-        </fieldset>
-
-        <fieldset class="rows">
-            <legend>Display Settings</legend>
-            <ol>
-                <li>
-                    <label for="show_staff_photos">Show staff photos:</label>
-                    <select name="show_staff_photos" id="show_staff_photos">
-                        <option value="1" [% IF show_staff_photos == '1' %]selected[% END %]>Yes</option>
-                        <option value="0" [% IF show_staff_photos == '0' %]selected[% END %]>No</option>
-                    </select>
-                </li>
-                <li>
-                    <label for="day_start_hour">Day starts at:</label>
-                    <select name="day_start_hour" id="day_start_hour">
-                        [% FOR hour IN [0..23] %]
-                            <option value="[% hour %]" [% IF day_start_hour == hour %]selected[% END %]>[% hour | format('%02d') %]:00</option>
-                        [% END %]
-                    </select>
-                </li>
-                <li>
-                    <label for="day_end_hour">Day ends at:</label>
-                    <select name="day_end_hour" id="day_end_hour">
-                        [% FOR hour IN [1..24] %]
-                            <option value="[% hour %]" [% IF day_end_hour == hour %]selected[% END %]>[% hour | format('%02d') %]:00</option>
-                        [% END %]
-                    </select>
-                </li>
-            </ol>
-        </fieldset>
 
         <fieldset class="rows">
             <legend>Notification Settings</legend>

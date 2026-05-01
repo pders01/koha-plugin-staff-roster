@@ -18,20 +18,13 @@
     Staff Roster | Plugins | Koha
 </title>
 [% INCLUDE 'doc-head-close.inc' %]
+<link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster-plugin.css" />
 [% IF op == 'view_assignments' %]
     <link rel="modulepreload" href="/api/v1/contrib/staffroster/static/staff-roster.js" crossorigin />
     <link rel="preload" as="style" href="/api/v1/contrib/staffroster/static/staff-roster.css" />
     <link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster.css" />
 [% END %]
 <style>
-    .staff-roster-type-swatch {
-        display: inline-block;
-        width: 0.7em;
-        height: 0.7em;
-        border-radius: 2px;
-        margin-right: 0.35em;
-        vertical-align: middle;
-    }
     .actions .btn-xs + .btn-xs {
         margin-left: 0.15rem;
     }
@@ -49,14 +42,6 @@
     }
     .staff-roster-filter .form-group:last-child {
         margin-bottom: 0;
-    }
-    .col-md-10 > main {
-        padding: 1rem;
-    }
-    @media (min-width: 992px) {
-        .col-md-10 > main {
-            padding: 1rem 1.5rem;
-        }
     }
     .slot-grid {
         display: grid;

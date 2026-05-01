@@ -5,16 +5,7 @@
 [% INCLUDE 'doc-head-open.inc' %]
 <title>Staff Roster - Report | Plugins | Koha</title>
 [% INCLUDE 'doc-head-close.inc' %]
-<style>
-    .col-md-10 > main {
-        padding: 1rem;
-    }
-    @media (min-width: 992px) {
-        .col-md-10 > main {
-            padding: 1rem 1.5rem;
-        }
-    }
-</style>
+<link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster-plugin.css" />
 </head>
 
 <body id="plugins_staff_roster_report" class="plugins">
