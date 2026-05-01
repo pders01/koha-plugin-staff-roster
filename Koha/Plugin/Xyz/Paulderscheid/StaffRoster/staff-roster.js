@@ -1312,7 +1312,7 @@ var Et = 5e3, Dt = 10, Ot = [
 			status: "scheduled",
 			notes: "",
 			fields: {}
-		}, this.editOriginEl = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
+		}, this.editOriginEl = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.recentlyChanged = /* @__PURE__ */ new Set(), this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
 			if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
 				e.preventDefault(), this.undo();
 				return;
@@ -1336,14 +1336,29 @@ var Et = 5e3, Dt = 10, Ot = [
 		super.connectedCallback(), this.weekStart ||= jt(/* @__PURE__ */ new Date()), this.refresh(), this.loadAvailable(), this.pollTimer = setInterval(() => void this.refresh(), Et), document.addEventListener("keydown", this.onKeyDown);
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), this.pollTimer && clearInterval(this.pollTimer), document.removeEventListener("keydown", this.onKeyDown);
+		super.disconnectedCallback(), this.pollTimer && clearInterval(this.pollTimer), this.recentlyChangedTimer && clearTimeout(this.recentlyChangedTimer), document.removeEventListener("keydown", this.onKeyDown);
 	}
 	async refresh() {
 		if (this.rosterId) try {
-			this.week = await xt(this.rosterId, this.weekStart), this.error = "";
+			let e = /* @__PURE__ */ new Map(), t = /* @__PURE__ */ new Set();
+			for (let n of this.week?.assignments ?? []) e.set(this.assignmentKey(n), n.updated_at), t.add(n.id);
+			let n = await xt(this.rosterId, this.weekStart);
+			if (this.week = n, this.error = "", t.size > 0) {
+				let t = /* @__PURE__ */ new Set();
+				for (let r of n.assignments) {
+					let n = e.get(this.assignmentKey(r));
+					(!n || n !== r.updated_at) && t.add(r.id);
+				}
+				t.size > 0 && (this.recentlyChanged = t, this.recentlyChangedTimer && clearTimeout(this.recentlyChangedTimer), this.recentlyChangedTimer = setTimeout(() => {
+					this.recentlyChanged = /* @__PURE__ */ new Set();
+				}, 4e3));
+			}
 		} catch (e) {
 			this.setError(e.message);
 		}
+	}
+	assignmentKey(e) {
+		return `${e.id}`;
 	}
 	async loadAvailable() {
 		if (this.week) try {
@@ -1816,10 +1831,10 @@ var Et = 5e3, Dt = 10, Ot = [
                           @focus=${() => this.focusedCellKey = l}
                         >
                           ${Ze(u, (e) => e.id, (e) => {
-				let t = this.pickedUp?.kind === "assignment" && this.pickedUp.assignment.id === e.id;
+				let t = this.pickedUp?.kind === "assignment" && this.pickedUp.assignment.id === e.id, n = this.recentlyChanged.has(e.id);
 				return C`
                                 <div
-                                  class="srg-assignment srg-status-${e.status} ${t ? "srg-picked-up" : ""}"
+                                  class="srg-assignment srg-status-${e.status} ${t ? "srg-picked-up" : ""} ${n ? "srg-recent-update" : ""}"
                                   role="button"
                                   tabindex="0"
                                   draggable="true"
@@ -2027,7 +2042,7 @@ Q([ze({
 })], $.prototype, "rosterId", void 0), Q([ze({
 	type: String,
 	attribute: "week-start"
-})], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), Q([A()], $.prototype, "pickedUp", void 0), Q([A()], $.prototype, "pendingDelete", void 0), Q([A()], $.prototype, "editing", void 0), Q([A()], $.prototype, "editForm", void 0), Q([A()], $.prototype, "liveMessage", void 0), Q([A()], $.prototype, "focusedCellKey", void 0), Q([A()], $.prototype, "focusedPillIdx", void 0), $ = Q([Ie("staff-roster-grid")], $);
+})], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), Q([A()], $.prototype, "pickedUp", void 0), Q([A()], $.prototype, "pendingDelete", void 0), Q([A()], $.prototype, "editing", void 0), Q([A()], $.prototype, "editForm", void 0), Q([A()], $.prototype, "liveMessage", void 0), Q([A()], $.prototype, "focusedCellKey", void 0), Q([A()], $.prototype, "focusedPillIdx", void 0), Q([A()], $.prototype, "recentlyChanged", void 0), $ = Q([Ie("staff-roster-grid")], $);
 function jt(e) {
 	let t = (e.getDay() + 6) % 7, n = new Date(e);
 	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);

@@ -260,6 +260,21 @@
     z-index: 1050;
 }
 
+/* Concurrent-edit indicator: chips whose updated_at advanced since the
+   previous poll briefly pulse so other librarians' changes don't appear
+   silently. The class is removed after ~4s to keep the grid calm. */
+@keyframes srg-recent-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.85); }
+    70%  { box-shadow: 0 0 0 8px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+.srg-assignment.srg-recent-update {
+    animation: srg-recent-pulse 1.4s ease-out 2;
+    outline: 2px solid #ffc107;
+    outline-offset: 1px;
+}
+
 /* Edit-assignment modal: roomy two-column form on tablet+, stack on mobile.
    Fixes the cramped Koha-default layout where labels and tiny controls
    get jammed against each other. */

@@ -57,6 +57,8 @@ export class StaffRosterGrid extends LitElement {
 
   private undoStack: UndoOp[] = [];
   private pollTimer?: ReturnType<typeof setInterval>;
+  @state() private recentlyChanged: Set<number> = new Set();
+  private recentlyChangedTimer?: ReturnType<typeof setTimeout>;
   private staffDebounce?: ReturnType<typeof setTimeout>;
   private errorDismissTimer?: ReturnType<typeof setTimeout>;
   private pickupOriginEl: HTMLElement | null = null;
@@ -90,6 +92,7 @@ export class StaffRosterGrid extends LitElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.pollTimer) clearInterval(this.pollTimer);
+    if (this.recentlyChangedTimer) clearTimeout(this.recentlyChangedTimer);
     document.removeEventListener("keydown", this.onKeyDown);
   }
 
@@ -115,11 +118,41 @@ export class StaffRosterGrid extends LitElement {
   private async refresh(): Promise<void> {
     if (!this.rosterId) return;
     try {
-      this.week = await fetchWeek(this.rosterId, this.weekStart);
+      const previousByKey = new Map<string, string>();
+      const previousIds = new Set<number>();
+      for (const a of this.week?.assignments ?? []) {
+        previousByKey.set(this.assignmentKey(a), a.updated_at);
+        previousIds.add(a.id);
+      }
+
+      const next = await fetchWeek(this.rosterId, this.weekStart);
+      this.week = next;
       this.error = "";
+
+      // Highlight rows whose updated_at advanced since the previous fetch, or
+      // brand-new assignments that other librarians just dropped in. Skip the
+      // initial load (previousIds empty) so first paint isn't a fireworks show.
+      if (previousIds.size > 0) {
+        const recent = new Set<number>();
+        for (const a of next.assignments) {
+          const previous = previousByKey.get(this.assignmentKey(a));
+          if (!previous || previous !== a.updated_at) recent.add(a.id);
+        }
+        if (recent.size > 0) {
+          this.recentlyChanged = recent;
+          if (this.recentlyChangedTimer) clearTimeout(this.recentlyChangedTimer);
+          this.recentlyChangedTimer = setTimeout(() => {
+            this.recentlyChanged = new Set();
+          }, 4000);
+        }
+      }
     } catch (err) {
       this.setError((err as Error).message);
     }
+  }
+
+  private assignmentKey(a: Assignment): string {
+    return `${a.id}`;
   }
 
   private async loadAvailable(): Promise<void> {
@@ -766,9 +799,10 @@ export class StaffRosterGrid extends LitElement {
                               const isAsgPicked =
                                 this.pickedUp?.kind === "assignment" &&
                                 this.pickedUp.assignment.id === a.id;
+                              const isRecent = this.recentlyChanged.has(a.id);
                               return html`
                                 <div
-                                  class="srg-assignment srg-status-${a.status} ${isAsgPicked ? "srg-picked-up" : ""}"
+                                  class="srg-assignment srg-status-${a.status} ${isAsgPicked ? "srg-picked-up" : ""} ${isRecent ? "srg-recent-update" : ""}"
                                   role="button"
                                   tabindex="0"
                                   draggable="true"
