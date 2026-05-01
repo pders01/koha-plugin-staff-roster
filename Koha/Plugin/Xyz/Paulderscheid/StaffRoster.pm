@@ -1027,7 +1027,7 @@ sub _tool_view_assignments {
         q{
         SELECT * FROM staff_roster_slots
         WHERE roster_id = ?
-        ORDER BY day_of_week, start_time
+        ORDER BY start_time, recurrence_rule
     }, { Slice => {} }, $roster_id
     );
 

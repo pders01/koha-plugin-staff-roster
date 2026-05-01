@@ -605,7 +605,6 @@
                         No time slots defined yet. Use <em>Add time slot</em> to create one.
                     </div>
                 [% END %]
-            </div>
         </div>
 
         <!-- Delete slot confirmation modal -->
