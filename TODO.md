@@ -8,11 +8,7 @@ _Empty — pick the next batch._
 
 ## Next (single-feature batches)
 
-- [ ] **Additional fields on assignments**: same plumbing as the roster
-      version, but assignments only have a Lit-grid drag/drop UI today.
-      Needs an "edit assignment" modal (open on chip click) before the
-      fields surface anywhere useful. Helpers in StaffRoster.pm are
-      table-agnostic — pass `staff_roster_assignments` once the modal lands.
+_Empty — pick the next batch._
 
 ## Phase 2 (planned features, each its own work block)
 
@@ -70,6 +66,15 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Assignment edit modal**: chip click opens a Lit modal with
+      status, notes, and additional fields (text or AV-backed). Save
+      PUTs through the existing /assignments/:id endpoint; Remove
+      hands off to the delete-confirm modal. Keyboard Delete still
+      removes directly, preserving the old shortcut.
+- [x] **Additional fields on assignments**: helper refactor split CGI
+      vs JSON-map paths; RosterController embeds per-assignment values
+      and field defs in the week response; AssignmentController.update
+      persists them.
 - [x] **Additional fields on rosters**: helpers
       (`_load_additional_fields` / `_save_additional_fields` /
       `_delete_additional_fields` / `_bulk_additional_field_values`)

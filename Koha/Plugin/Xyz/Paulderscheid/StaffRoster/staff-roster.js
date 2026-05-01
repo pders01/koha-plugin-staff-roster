@@ -1308,7 +1308,11 @@ var Et = 5e3, Dt = 10, Ot = [
 	"SU"
 ], $ = class extends k {
 	constructor(...e) {
-		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.staffQuery = "", this.error = "", this.dragging = null, this.pickedUp = null, this.pendingDelete = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
+		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.staffQuery = "", this.error = "", this.dragging = null, this.pickedUp = null, this.pendingDelete = null, this.editing = null, this.editForm = {
+			status: "scheduled",
+			notes: "",
+			fields: {}
+		}, this.editOriginEl = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
 			if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
 				e.preventDefault(), this.undo();
 				return;
@@ -1418,6 +1422,41 @@ var Et = 5e3, Dt = 10, Ot = [
 	}
 	requestDelete(e) {
 		this.pendingDelete = e, this.pendingFocusModal = !0;
+	}
+	requestEdit(e, t = null) {
+		this.editing = e, this.editOriginEl = t, this.editForm = {
+			status: e.status,
+			notes: e.notes ?? "",
+			fields: { ...e.additional_fields ?? {} }
+		}, this.pendingFocusModal = !0;
+	}
+	cancelEdit() {
+		this.editing = null;
+		let e = this.editOriginEl;
+		this.editOriginEl = null, e && requestAnimationFrame(() => e.focus());
+	}
+	async saveEdit() {
+		let e = this.editing;
+		if (!e) return;
+		let t = {
+			status: this.editForm.status,
+			notes: this.editForm.notes === "" ? null : this.editForm.notes
+		};
+		(this.week?.assignment_fields ?? []).length && (t.additional_fields = this.editForm.fields);
+		try {
+			await Ct(e.id, t), this.liveMessage = `Updated assignment for ${e.firstname} ${e.surname}.`, this.editing = null;
+			let n = this.editOriginEl;
+			this.editOriginEl = null, await this.refresh(), n && requestAnimationFrame(() => n.focus());
+		} catch (e) {
+			this.setError(e.message);
+		}
+	}
+	deleteFromEdit() {
+		let e = this.editing;
+		if (!e) return;
+		this.editing = null;
+		let t = this.editOriginEl;
+		this.editOriginEl = null, this.deleteOriginEl = t, this.requestDelete(e);
 	}
 	cancelDelete() {
 		this.pendingDelete = null;
@@ -1785,15 +1824,15 @@ var Et = 5e3, Dt = 10, Ot = [
                                   role="button"
                                   tabindex="0"
                                   draggable="true"
-                                  aria-label="${e.firstname} ${e.surname}, ${e.status}. Press Enter to move, Delete to remove."
-                                  title="${e.firstname} ${e.surname} (${e.status}). Click to remove."
+                                  aria-label="${e.firstname} ${e.surname}, ${e.status}. Press Enter to move, Delete to remove. Click to edit."
+                                  title="${e.firstname} ${e.surname} (${e.status}). Click to edit."
                                   @dragstart=${(t) => {
 					this.dragging = {
 						kind: "assignment",
 						assignment: e
 					}, t.dataTransfer?.setData("text/plain", String(e.id));
 				}}
-                                  @click=${() => this.requestDelete(e)}
+                                  @click=${(t) => this.requestEdit(e, t.currentTarget)}
                                   @keydown=${(t) => this.onAssignmentKeyDown(t, e)}
                                 >
                                   ${e.surname}, ${e.firstname}
@@ -1811,7 +1850,128 @@ var Et = 5e3, Dt = 10, Ot = [
         </section>
       </div>
 
+      ${this.editing ? this.renderEditModal(this.editing) : T}
       ${this.pendingDelete ? this.renderDeleteModal(this.pendingDelete) : T}
+    `;
+	}
+	renderEditModal(e) {
+		let t = this.week?.assignment_fields ?? [];
+		return C`
+      <div
+        class="modal show staff-roster-modal-open"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        style="display: block;"
+        @click=${(e) => {
+			e.target.classList.contains("modal") && this.cancelEdit();
+		}}
+      >
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title">Edit assignment — ${e.surname}, ${e.firstname}</h1>
+              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelEdit()}></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted">${e.assignment_date}</p>
+              <fieldset class="rows">
+                <ol>
+                  <li>
+                    <label for="srg-edit-status">Status:</label>
+                    <select
+                      id="srg-edit-status"
+                      .value=${this.editForm.status}
+                      @change=${(e) => this.editForm = {
+			...this.editForm,
+			status: e.target.value
+		}}
+                    >
+                      ${[
+			"scheduled",
+			"confirmed",
+			"completed",
+			"cancelled",
+			"no_show"
+		].map((e) => C`<option value=${e} ?selected=${e === this.editForm.status}>${e}</option>`)}
+                    </select>
+                  </li>
+                  <li>
+                    <label for="srg-edit-notes">Notes:</label>
+                    <textarea
+                      id="srg-edit-notes"
+                      rows="2"
+                      cols="40"
+                      .value=${this.editForm.notes}
+                      @input=${(e) => this.editForm = {
+			...this.editForm,
+			notes: e.target.value
+		}}
+                    ></textarea>
+                  </li>
+                  ${t.map((e) => this.renderEditField(e))}
+                </ol>
+              </fieldset>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" @click=${() => void this.saveEdit()}>
+                <i class="fa fa-save"></i> Save
+              </button>
+              <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>Cancel</button>
+              <button type="button" class="btn btn-danger" @click=${() => this.deleteFromEdit()}>
+                <i class="fa fa-trash"></i> Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop fade show staff-roster-modal-backdrop"></div>
+    `;
+	}
+	renderEditField(e) {
+		let t = `srg-edit-af-${e.id}`, n = this.editForm.fields[e.id] ?? [], r = (t) => {
+			this.editForm = {
+				...this.editForm,
+				fields: {
+					...this.editForm.fields,
+					[e.id]: t
+				}
+			};
+		};
+		if (e.av_options && e.av_options.length) {
+			let i = n[0] ?? "";
+			return C`
+        <li>
+          <label for=${t}>${e.name}:</label>
+          <select
+            id=${t}
+            .value=${i}
+            @change=${(e) => {
+				let t = e.target.value;
+				r(t === "" ? [] : [t]);
+			}}
+          >
+            <option value="">— None —</option>
+            ${e.av_options.map((e) => C`<option value=${e.value} ?selected=${e.value === i}>${e.lib || e.value}</option>`)}
+          </select>
+        </li>
+      `;
+		}
+		let i = n.join(", "), a = e.repeatable ? C`<span class="hint">Separate multiple values with commas.</span>` : T;
+		return C`
+      <li>
+        <label for=${t}>${e.name}:</label>
+        <input
+          id=${t}
+          type="text"
+          .value=${i}
+          @input=${(t) => {
+			let n = t.target.value;
+			r(e.repeatable ? n.split(",").map((e) => e.trim()).filter(Boolean) : n === "" ? [] : [n]);
+		}}
+        />
+        ${a}
+      </li>
     `;
 	}
 	renderDeleteModal(e) {
@@ -1857,7 +2017,7 @@ Q([ze({
 })], $.prototype, "rosterId", void 0), Q([ze({
 	type: String,
 	attribute: "week-start"
-})], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), Q([A()], $.prototype, "pickedUp", void 0), Q([A()], $.prototype, "pendingDelete", void 0), Q([A()], $.prototype, "liveMessage", void 0), Q([A()], $.prototype, "focusedCellKey", void 0), Q([A()], $.prototype, "focusedPillIdx", void 0), $ = Q([Ie("staff-roster-grid")], $);
+})], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), Q([A()], $.prototype, "pickedUp", void 0), Q([A()], $.prototype, "pendingDelete", void 0), Q([A()], $.prototype, "editing", void 0), Q([A()], $.prototype, "editForm", void 0), Q([A()], $.prototype, "liveMessage", void 0), Q([A()], $.prototype, "focusedCellKey", void 0), Q([A()], $.prototype, "focusedPillIdx", void 0), $ = Q([Ie("staff-roster-grid")], $);
 function jt(e) {
 	let t = (e.getDay() + 6) % 7, n = new Date(e);
 	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);

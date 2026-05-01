@@ -48,6 +48,15 @@ export type Assignment = {
   firstname: string;
   surname: string;
   cardnumber: string;
+  additional_fields?: Record<string, string[]>;
+};
+
+export type AssignmentField = {
+  id: number;
+  name: string;
+  authorised_value_category: string | null;
+  repeatable: 0 | 1;
+  av_options?: { value: string; lib: string }[];
 };
 
 export type Staff = {
@@ -71,6 +80,7 @@ export type RosterWeek = {
   };
   slots: Slot[];
   assignments: Assignment[];
+  assignment_fields?: AssignmentField[];
   exceptions: { id: number; exception_date: string; exception_type: string; reason: string | null }[];
   week_start: string;
 };
@@ -111,7 +121,14 @@ export async function createAssignment(body: {
 
 export async function updateAssignment(
   id: number,
-  body: Partial<{ slot_id: number; borrowernumber: number; assignment_date: string; status: string; notes: string }>,
+  body: Partial<{
+    slot_id: number;
+    borrowernumber: number;
+    assignment_date: string;
+    status: string;
+    notes: string | null;
+    additional_fields: Record<string, string[]>;
+  }>,
 ): Promise<Assignment> {
   const res = await api.put({
     endpoint: "assignments",

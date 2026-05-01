@@ -44,6 +44,13 @@ export class StaffRosterGrid extends LitElement {
   @state() private dragging: Cargo | null = null;
   @state() private pickedUp: Cargo | null = null;
   @state() private pendingDelete: Assignment | null = null;
+  @state() private editing: Assignment | null = null;
+  @state() private editForm: { status: string; notes: string; fields: Record<string, string[]> } = {
+    status: "scheduled",
+    notes: "",
+    fields: {},
+  };
+  private editOriginEl: HTMLElement | null = null;
   @state() private liveMessage = "";
   @state() private focusedCellKey = "";
   @state() private focusedPillIdx = 0;
@@ -208,6 +215,56 @@ export class StaffRosterGrid extends LitElement {
   private requestDelete(a: Assignment): void {
     this.pendingDelete = a;
     this.pendingFocusModal = true;
+  }
+
+  private requestEdit(a: Assignment, origin: HTMLElement | null = null): void {
+    this.editing = a;
+    this.editOriginEl = origin;
+    this.editForm = {
+      status: a.status,
+      notes: a.notes ?? "",
+      fields: { ...(a.additional_fields ?? {}) },
+    };
+    this.pendingFocusModal = true;
+  }
+
+  private cancelEdit(): void {
+    this.editing = null;
+    const origin = this.editOriginEl;
+    this.editOriginEl = null;
+    if (origin) requestAnimationFrame(() => origin.focus());
+  }
+
+  private async saveEdit(): Promise<void> {
+    const a = this.editing;
+    if (!a) return;
+    const payload: Parameters<typeof updateAssignment>[1] = {
+      status: this.editForm.status,
+      notes: this.editForm.notes === "" ? null : this.editForm.notes,
+    };
+    const fieldDefs = this.week?.assignment_fields ?? [];
+    if (fieldDefs.length) payload.additional_fields = this.editForm.fields;
+    try {
+      await updateAssignment(a.id, payload);
+      this.liveMessage = `Updated assignment for ${a.firstname} ${a.surname}.`;
+      this.editing = null;
+      const origin = this.editOriginEl;
+      this.editOriginEl = null;
+      await this.refresh();
+      if (origin) requestAnimationFrame(() => origin.focus());
+    } catch (err) {
+      this.setError((err as Error).message);
+    }
+  }
+
+  private deleteFromEdit(): void {
+    const a = this.editing;
+    if (!a) return;
+    this.editing = null;
+    const origin = this.editOriginEl;
+    this.editOriginEl = null;
+    this.deleteOriginEl = origin;
+    this.requestDelete(a);
   }
 
   private cancelDelete(): void {
@@ -710,13 +767,13 @@ export class StaffRosterGrid extends LitElement {
                                   role="button"
                                   tabindex="0"
                                   draggable="true"
-                                  aria-label="${a.firstname} ${a.surname}, ${a.status}. Press Enter to move, Delete to remove."
-                                  title="${a.firstname} ${a.surname} (${a.status}). Click to remove."
+                                  aria-label="${a.firstname} ${a.surname}, ${a.status}. Press Enter to move, Delete to remove. Click to edit."
+                                  title="${a.firstname} ${a.surname} (${a.status}). Click to edit."
                                   @dragstart=${(e: DragEvent) => {
                                     this.dragging = { kind: "assignment", assignment: a };
                                     e.dataTransfer?.setData("text/plain", String(a.id));
                                   }}
-                                  @click=${() => this.requestDelete(a)}
+                                  @click=${(e: MouseEvent) => this.requestEdit(a, e.currentTarget as HTMLElement)}
                                   @keydown=${(e: KeyboardEvent) => this.onAssignmentKeyDown(e, a)}
                                 >
                                   ${a.surname}, ${a.firstname}
@@ -736,7 +793,125 @@ export class StaffRosterGrid extends LitElement {
         </section>
       </div>
 
+      ${this.editing ? this.renderEditModal(this.editing) : nothing}
       ${this.pendingDelete ? this.renderDeleteModal(this.pendingDelete) : nothing}
+    `;
+  }
+
+  private renderEditModal(a: Assignment) {
+    const fields = this.week?.assignment_fields ?? [];
+    const STATUSES: Assignment["status"][] = ["scheduled", "confirmed", "completed", "cancelled", "no_show"];
+    return html`
+      <div
+        class="modal show staff-roster-modal-open"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        style="display: block;"
+        @click=${(e: MouseEvent) => {
+          if ((e.target as HTMLElement).classList.contains("modal")) this.cancelEdit();
+        }}
+      >
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title">Edit assignment — ${a.surname}, ${a.firstname}</h1>
+              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelEdit()}></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted">${a.assignment_date}</p>
+              <fieldset class="rows">
+                <ol>
+                  <li>
+                    <label for="srg-edit-status">Status:</label>
+                    <select
+                      id="srg-edit-status"
+                      .value=${this.editForm.status}
+                      @change=${(e: Event) => (this.editForm = { ...this.editForm, status: (e.target as HTMLSelectElement).value })}
+                    >
+                      ${STATUSES.map((s) => html`<option value=${s} ?selected=${s === this.editForm.status}>${s}</option>`)}
+                    </select>
+                  </li>
+                  <li>
+                    <label for="srg-edit-notes">Notes:</label>
+                    <textarea
+                      id="srg-edit-notes"
+                      rows="2"
+                      cols="40"
+                      .value=${this.editForm.notes}
+                      @input=${(e: Event) => (this.editForm = { ...this.editForm, notes: (e.target as HTMLTextAreaElement).value })}
+                    ></textarea>
+                  </li>
+                  ${fields.map((f) => this.renderEditField(f))}
+                </ol>
+              </fieldset>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" @click=${() => void this.saveEdit()}>
+                <i class="fa fa-save"></i> Save
+              </button>
+              <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>Cancel</button>
+              <button type="button" class="btn btn-danger" @click=${() => this.deleteFromEdit()}>
+                <i class="fa fa-trash"></i> Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop fade show staff-roster-modal-backdrop"></div>
+    `;
+  }
+
+  private renderEditField(f: NonNullable<RosterWeek["assignment_fields"]>[number]) {
+    const id = `srg-edit-af-${f.id}`;
+    const current = this.editForm.fields[f.id] ?? [];
+    const setValues = (vals: string[]) => {
+      this.editForm = { ...this.editForm, fields: { ...this.editForm.fields, [f.id]: vals } };
+    };
+    if (f.av_options && f.av_options.length) {
+      // Single-select dropdown; repeatable AVs collapse to first value (rare in practice).
+      const value = current[0] ?? "";
+      return html`
+        <li>
+          <label for=${id}>${f.name}:</label>
+          <select
+            id=${id}
+            .value=${value}
+            @change=${(e: Event) => {
+              const v = (e.target as HTMLSelectElement).value;
+              setValues(v === "" ? [] : [v]);
+            }}
+          >
+            <option value="">— None —</option>
+            ${f.av_options.map((opt) => html`<option value=${opt.value} ?selected=${opt.value === value}>${opt.lib || opt.value}</option>`)}
+          </select>
+        </li>
+      `;
+    }
+    // Free-text: comma-separated for repeatable, single line for non-repeatable.
+    const text = current.join(", ");
+    const hint = f.repeatable
+      ? html`<span class="hint">Separate multiple values with commas.</span>`
+      : nothing;
+    return html`
+      <li>
+        <label for=${id}>${f.name}:</label>
+        <input
+          id=${id}
+          type="text"
+          .value=${text}
+          @input=${(e: Event) => {
+            const raw = (e.target as HTMLInputElement).value;
+            const vals = f.repeatable
+              ? raw.split(",").map((s) => s.trim()).filter(Boolean)
+              : raw === ""
+                ? []
+                : [raw];
+            setValues(vals);
+          }}
+        />
+        ${hint}
+      </li>
     `;
   }
 
