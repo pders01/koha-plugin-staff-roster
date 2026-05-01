@@ -90,9 +90,9 @@ sub get_week {
 
         # Merge Koha calendar closures (if enabled) into exceptions for the week.
         if ( $plugin->retrieve_data('use_koha_calendar') ) {
-            require DateTime::Format::ISO8601;
+            require Koha::DateUtils;
             my %seen = map { $_->{exception_date} => 1 } @{$exceptions};
-            my $start_dt = DateTime::Format::ISO8601->parse_datetime($week_start);
+            my $start_dt = Koha::DateUtils::dt_from_string( $week_start, 'iso' );
             for my $i ( 0 .. 6 ) {
                 my $date = $start_dt->clone->add( days => $i )->ymd;
                 next if $seen{$date};

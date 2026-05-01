@@ -1105,8 +1105,8 @@ sub _is_closed_for_roster {
     return 0 if !@branches;
 
     require Koha::Calendar;
-    require DateTime::Format::ISO8601;
-    my $dt = eval { DateTime::Format::ISO8601->parse_datetime($date) };
+    require Koha::DateUtils;
+    my $dt = eval { Koha::DateUtils::dt_from_string( $date, 'iso' ) };
     return 0 if !$dt;
 
     for my $b (@branches) {
