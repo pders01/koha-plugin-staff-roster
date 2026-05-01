@@ -57,6 +57,16 @@ sub create {
         );
 
         my $id = $dbh->last_insert_id( undef, undef, undef, undef );
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
+            'CREATE', $id,
+            {   entity          => 'assignment',
+                slot_id         => $slot_id,
+                borrowernumber  => $borrowernumber,
+                assignment_date => $date,
+                status          => $body->{status} // 'scheduled',
+            }
+        );
         return $c->render( status => 201, openapi => _load( $dbh, $id ) );
     }
     catch {
@@ -119,6 +129,17 @@ sub update {
             );
         }
 
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
+            'MODIFY', $id,
+            {   entity     => 'assignment',
+                changed    => [ sort keys %{$body} ],
+                slot_id    => $merged{slot_id},
+                borrowernumber  => $merged{borrowernumber},
+                assignment_date => $merged{assignment_date},
+            }
+        );
+
         return $c->render( status => 200, openapi => _load( $dbh, $id ) );
     }
     catch {
@@ -141,6 +162,10 @@ sub delete {
         if ( !$count || $count eq '0E0' ) {
             return $c->render( status => 404, openapi => { error => 'Assignment not found' } );
         }
+
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
+            'DELETE', $id, { entity => 'assignment' } );
 
         return $c->render_resource_deleted;
     }
@@ -172,6 +197,9 @@ sub bulk {
 
         if ( $op eq 'clear' ) {
             $dbh->do( "DELETE FROM staff_roster_assignments WHERE id IN ($placeholders)", undef, @{$ids} );
+            require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
+                'DELETE', undef, { entity => 'assignment_bulk', op => 'clear', ids => $ids } );
             return $c->render( status => 200, openapi => { deleted => scalar @{$ids} } );
         }
 
@@ -195,6 +223,10 @@ sub bulk {
                 join( q{, }, @sets ), $placeholders;
 
             $dbh->do( $sql, undef, @params, @{$ids} );
+            require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
+                'MODIFY', undef,
+                { entity => 'assignment_bulk', op => 'move', ids => $ids, target => $target } );
             return $c->render( status => 200, openapi => { updated => scalar @{$ids} } );
         }
 

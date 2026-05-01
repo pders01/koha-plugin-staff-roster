@@ -7,6 +7,24 @@ use base qw(Koha::Plugins::Base);
 use C4::Context;
 use Mojo::JSON qw( decode_json );
 
+# Flow plugin mutations into Koha's action_logs so admins can audit changes
+# from tools/viewlog.pl alongside borrower / catalogue / acquisitions activity.
+# All entries land under module 'STAFFROSTER'; the entity (roster, slot,
+# assignment, exception, type) and any extra context goes into the JSON info
+# blob. Loaded lazily so the plugin still works in environments where C4::Log
+# isn't available (very old Koha).
+sub _audit {
+    my ( $action, $object_id, $info ) = @_;
+    return if !defined $action;
+    eval {
+        require C4::Log;
+        $info //= {};
+        C4::Log::logaction( 'STAFFROSTER', $action, $object_id, $info );
+        1;
+    };
+    return;
+}
+
 our $metadata = {
     'author'           => 'Paul Derscheid',
     'date_authored'    => '2025-12-24',
@@ -461,6 +479,14 @@ sub _admin_save_type {
     }
 
     my $ok = $dbh->do( $sql, undef, @params );
+    if ($ok) {
+        $id ||= $dbh->last_insert_id( undef, undef, 'staff_roster_types', undef );
+        _audit(
+            $verb eq 'insert' ? 'CREATE' : 'MODIFY',
+            $id,
+            { entity => 'roster_type', code => $fields[0], name => $fields[1] }
+        );
+    }
     push @{$messages}, $ok
         ? { type => 'success', code => "success_on_$verb" }
         : { type => 'danger',  code => "error_on_$verb" };
@@ -479,6 +505,7 @@ sub _admin_delete_type {
     }
 
     my $ok = $dbh->do( q{DELETE FROM staff_roster_types WHERE id = ?}, undef, $id );
+    _audit( 'DELETE', $id, { entity => 'roster_type' } ) if $ok;
     push @{$messages}, $ok
         ? { type => 'success', code => 'success_on_delete' }
         : { type => 'danger',  code => 'error_on_delete' };
@@ -836,6 +863,11 @@ sub _tool_save_roster {
     if ($ok) {
         $roster_id ||= $dbh->last_insert_id( undef, undef, 'staff_roster', undef );
         _save_additional_fields( $dbh, 'staff_roster', $roster_id, $cgi );
+        _audit(
+            $verb eq 'insert' ? 'CREATE' : 'MODIFY',
+            $roster_id,
+            { entity => 'roster', name => $cgi->param('name'), branch_id => $branch_id, group_id => $group_id }
+        );
     }
     push @{$messages}, $ok
         ? { type => 'success', code => "success_on_$verb" }
@@ -849,6 +881,9 @@ sub _tool_delete_roster {
     my $roster_id = $cgi->param('roster_id');
     _delete_additional_fields( $dbh, 'staff_roster', $roster_id );
     my $ok = $dbh->do( q{DELETE FROM staff_roster WHERE id = ?}, undef, $roster_id );
+    if ($ok) {
+        _audit( 'DELETE', $roster_id, { entity => 'roster' } );
+    }
     push @{$messages}, $ok
         ? { type => 'success', code => 'success_on_delete' }
         : { type => 'danger',  code => 'error_on_delete' };
@@ -916,6 +951,8 @@ sub _tool_save_slot {
             WHERE id = ?
         }, undef, @fields, $slot_id
         );
+        _audit( 'MODIFY', $slot_id,
+            { entity => 'slot', roster_id => $cgi->param('roster_id'), recurrence_rule => $rrule } );
     }
     else {
         $dbh->do(
@@ -925,6 +962,9 @@ sub _tool_save_slot {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         }, undef, $cgi->param('roster_id'), @fields
         );
+        my $new_id = $dbh->last_insert_id( undef, undef, 'staff_roster_slots', undef );
+        _audit( 'CREATE', $new_id,
+            { entity => 'slot', roster_id => $cgi->param('roster_id'), recurrence_rule => $rrule } );
     }
     push @{$messages}, { type => 'success', code => 'slot_saved' };
     return;
@@ -932,7 +972,9 @@ sub _tool_save_slot {
 
 sub _tool_delete_slot {
     my ( $self, $dbh, $cgi, $messages ) = @_;
-    $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $cgi->param('slot_id') );
+    my $slot_id = $cgi->param('slot_id');
+    $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
+    _audit( 'DELETE', $slot_id, { entity => 'slot' } );
     push @{$messages}, { type => 'success', code => 'slot_deleted' };
     return;
 }
@@ -969,7 +1011,8 @@ sub _tool_save_exception {
               WHERE id = ? AND roster_id = ?},
             undef, $exception_date, $exception_type, $reason, $exception_id, $roster_id
         );
-        push @{$messages}, { type => 'success', code => 'exception_saved' };
+        _audit( 'MODIFY', $exception_id,
+            { entity => 'exception', roster_id => $roster_id, date => $exception_date, type => $exception_type } );
     }
     else {
         $dbh->do(
@@ -978,8 +1021,11 @@ sub _tool_save_exception {
               VALUES (?, ?, ?, ?, ?, NOW(), NOW())},
             undef, $roster_id, $exception_date, $exception_type, $reason, $created_by
         );
-        push @{$messages}, { type => 'success', code => 'exception_saved' };
+        my $new_id = $dbh->last_insert_id( undef, undef, 'staff_roster_exceptions', undef );
+        _audit( 'CREATE', $new_id,
+            { entity => 'exception', roster_id => $roster_id, date => $exception_date, type => $exception_type } );
     }
+    push @{$messages}, { type => 'success', code => 'exception_saved' };
     return;
 }
 
@@ -987,10 +1033,12 @@ sub _tool_delete_exception {
     my ( $self, $dbh, $cgi, $messages ) = @_;
     my $roster_id    = $cgi->param('roster_id');
     my $exception_id = $cgi->param('exception_id');
-    $dbh->do(
+    my $count = $dbh->do(
         q{DELETE FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
         undef, $exception_id, $roster_id
     );
+    _audit( 'DELETE', $exception_id, { entity => 'exception', roster_id => $roster_id } )
+        if $count && $count ne '0E0';
     push @{$messages}, { type => 'success', code => 'exception_deleted' };
     return;
 }
