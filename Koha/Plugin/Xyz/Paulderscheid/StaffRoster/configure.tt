@@ -155,6 +155,21 @@
                     </select>
                     <span class="hint">When enabled and the roster targets a single branch, the slot location is picked from the branch's Koha desks. Free text otherwise.</span>
                 </li>
+                <li>
+                    <label for="use_authorised_value_locations">Use authorised values for slot locations:</label>
+                    <select name="use_authorised_value_locations" id="use_authorised_value_locations">
+                        <option value="1" [% IF use_authorised_value_locations == '1' %]selected[% END %]>Yes</option>
+                        <option value="0" [% IF use_authorised_value_locations == '0' %]selected[% END %]>No</option>
+                    </select>
+                    <span class="hint">When enabled, the slot location is picked from a Koha authorised value category. Takes precedence over Koha desks when both are on. Submitted values must match the category.</span>
+                </li>
+                <li>
+                    <label for="authorised_value_location_category">Authorised value category:</label>
+                    <input type="text" name="authorised_value_location_category" id="authorised_value_location_category"
+                           size="40" maxlength="32"
+                           value="[% authorised_value_location_category | html %]" />
+                    <span class="hint">Category code from Koha's Authorised values admin page (e.g. <code>STAFFROSTER_LOCATION</code>). Create the category and its values in Koha first.</span>
+                </li>
             </ol>
         </fieldset>
 

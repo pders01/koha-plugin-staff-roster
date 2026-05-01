@@ -245,6 +245,8 @@
                 <span>Time slot deleted successfully.</span>
             [% CASE 'slot_no_days_selected' %]
                 <span>Pick at least one day of the week for the slot.</span>
+            [% CASE 'slot_location_not_in_av' %]
+                <span>Location &quot;[% m.value | html %]&quot; is not in authorised value category &quot;[% m.category | html %]&quot;. Pick a value from the list.</span>
             [% CASE 'access_denied' %]
                 <span>You are not authorized to view that roster.</span>
             [% CASE %]
@@ -535,17 +537,27 @@
                         </li>
                         <li>
                             <label for="location">Location:</label>
-                            <input type="text" name="location" id="location" size="30" maxlength="255"
-                                   [% IF desks.size %]list="koha-desks-list"[% END %] />
-                            [% IF desks.size %]
-                                <datalist id="koha-desks-list">
-                                    [% FOREACH d IN desks %]
-                                        <option value="[% d.desk_name | html %]"></option>
+                            [% IF av_locations.size %]
+                                <select name="location" id="location">
+                                    <option value="">— None —</option>
+                                    [% FOREACH av IN av_locations %]
+                                        <option value="[% av.value | html %]">[% av.lib || av.value | html %]</option>
                                     [% END %]
-                                </datalist>
-                                <span class="hint">Suggestions are this branch's Koha desks; you can also type a custom value.</span>
+                                </select>
+                                <span class="hint">Pick from the configured authorised value category. Submitting other values is rejected.</span>
                             [% ELSE %]
-                                <span class="hint">Specific desk or area within the branch.</span>
+                                <input type="text" name="location" id="location" size="30" maxlength="255"
+                                       [% IF desks.size %]list="koha-desks-list"[% END %] />
+                                [% IF desks.size %]
+                                    <datalist id="koha-desks-list">
+                                        [% FOREACH d IN desks %]
+                                            <option value="[% d.desk_name | html %]"></option>
+                                        [% END %]
+                                    </datalist>
+                                    <span class="hint">Suggestions are this branch's Koha desks; you can also type a custom value.</span>
+                                [% ELSE %]
+                                    <span class="hint">Specific desk or area within the branch.</span>
+                                [% END %]
                             [% END %]
                         </li>
                         <li>

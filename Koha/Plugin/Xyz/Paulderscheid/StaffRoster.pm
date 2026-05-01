@@ -543,6 +543,7 @@ sub configure {
         library_group_mode default_library_group_id
         use_koha_calendar koha_calendar_branch koha_calendar_strict
         staff_categories use_koha_desks
+        use_authorised_value_locations authorised_value_location_category
     );
 
     my $template = $self->get_template( { file => 'configure.tt' } );
@@ -593,6 +594,10 @@ sub configure {
         koha_calendar_branch      => $self->retrieve_data('koha_calendar_branch')      // q{},
         koha_calendar_strict      => $self->retrieve_data('koha_calendar_strict')      // '1',
         use_koha_desks            => $self->retrieve_data('use_koha_desks')            // '0',
+        use_authorised_value_locations =>
+            $self->retrieve_data('use_authorised_value_locations') // '0',
+        authorised_value_location_category =>
+            $self->retrieve_data('authorised_value_location_category') // 'STAFFROSTER_LOCATION',
         library_groups            => _flatten_groups( $root_groups, 0 ),
         all_libraries             => [ Koha::Libraries->search( {}, { order_by => 'branchname' } )->as_list ],
         patron_categories         => \@categories,
@@ -852,13 +857,27 @@ sub _tool_save_slot {
         return;
     }
 
+    my $location = $cgi->param('location');
+    if ( $self->retrieve_data('use_authorised_value_locations') && defined $location && length $location ) {
+        my $cat = $self->retrieve_data('authorised_value_location_category')
+            || 'STAFFROSTER_LOCATION';
+        require Koha::AuthorisedValues;
+        my $match = Koha::AuthorisedValues->search(
+            { category => $cat, authorised_value => $location } )->count;
+        if ( !$match ) {
+            push @{$messages},
+                { type => 'danger', code => 'slot_location_not_in_av', value => $location, category => $cat };
+            return;
+        }
+    }
+
     my @fields = (
         $rrule,
         $cgi->param('start_time'),
         $cgi->param('end_time'),
         $cgi->param('min_staff') // 1,
         $cgi->param('max_staff') // 1,
-        $cgi->param('location'),
+        $location,
         $cgi->param('slot_notes'),
     );
 
@@ -1012,7 +1031,26 @@ sub _tool_view_manage_slots {
         @desks = Koha::Desks->search( { branchcode => $roster->{branch_id} }, { order_by => 'desk_name' } )->as_list;
     }
 
-    $template->param( roster => $roster, slots => $slots, desks => \@desks );
+    # Optional authorised-value-backed location list. When enabled, this takes
+    # precedence over the desks datalist in the slot form.
+    my @av_locations;
+    if ( $self->retrieve_data('use_authorised_value_locations') ) {
+        my $cat = $self->retrieve_data('authorised_value_location_category')
+            || 'STAFFROSTER_LOCATION';
+        require Koha::AuthorisedValues;
+        @av_locations = map { { value => $_->authorised_value, lib => $_->lib } }
+            Koha::AuthorisedValues->search(
+            { category => $cat },
+            { order_by => [ 'lib', 'authorised_value' ] }
+            )->as_list;
+    }
+
+    $template->param(
+        roster       => $roster,
+        slots        => $slots,
+        desks        => \@desks,
+        av_locations => \@av_locations,
+    );
     return;
 }
 
