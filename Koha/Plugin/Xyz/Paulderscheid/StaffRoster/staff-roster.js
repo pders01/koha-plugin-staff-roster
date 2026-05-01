@@ -1424,7 +1424,8 @@ var Et = 5e3, Dt = 10, Ot = [
 		let e = this.week.roster.type_color, t = [...this.week.slots].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.day_of_week - t.day_of_week), n = [...new Set(t.map((e) => `${e.start_time}-${e.end_time}-${e.location ?? ""}`))];
 		return C`
       ${this.error ? C`
-            <div class="srg-toast alert alert-warning" role="alert" aria-live="assertive">
+            <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
+              <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
               <span>${this.error}</span>
               <button
                 type="button"

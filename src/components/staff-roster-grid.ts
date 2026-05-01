@@ -225,7 +225,8 @@ export class StaffRosterGrid extends LitElement {
     return html`
       ${this.error
         ? html`
-            <div class="srg-toast alert alert-warning" role="alert" aria-live="assertive">
+            <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
+              <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
               <span>${this.error}</span>
               <button
                 type="button"

@@ -55,8 +55,32 @@
                         "type": "object"
                     }
                 },
+                "400": {
+                    "description": "Bad request",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
                 "403": {
                     "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "409": {
+                    "description": "Conflict (slot full, overlap, calendar closed)",
                     "schema": {
                         "properties": {
                             "error": {
@@ -153,8 +177,32 @@
                         "type": "object"
                     }
                 },
+                "400": {
+                    "description": "Bad request",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
                 "403": {
                     "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "409": {
+                    "description": "Conflict (slot full, overlap, calendar closed)",
                     "schema": {
                         "properties": {
                             "error": {
@@ -209,6 +257,18 @@
                 "204": {
                     "description": "Unassign"
                 },
+                "400": {
+                    "description": "Bad request",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
                 "403": {
                     "description": "Access forbidden",
                     "schema": {
@@ -223,6 +283,18 @@
                 },
                 "404": {
                     "description": "Not found",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "409": {
+                    "description": "Conflict (slot full, overlap, calendar closed)",
                     "schema": {
                         "properties": {
                             "error": {
@@ -314,6 +386,18 @@
                         "type": "object"
                     }
                 },
+                "400": {
+                    "description": "Bad request",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
                 "403": {
                     "description": "Access forbidden",
                     "schema": {
@@ -328,6 +412,18 @@
                 },
                 "404": {
                     "description": "Not found",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "409": {
+                    "description": "Conflict (slot full, overlap, calendar closed)",
                     "schema": {
                         "properties": {
                             "error": {
