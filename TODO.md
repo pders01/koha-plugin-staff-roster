@@ -21,10 +21,6 @@ _Empty — pick the next batch._
 - [ ] **Self-service patron view**: borrower sees own shifts, can
       self-assign to open slots if `staff_can_self_assign`. Group-scoped.
       Read-only calendar view is a great kalendus fit.
-- [ ] **Exception/closure management UI**: today only the API merges
-      Koha calendar closures. Add a small admin page to create
-      `staff_roster_exceptions` rows for non-calendar closures (training
-      days, special events, reduced hours).
 - [ ] **Skills / competencies**: schema doesn't model "John can work CIRC
       but not REF". Add `staff_skills` table + per-roster-type required
       skills; filter `/staff/available` by competency.
@@ -32,9 +28,6 @@ _Empty — pick the next batch._
       Useful for "who moved Sara off Tuesday?". Schema TBD.
 - [ ] **i18n**: all strings hardcoded English. Either Koha's gettext or
       `@jpahd/lit-stack/i18n` for the Lit component.
-- [ ] **Concurrent-edit indicator**: polling refreshes the grid, but
-      changes from other librarians appear silently. Highlight cells
-      whose `updated_at` advanced since last fetch.
 
 ## Distribution (blocks release, not dev)
 
@@ -66,6 +59,13 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Concurrent-edit indicator**: snapshot per-assignment updated_at
+      across polls; chips that advance pulse an amber outline for ~4s.
+      Initial load skipped so first paint isn't fireworks.
+- [x] **Exception/closure management UI**: per-roster manage_exceptions
+      op with toolbar, inline add/edit form, schema-validated
+      type/date, scoped delete. Sidebar nav + view_assignments toolbar
+      shortcut. t/exceptions.t covers add/edit/delete/bad-input/cross-roster.
 - [x] **Assignment edit modal**: chip click opens a Lit modal with
       status, notes, and additional fields (text or AV-backed). Save
       PUTs through the existing /assignments/:id endpoint; Remove

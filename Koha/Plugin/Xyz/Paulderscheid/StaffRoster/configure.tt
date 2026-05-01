@@ -87,19 +87,19 @@
         </fieldset>
 
         <fieldset class="rows">
-            <legend>Koha integration</legend>
+            <legend>Library scope &amp; staff selection</legend>
             <ol>
                 <li>
-                    <label for="library_group_mode">Library group enforcement:</label>
+                    <label for="library_group_mode">Group enforcement:</label>
                     <select name="library_group_mode" id="library_group_mode">
-                        <option value="off"    [% IF library_group_mode == 'off'    %]selected[% END %]>Off: groups ignored</option>
-                        <option value="filter" [% IF library_group_mode == 'filter' %]selected[% END %]>Filter: non-members don't see group rosters</option>
-                        <option value="strict" [% IF library_group_mode == 'strict' %]selected[% END %]>Strict: non-members get 403 on read and write</option>
+                        <option value="off"    [% IF library_group_mode == 'off'    %]selected[% END %]>Off — groups ignored</option>
+                        <option value="filter" [% IF library_group_mode == 'filter' %]selected[% END %]>Filter — non-members don't see group rosters</option>
+                        <option value="strict" [% IF library_group_mode == 'strict' %]selected[% END %]>Strict — non-members get 403 on read and write</option>
                     </select>
                     <span class="hint">Superlibrarians always see all rosters regardless of mode.</span>
                 </li>
                 <li>
-                    <label for="default_library_group_id">Default library group for new rosters:</label>
+                    <label for="default_library_group_id">Default group:</label>
                     <select name="default_library_group_id" id="default_library_group_id">
                         <option value="">None</option>
                         [% FOREACH g IN library_groups %]
@@ -108,7 +108,25 @@
                             </option>
                         [% END %]
                     </select>
+                    <span class="hint">Pre-selected for new rosters.</span>
                 </li>
+                <li>
+                    <label for="staff_categories">Staff patron categories:</label>
+                    <select name="staff_categories" id="staff_categories" multiple size="6">
+                        [% FOREACH cat IN patron_categories %]
+                            <option value="[% cat.code | html %]" [% IF cat.selected %]selected[% END %]>
+                                [% cat.description | html %] ([% cat.code | html %])
+                            </option>
+                        [% END %]
+                    </select>
+                    <span class="hint">Categories whose patrons can be assigned to slots. Hold Ctrl/Cmd to multi-select. Empty = fall back to all <code>category_type='S'</code> patrons.</span>
+                </li>
+            </ol>
+        </fieldset>
+
+        <fieldset class="rows">
+            <legend>Calendar integration</legend>
+            <ol>
                 <li>
                     <label for="use_koha_calendar">Use Koha calendar:</label>
                     <select name="use_koha_calendar" id="use_koha_calendar">
@@ -120,55 +138,50 @@
                 <li>
                     <label for="koha_calendar_branch">Calendar source:</label>
                     <select name="koha_calendar_branch" id="koha_calendar_branch">
-                        <option value="">Roster's branch (or all branches in group)</option>
+                        <option value="">Roster's branch (or all branches in its group)</option>
                         [% FOREACH b IN all_libraries %]
                             <option value="[% b.branchcode | html %]" [% IF koha_calendar_branch == b.branchcode %]selected[% END %]>
                                 [% b.branchname | html %]
                             </option>
                         [% END %]
                     </select>
-                    <span class="hint">For multi-branch rosters, a date is closed only if all branches in the group are closed.</span>
+                    <span class="hint">For multi-branch rosters, a date is closed only if every branch in the group is closed.</span>
                 </li>
                 <li>
                     <label for="koha_calendar_strict">Closure handling:</label>
                     <select name="koha_calendar_strict" id="koha_calendar_strict">
-                        <option value="1" [% IF koha_calendar_strict == '1' %]selected[% END %]>Hard: block assignment on closed dates</option>
-                        <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>Soft: show closure but allow assignment</option>
+                        <option value="1" [% IF koha_calendar_strict == '1' %]selected[% END %]>Hard — block assignment on closed dates</option>
+                        <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>Soft — show closure but allow assignment</option>
                     </select>
                 </li>
+            </ol>
+        </fieldset>
+
+        <fieldset class="rows">
+            <legend>Slot location source</legend>
+            <ol>
                 <li>
-                    <label for="staff_categories">Staff patron categories:</label>
-                    <select name="staff_categories" id="staff_categories" multiple size="6">
-                        [% FOREACH cat IN patron_categories %]
-                            <option value="[% cat.code | html %]" [% IF cat.selected %]selected[% END %]>
-                                [% cat.description | html %] ([% cat.code | html %])
-                            </option>
-                        [% END %]
-                    </select>
-                    <span class="hint">Categories whose patrons can be assigned to slots. Hold Ctrl/Cmd to multi-select. Empty = fall back to all category_type='S' patrons.</span>
-                </li>
-                <li>
-                    <label for="use_koha_desks">Use Koha desks for slot locations:</label>
+                    <label for="use_koha_desks">Koha desks:</label>
                     <select name="use_koha_desks" id="use_koha_desks">
                         <option value="1" [% IF use_koha_desks == '1' %]selected[% END %]>Yes</option>
                         <option value="0" [% IF use_koha_desks == '0' %]selected[% END %]>No</option>
                     </select>
-                    <span class="hint">When enabled and the roster targets a single branch, the slot location is picked from the branch's Koha desks. Free text otherwise.</span>
+                    <span class="hint">For single-branch rosters, suggest the branch's Koha desks in the location field. Free text otherwise.</span>
                 </li>
                 <li>
-                    <label for="use_authorised_value_locations">Use authorised values for slot locations:</label>
+                    <label for="use_authorised_value_locations">Authorised values:</label>
                     <select name="use_authorised_value_locations" id="use_authorised_value_locations">
                         <option value="1" [% IF use_authorised_value_locations == '1' %]selected[% END %]>Yes</option>
                         <option value="0" [% IF use_authorised_value_locations == '0' %]selected[% END %]>No</option>
                     </select>
-                    <span class="hint">When enabled, the slot location is picked from a Koha authorised value category. Takes precedence over Koha desks when both are on. Submitted values must match the category.</span>
+                    <span class="hint">Replace the location input with a dropdown from a Koha AV category. Takes precedence over Koha desks. Submitted values must match the category.</span>
                 </li>
                 <li>
-                    <label for="authorised_value_location_category">Authorised value category:</label>
+                    <label for="authorised_value_location_category">AV category:</label>
                     <input type="text" name="authorised_value_location_category" id="authorised_value_location_category"
-                           size="40" maxlength="32"
+                           size="32" maxlength="32"
                            value="[% authorised_value_location_category | html %]" />
-                    <span class="hint">Category code from Koha's Authorised values admin page (e.g. <code>STAFFROSTER_LOCATION</code>). Create the category and its values in Koha first.</span>
+                    <span class="hint">Category code (default <code>STAFFROSTER_LOCATION</code>). Create the category in <a href="/cgi-bin/koha/admin/authorised_values.pl">Koha admin</a> first.</span>
                 </li>
             </ol>
         </fieldset>
