@@ -19,81 +19,19 @@
 </title>
 [% INCLUDE 'doc-head-close.inc' %]
 <style>
-    .roster-card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 16px;
-        background: #fff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .roster-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-    }
-    .roster-card-title {
-        font-size: 1.2em;
-        font-weight: bold;
-        margin: 0;
-    }
-    .roster-type-badge {
+    .srg-type-swatch {
         display: inline-block;
-        padding: 4px 12px;
-        border-radius: 16px;
-        color: #fff;
-        font-size: 0.85em;
+        width: 0.7em;
+        height: 0.7em;
+        border-radius: 2px;
+        margin-right: 0.35em;
+        vertical-align: middle;
     }
-    .roster-meta {
-        color: #666;
-        font-size: 0.9em;
+    #filters .form-group {
+        margin-right: 1rem;
     }
-    .roster-dates {
-        margin-top: 8px;
-    }
-    .slot-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 8px;
-        margin-top: 16px;
-    }
-    .slot-day {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        padding: 8px;
-        min-height: 100px;
-    }
-    .slot-day-header {
-        font-weight: bold;
-        text-align: center;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #dee2e6;
-        margin-bottom: 8px;
-    }
-    .slot-item {
-        background: #fff;
-        border-left: 3px solid #3498db;
-        padding: 4px 8px;
-        margin-bottom: 4px;
-        font-size: 0.85em;
-        border-radius: 0 4px 4px 0;
-    }
-    .status-active { color: #27ae60; }
-    .status-inactive { color: #95a5a6; }
-    .filter-row {
-        display: flex;
-        gap: 16px;
-        align-items: center;
-        margin-bottom: 16px;
-        padding: 12px;
-        background: #f8f9fa;
-        border-radius: 4px;
-    }
-    .filter-row label {
-        margin-bottom: 0;
-        margin-right: 8px;
+    .actions .btn-xs + .btn-xs {
+        margin-left: 0.15rem;
     }
 </style>
 </head>
@@ -200,114 +138,124 @@
     [% END %]
 
     [% IF op == 'list' %]
+        <h1>Staff rosters</h1>
+
         <div id="toolbar" class="btn-toolbar">
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">
                 <i class="fa fa-plus"></i> New roster
             </a>
-            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">
-                <i class="fa fa-cog"></i> Manage roster types
-            </a>
-            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">
-                <i class="fa fa-wrench"></i> Configuration
-            </a>
         </div>
 
-        <h1>Staff Roster</h1>
-        <p>Manage staff duty schedules and assignments across library branches.</p>
-
-        <div class="filter-row">
-            <div>
-                <label for="filter_branch">Branch:</label>
-                <select id="filter_branch" name="filter_branch">
-                    <option value="">All branches</option>
-                    [% FOREACH branch IN branches %]
-                        <option value="[% branch.branchcode | html %]" [% IF filter_branch == branch.branchcode %]selected[% END %]>
-                            [% branch.branchname | html %]
-                        </option>
-                    [% END %]
-                </select>
-            </div>
-            <div>
-                <label for="filter_type">Roster type:</label>
-                <select id="filter_type" name="filter_type">
-                    <option value="">All types</option>
-                    [% FOREACH rt IN roster_types %]
-                        <option value="[% rt.id | html %]" [% IF filter_type == rt.id %]selected[% END %]>
-                            [% rt.name | html %]
-                        </option>
-                    [% END %]
-                </select>
-            </div>
-            <div>
-                <label for="filter_status">Status:</label>
-                <select id="filter_status" name="filter_status">
-                    <option value="">All</option>
-                    <option value="1" [% IF filter_status == '1' %]selected[% END %]>Active</option>
-                    <option value="0" [% IF filter_status == '0' %]selected[% END %]>Inactive</option>
-                </select>
-            </div>
-            <button class="btn btn-default" id="apply_filters">
-                <i class="fa fa-filter"></i> Apply
-            </button>
-        </div>
-
-        [% IF rosters.size %]
-            <div class="page-section">
-                [% FOREACH roster IN rosters %]
-                    <div class="roster-card">
-                        <div class="roster-card-header">
-                            <h3 class="roster-card-title">[% roster.name | html %]</h3>
-                            <span class="roster-type-badge" style="background-color: [% roster.type_color | html %];">
-                                [% roster.type_name | html %]
-                            </span>
-                        </div>
-                        <div class="roster-meta">
-                            [% IF roster.branch_name %]
-                                <i class="fa fa-building"></i> [% roster.branch_name | html %]
-                            [% ELSE %]
-                                <i class="fa fa-globe"></i> All branches
-                            [% END %]
-                            <span class="roster-dates">
-                                <i class="fa fa-calendar"></i>
-                                [% roster.effective_from | $KohaDates %]
-                                [% IF roster.effective_to %]
-                                    - [% roster.effective_to | $KohaDates %]
-                                [% ELSE %]
-                                    - ongoing
-                                [% END %]
-                            </span>
-                            &nbsp;
-                            [% IF roster.is_active %]
-                                <span class="status-active"><i class="fa fa-check-circle"></i> Active</span>
-                            [% ELSE %]
-                                <span class="status-inactive"><i class="fa fa-pause-circle"></i> Inactive</span>
-                            [% END %]
-                        </div>
-                        [% IF roster.description %]
-                            <p style="margin-top: 8px; color: #666;">[% roster.description | html | truncate(200) %]</p>
+        <div class="page-section">
+            <form id="filters" class="form-inline" role="form">
+                <div class="form-group">
+                    <label for="filter_branch" class="control-label">Branch:</label>
+                    <select id="filter_branch" name="filter_branch" class="form-control input-sm">
+                        <option value="">All branches</option>
+                        [% FOREACH branch IN branches %]
+                            <option value="[% branch.branchcode | html %]" [% IF filter_branch == branch.branchcode %]selected[% END %]>
+                                [% branch.branchname | html %]
+                            </option>
                         [% END %]
-                        <div style="margin-top: 12px;">
-                            <a class="btn btn-default btn-sm" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]">
-                                <i class="fa fa-calendar-check"></i> View schedule
-                            </a>
-                            <a class="btn btn-default btn-sm" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">
-                                <i class="fa fa-clock"></i> Manage slots ([% roster.slot_count || 0 %])
-                            </a>
-                            <a class="btn btn-default btn-sm" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=edit_roster&roster_id=[% roster.id | uri %]">
-                                <i class="fa-solid fa-pencil"></i> Edit
-                            </a>
-                            <a class="btn btn-default btn-sm" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=delete_confirm&roster_id=[% roster.id | uri %]">
-                                <i class="fa fa-trash-can"></i> Delete
-                            </a>
-                        </div>
-                    </div>
-                [% END %]
-            </div>
-        [% ELSE %]
-            <div class="alert alert-info">
-                No rosters found. <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">Create your first roster</a>.
-            </div>
-        [% END %]
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filter_type" class="control-label">Type:</label>
+                    <select id="filter_type" name="filter_type" class="form-control input-sm">
+                        <option value="">All types</option>
+                        [% FOREACH rt IN roster_types %]
+                            <option value="[% rt.id | html %]" [% IF filter_type == rt.id %]selected[% END %]>
+                                [% rt.name | html %]
+                            </option>
+                        [% END %]
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filter_status" class="control-label">Status:</label>
+                    <select id="filter_status" name="filter_status" class="form-control input-sm">
+                        <option value="">All</option>
+                        <option value="1" [% IF filter_status == '1' %]selected[% END %]>Active</option>
+                        <option value="0" [% IF filter_status == '0' %]selected[% END %]>Inactive</option>
+                    </select>
+                </div>
+                <button class="btn btn-default btn-sm" id="apply_filters" type="button">
+                    <i class="fa fa-filter"></i> Apply
+                </button>
+            </form>
+        </div>
+
+        <div class="page-section">
+            [% IF rosters.size %]
+                <table id="rosters_table">
+                    <thead>
+                        <tr>
+                            <th scope="col" data-colname="name">Name</th>
+                            <th scope="col" data-colname="type">Type</th>
+                            <th scope="col" data-colname="branch">Branch</th>
+                            <th scope="col" data-colname="effective">Effective</th>
+                            <th scope="col" data-colname="slots">Slots</th>
+                            <th scope="col" data-colname="status">Status</th>
+                            <th scope="col" class="noExport" data-colname="actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        [% FOREACH roster IN rosters %]
+                            <tr>
+                                <td>
+                                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]">
+                                        <strong>[% roster.name | html %]</strong>
+                                    </a>
+                                    [% IF roster.description %]
+                                        <div class="text-muted"><small>[% roster.description | html | truncate(120) %]</small></div>
+                                    [% END %]
+                                </td>
+                                <td>
+                                    <span class="srg-type-swatch" style="background-color: [% roster.type_color | html %];" aria-hidden="true"></span>
+                                    [% roster.type_name | html %]
+                                </td>
+                                <td>
+                                    [% IF roster.branch_name %][% roster.branch_name | html %][% ELSE %]<span class="text-muted">All branches</span>[% END %]
+                                </td>
+                                <td>
+                                    [% roster.effective_from | $KohaDates %]
+                                    [% IF roster.effective_to %]
+                                        – [% roster.effective_to | $KohaDates %]
+                                    [% ELSE %]
+                                        – <span class="text-muted">ongoing</span>
+                                    [% END %]
+                                </td>
+                                <td>[% roster.slot_count || 0 %]</td>
+                                <td>
+                                    [% IF roster.is_active %]
+                                        <span class="text-success"><i class="fa fa-circle"></i> Active</span>
+                                    [% ELSE %]
+                                        <span class="text-muted"><i class="fa fa-circle-o"></i> Inactive</span>
+                                    [% END %]
+                                </td>
+                                <td class="actions">
+                                    <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]">
+                                        <i class="fa fa-calendar-check"></i> Schedule
+                                    </a>
+                                    <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">
+                                        <i class="fa fa-clock"></i> Slots
+                                    </a>
+                                    <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=edit_roster&roster_id=[% roster.id | uri %]">
+                                        <i class="fa-solid fa-pencil"></i> Edit
+                                    </a>
+                                    <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=delete_confirm&roster_id=[% roster.id | uri %]">
+                                        <i class="fa fa-trash-can"></i> Delete
+                                    </a>
+                                </td>
+                            </tr>
+                        [% END %]
+                    </tbody>
+                </table>
+            [% ELSE %]
+                <div class="alert alert-info">
+                    No rosters found. <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">Create your first roster</a>.
+                </div>
+            [% END %]
+        </div>
     [% END %]
 
     [% IF op == 'add_roster' || op == 'edit_roster' %]
@@ -414,7 +362,7 @@
     [% IF op == 'manage_slots' %]
         <h1>Manage Time Slots - [% roster.name | html %]</h1>
         <p>
-            <span class="roster-type-badge" style="background-color: [% roster.type_color | html %];">[% roster.type_name | html %]</span>
+            <span class="srg-type-swatch" style="background-color: [% roster.type_color | html %];" aria-hidden="true"></span>[% roster.type_name | html %]
             [% IF roster.branch_name %][% roster.branch_name | html %][% ELSE %]All branches[% END %]
         </p>
 
@@ -536,7 +484,7 @@
     [% IF op == 'view_assignments' %]
         <h1>Schedule - [% roster.name | html %]</h1>
         <p>
-            <span class="roster-type-badge" style="background-color: [% roster.type_color | html %];">[% roster.type_name | html %]</span>
+            <span class="srg-type-swatch" style="background-color: [% roster.type_color | html %];" aria-hidden="true"></span>[% roster.type_name | html %]
             [% IF roster.branch_name %][% roster.branch_name | html %][% ELSE %]All branches[% END %]
         </p>
 
@@ -571,6 +519,14 @@
             $(".flatpickr").flatpickr({
                 dateFormat: "Y-m-d"
             });
+
+            // Roster list as DataTable (zebra rows, search, pagination)
+            if ($("#rosters_table").length) {
+                $("#rosters_table").dataTable($.extend(true, {}, dataTablesDefaults, {
+                    columnDefs: [{ targets: -1, orderable: false, searchable: false }],
+                    order: [[0, "asc"]]
+                }));
+            }
 
             // Filter application
             $("#apply_filters").on("click", function() {
