@@ -27,11 +27,73 @@
         margin-right: 0.35em;
         vertical-align: middle;
     }
-    #filters .form-group {
-        margin-right: 1rem;
-    }
     .actions .btn-xs + .btn-xs {
         margin-left: 0.15rem;
+    }
+    .staff-roster-filter {
+        padding: 0.75rem 0;
+        border-top: 1px solid #e3e3e3;
+        margin-top: 0.75rem;
+    }
+    .staff-roster-filter h5 {
+        margin: 0 0 0.5rem;
+        font-size: 1em;
+    }
+    .staff-roster-filter .form-group {
+        margin-bottom: 0.5rem;
+    }
+    .slot-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+    .slot-day {
+        background: #fff;
+        border: 1px solid #e3e3e3;
+        border-radius: 3px;
+        min-height: 130px;
+        display: flex;
+        flex-direction: column;
+    }
+    .slot-day-header {
+        font-weight: 600;
+        text-align: center;
+        padding: 0.4rem;
+        background: #f4f4f4;
+        border-bottom: 1px solid #e3e3e3;
+        font-size: 0.85rem;
+    }
+    .slot-day-body {
+        padding: 0.4rem;
+        flex: 1;
+    }
+    .slot-item {
+        background: #fafafa;
+        border-left: 3px solid #418940;
+        padding: 0.35rem 0.5rem;
+        margin-bottom: 0.4rem;
+        font-size: 0.8rem;
+        border-radius: 0 2px 2px 0;
+        line-height: 1.35;
+    }
+    .slot-item .slot-actions {
+        margin-top: 0.25rem;
+    }
+    .slot-item .slot-actions .btn-link {
+        padding: 0;
+        margin-right: 0.4rem;
+        color: #555;
+    }
+    .slot-day-empty {
+        color: #999;
+        font-size: 0.8rem;
+        font-style: italic;
+        padding: 0.4rem;
+    }
+    @media (max-width: 991px) {
+        .slot-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 </style>
 </head>
@@ -104,6 +166,53 @@
             </li>
         </ul>
     </div>
+
+    [% IF op == 'list' %]
+        <form id="rosters_filter" class="staff-roster-filter sidebar_menu" role="form"
+              method="get" action="/cgi-bin/koha/plugins/run.pl">
+            <input type="hidden" name="class" value="[% CLASS | html %]" />
+            <input type="hidden" name="method" value="tool" />
+            <h5>Filter rosters</h5>
+            <div class="form-group">
+                <label for="filter_branch" class="control-label">Branch</label>
+                <select id="filter_branch" name="filter_branch" class="form-control input-sm">
+                    <option value="">All branches</option>
+                    [% FOREACH branch IN branches %]
+                        <option value="[% branch.branchcode | html %]" [% IF filter_branch == branch.branchcode %]selected[% END %]>
+                            [% branch.branchname | html %]
+                        </option>
+                    [% END %]
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="filter_type" class="control-label">Type</label>
+                <select id="filter_type" name="filter_type" class="form-control input-sm">
+                    <option value="">All types</option>
+                    [% FOREACH rt IN roster_types %]
+                        <option value="[% rt.id | html %]" [% IF filter_type == rt.id %]selected[% END %]>
+                            [% rt.name | html %]
+                        </option>
+                    [% END %]
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="filter_status" class="control-label">Status</label>
+                <select id="filter_status" name="filter_status" class="form-control input-sm">
+                    <option value="">All</option>
+                    <option value="1" [% IF filter_status == '1' %]selected[% END %]>Active</option>
+                    <option value="0" [% IF filter_status == '0' %]selected[% END %]>Inactive</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary btn-sm btn-block">
+                    <i class="fa fa-filter"></i> Apply filters
+                </button>
+                [% IF filter_branch || filter_type || filter_status %]
+                    <a class="btn btn-link btn-sm btn-block" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Clear</a>
+                [% END %]
+            </div>
+        </form>
+    [% END %]
 </aside>
 [% END %]
 
@@ -146,43 +255,12 @@
             </a>
         </div>
 
-        <div class="page-section">
-            <form id="filters" class="form-inline" role="form">
-                <div class="form-group">
-                    <label for="filter_branch" class="control-label">Branch:</label>
-                    <select id="filter_branch" name="filter_branch" class="form-control input-sm">
-                        <option value="">All branches</option>
-                        [% FOREACH branch IN branches %]
-                            <option value="[% branch.branchcode | html %]" [% IF filter_branch == branch.branchcode %]selected[% END %]>
-                                [% branch.branchname | html %]
-                            </option>
-                        [% END %]
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="filter_type" class="control-label">Type:</label>
-                    <select id="filter_type" name="filter_type" class="form-control input-sm">
-                        <option value="">All types</option>
-                        [% FOREACH rt IN roster_types %]
-                            <option value="[% rt.id | html %]" [% IF filter_type == rt.id %]selected[% END %]>
-                                [% rt.name | html %]
-                            </option>
-                        [% END %]
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="filter_status" class="control-label">Status:</label>
-                    <select id="filter_status" name="filter_status" class="form-control input-sm">
-                        <option value="">All</option>
-                        <option value="1" [% IF filter_status == '1' %]selected[% END %]>Active</option>
-                        <option value="0" [% IF filter_status == '0' %]selected[% END %]>Inactive</option>
-                    </select>
-                </div>
-                <button class="btn btn-default btn-sm" id="apply_filters" type="button">
-                    <i class="fa fa-filter"></i> Apply
-                </button>
-            </form>
-        </div>
+        [% IF filter_branch || filter_type || filter_status %]
+            <div class="alert alert-info">
+                Filters active.
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Clear</a>
+            </div>
+        [% END %]
 
         <div class="page-section">
             [% IF rosters.size %]
@@ -435,49 +513,57 @@
             </form>
         </div>
 
-        <!-- Weekly slot overview -->
-        <div class="slot-grid">
-            [% FOREACH day IN ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %]
-                [% day_index = loop.index %]
-                <div class="slot-day" data-day="[% day_index %]">
-                    <div class="slot-day-header">[% day %]</div>
-                    [% FOREACH slot IN slots %]
-                        [% IF slot.day_of_week == day_index %]
-                            <div class="slot-item" style="border-left-color: [% roster.type_color | html %];">
-                                <strong>[% slot.start_time | html %] - [% slot.end_time | html %]</strong>
-                                [% IF slot.location %]<br><small>[% slot.location | html %]</small>[% END %]
-                                <br>
-                                <small>Staff: [% slot.min_staff %]-[% slot.max_staff %]</small>
-                                <div style="margin-top: 4px;">
-                                    <a href="#" class="edit-slot"
-                                       data-id="[% slot.id %]"
-                                       data-day="[% slot.day_of_week %]"
-                                       data-start="[% slot.start_time %]"
-                                       data-end="[% slot.end_time %]"
-                                       data-min="[% slot.min_staff %]"
-                                       data-max="[% slot.max_staff %]"
-                                       data-location="[% slot.location | html %]"
-                                       data-notes="[% slot.notes | html %]">
-                                        <i class="fa-solid fa-pencil fa-xs"></i>
-                                    </a>
-                                    <form method="post" action="/cgi-bin/koha/plugins/run.pl" style="display: inline;"
-                                          onsubmit="return confirm('Delete this slot?');">
-                                        [% INCLUDE 'csrf-token.inc' %]
-                                        <input type="hidden" name="class" value="[% CLASS | html %]" />
-                                        <input type="hidden" name="method" value="tool" />
-                                        <input type="hidden" name="op" value="cud-delete_slot" />
-                                        <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
-                                        <input type="hidden" name="slot_id" value="[% slot.id | html %]" />
-                                        <button type="submit" class="btn btn-link btn-xs" style="padding: 0;">
-                                            <i class="fa fa-trash-can fa-xs"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        [% END %]
-                    [% END %]
-                </div>
-            [% END %]
+        <div class="page-section">
+            <div class="slot-grid">
+                [% FOREACH day IN ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %]
+                    [% day_index = loop.index %]
+                    [% day_count = 0 %]
+                    <div class="slot-day" data-day="[% day_index %]">
+                        <div class="slot-day-header">[% day %]</div>
+                        <div class="slot-day-body">
+                            [% FOREACH slot IN slots %]
+                                [% IF slot.day_of_week == day_index %]
+                                    [% day_count = day_count + 1 %]
+                                    <div class="slot-item" style="border-left-color: [% roster.type_color | html %];">
+                                        <strong>[% slot.start_time.substr(0,5) | html %]–[% slot.end_time.substr(0,5) | html %]</strong>
+                                        [% IF slot.location %]<div class="text-muted"><small>[% slot.location | html %]</small></div>[% END %]
+                                        <div class="text-muted"><small>Staff [% slot.min_staff %]–[% slot.max_staff %]</small></div>
+                                        <div class="slot-actions">
+                                            <a href="#" class="btn btn-link btn-xs edit-slot"
+                                               title="Edit slot"
+                                               data-id="[% slot.id %]"
+                                               data-day="[% slot.day_of_week %]"
+                                               data-start="[% slot.start_time %]"
+                                               data-end="[% slot.end_time %]"
+                                               data-min="[% slot.min_staff %]"
+                                               data-max="[% slot.max_staff %]"
+                                               data-location="[% slot.location | html %]"
+                                               data-notes="[% slot.notes | html %]">
+                                                <i class="fa-solid fa-pencil"></i>
+                                            </a>
+                                            <form method="post" action="/cgi-bin/koha/plugins/run.pl" style="display:inline"
+                                                  onsubmit="return confirm('Delete this slot?');">
+                                                [% INCLUDE 'csrf-token.inc' %]
+                                                <input type="hidden" name="class" value="[% CLASS | html %]" />
+                                                <input type="hidden" name="method" value="tool" />
+                                                <input type="hidden" name="op" value="cud-delete_slot" />
+                                                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                                                <input type="hidden" name="slot_id" value="[% slot.id | html %]" />
+                                                <button type="submit" class="btn btn-link btn-xs" title="Delete slot">
+                                                    <i class="fa fa-trash-can"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                [% END %]
+                            [% END %]
+                            [% IF day_count == 0 %]
+                                <div class="slot-day-empty">No slots</div>
+                            [% END %]
+                        </div>
+                    </div>
+                [% END %]
+            </div>
         </div>
     [% END %]
 
@@ -527,18 +613,6 @@
                     order: [[0, "asc"]]
                 }));
             }
-
-            // Filter application
-            $("#apply_filters").on("click", function() {
-                var branch = $("#filter_branch").val();
-                var type = $("#filter_type").val();
-                var status = $("#filter_status").val();
-                var url = "/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool";
-                if (branch) url += "&filter_branch=" + encodeURIComponent(branch);
-                if (type) url += "&filter_type=" + encodeURIComponent(type);
-                if (status !== "") url += "&filter_status=" + encodeURIComponent(status);
-                window.location.href = url;
-            });
 
             // Slot form toggle
             $("#add_slot_btn").on("click", function(e) {
