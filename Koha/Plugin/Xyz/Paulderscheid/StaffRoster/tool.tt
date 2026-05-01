@@ -832,31 +832,6 @@
             [% END %]
         </div>
 
-        <script>
-            $(function() {
-                $("#add_exception_btn").on("click", function(e) {
-                    e.preventDefault();
-                    $("#exception_form_legend").text("Add exception");
-                    $("#exception_form")[0].reset();
-                    $("#exception_id").val("");
-                    $("#exception_form_container").slideDown();
-                });
-                $("#cancel_exception").on("click", function() {
-                    $("#exception_form_container").slideUp();
-                });
-                $(".edit-exception").on("click", function(e) {
-                    e.preventDefault();
-                    var $b = $(this);
-                    $("#exception_id").val($b.data("id"));
-                    $("#exception_date").val($b.data("date"));
-                    $("#exception_type").val($b.data("type"));
-                    $("#reason").val($b.data("reason") || "");
-                    $("#exception_form_legend").text("Edit exception");
-                    $("#exception_form_container").slideDown();
-                    $('html, body').animate({ scrollTop: $("#exception_form_container").offset().top - 100 }, 300);
-                });
-            });
-        </script>
     [% END %]
 
     [% IF op == 'view_assignments' %]
@@ -998,6 +973,29 @@
             $("#go_to_week").on("click", function() {
                 var date = $("#week_date").val();
                 window.location.href = "/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]&week_start=" + date;
+            });
+
+            // Exception form toggle + edit prefill (manage_exceptions op).
+            $("#add_exception_btn").on("click", function(e) {
+                e.preventDefault();
+                $("#exception_form_legend").text("Add exception");
+                $("#exception_form")[0].reset();
+                $("#exception_id").val("");
+                $("#exception_form_container").slideDown();
+            });
+            $("#cancel_exception").on("click", function() {
+                $("#exception_form_container").slideUp();
+            });
+            $(".edit-exception").on("click", function(e) {
+                e.preventDefault();
+                var $b = $(this);
+                $("#exception_id").val($b.data("id"));
+                $("#exception_date").val($b.data("date"));
+                $("#exception_type").val($b.data("type"));
+                $("#reason").val($b.data("reason") || "");
+                $("#exception_form_legend").text("Edit exception");
+                $("#exception_form_container").slideDown();
+                $('html, body').animate({ scrollTop: $("#exception_form_container").offset().top - 100 }, 300);
             });
         });
         </script>
