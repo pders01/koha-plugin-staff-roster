@@ -23,8 +23,13 @@
 }
 
 .srg-staff-panel {
+    align-self: start;
     max-height: 75vh;
     overflow-y: auto;
+}
+
+.srg-grid-wrap {
+    align-self: start;
 }
 
 .srg-panel-title {

@@ -1460,8 +1460,8 @@ var Et = 5e3, Dt = 10, Ot = [
         </div>
       </div>
 
-      <div class="page-section srg-layout" style=${`--srg-type-color: ${e}`}>
-        <section class="srg-staff-panel">
+      <div class="srg-layout" style=${`--srg-type-color: ${e}`}>
+        <section class="page-section srg-staff-panel">
           <h3 class="srg-panel-title">Available staff</h3>
           <input
             type="search"
@@ -1492,7 +1492,7 @@ var Et = 5e3, Dt = 10, Ot = [
           </ul>
         </section>
 
-        <section class="srg-grid-wrap">
+        <section class="page-section srg-grid-wrap">
           <table class="table srg-grid">
             <thead>
               <tr>
