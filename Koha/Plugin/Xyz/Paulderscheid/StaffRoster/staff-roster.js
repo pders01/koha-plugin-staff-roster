@@ -1443,10 +1443,9 @@ var Et = 5e3, Dt = 10, Ot = [
 			notes: this.editForm.notes === "" ? null : this.editForm.notes
 		};
 		(this.week?.assignment_fields ?? []).length && (t.additional_fields = this.editForm.fields);
+		let n = this.dayIdxForDate(e.assignment_date), r = `${e.slot_id}-${n}`;
 		try {
-			await Ct(e.id, t), this.liveMessage = `Updated assignment for ${e.firstname} ${e.surname}.`, this.editing = null;
-			let n = this.editOriginEl;
-			this.editOriginEl = null, await this.refresh(), n && requestAnimationFrame(() => n.focus());
+			await Ct(e.id, t), this.liveMessage = `Updated assignment for ${e.firstname} ${e.surname}.`, this.editing = null, this.editOriginEl = null, await this.refresh(), this.focusedCellKey = r, this.pendingFocusCellKey = r;
 		} catch (e) {
 			this.setError(e.message);
 		}

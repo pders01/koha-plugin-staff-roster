@@ -244,14 +244,19 @@ export class StaffRosterGrid extends LitElement {
     };
     const fieldDefs = this.week?.assignment_fields ?? [];
     if (fieldDefs.length) payload.additional_fields = this.editForm.fields;
+    const dayIdx = this.dayIdxForDate(a.assignment_date);
+    const cellKey = `${a.slot_id}-${dayIdx}`;
     try {
       await updateAssignment(a.id, payload);
       this.liveMessage = `Updated assignment for ${a.firstname} ${a.surname}.`;
       this.editing = null;
-      const origin = this.editOriginEl;
       this.editOriginEl = null;
       await this.refresh();
-      if (origin) requestAnimationFrame(() => origin.focus());
+      // The chip's DOM node was replaced by the refresh, so origin.focus()
+      // would no-op against a detached element. Route focus through the
+      // cell-key pipeline instead, same as confirmDelete.
+      this.focusedCellKey = cellKey;
+      this.pendingFocusCellKey = cellKey;
     } catch (err) {
       this.setError((err as Error).message);
     }
