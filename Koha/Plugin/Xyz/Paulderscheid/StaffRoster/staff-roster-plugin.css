@@ -27,3 +27,36 @@
     border-radius: 3px;
     border: 1px solid #ccc;
 }
+
+.staff-roster-day-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.staff-roster-day-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #fff;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+}
+
+.staff-roster-day-checkbox:has(input:checked) {
+    background: #418940;
+    border-color: #418940;
+    color: #fff;
+}
+
+.staff-roster-day-checkbox:hover {
+    border-color: #418940;
+}
+
+.staff-roster-day-checkbox input {
+    margin: 0;
+}

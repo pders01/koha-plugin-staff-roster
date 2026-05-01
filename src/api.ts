@@ -25,7 +25,8 @@ export const api = new RequestHandler(BASE, ENDPOINTS);
 
 export type Slot = {
   id: number;
-  day_of_week: number;
+  recurrence_rule: string;
+  days_of_week: string[]; // iCal BYDAY codes: SU MO TU WE TH FR SA
   start_time: string;
   end_time: string;
   min_staff: number;

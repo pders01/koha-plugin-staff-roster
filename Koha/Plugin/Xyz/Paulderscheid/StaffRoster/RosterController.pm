@@ -56,13 +56,19 @@ sub get_week {
 
         my $slots = $dbh->selectall_arrayref(
             q{
-            SELECT id, day_of_week, start_time, end_time,
+            SELECT id, recurrence_rule, start_time, end_time,
                    min_staff, max_staff, location, notes
             FROM staff_roster_slots
             WHERE roster_id = ?
-            ORDER BY day_of_week, start_time
+            ORDER BY start_time, recurrence_rule
         }, { Slice => {} }, $roster_id
         );
+
+        # Decorate slots with iCal BYDAY codes for client-side filtering
+        for my $slot ( @{$slots} ) {
+            $slot->{days_of_week} =
+                Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_byday_from_rrule( $slot->{recurrence_rule} );
+        }
 
         my $assignments = $dbh->selectall_arrayref(
             q{

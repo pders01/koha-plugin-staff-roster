@@ -1290,7 +1290,15 @@ var Et = 5e3, Dt = 10, Ot = [
 	"Fri",
 	"Sat",
 	"Sun"
-], kt = (e) => (e + 1) % 7, $ = class extends k {
+], kt = [
+	"MO",
+	"TU",
+	"WE",
+	"TH",
+	"FR",
+	"SA",
+	"SU"
+], $ = class extends k {
 	constructor(...e) {
 		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.staffQuery = "", this.error = "", this.dragging = null, this.pendingDelete = null, this.undoStack = [], this.onKeyDown = (e) => {
 			(e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey && (e.preventDefault(), this.undo());
@@ -1421,7 +1429,7 @@ var Et = 5e3, Dt = 10, Ot = [
 	}
 	render() {
 		if (!this.week) return C`<div class="text-center text-muted py-4">Loading…</div>`;
-		let e = this.week.roster.type_color, t = [...this.week.slots].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.day_of_week - t.day_of_week), n = [...new Set(t.map((e) => `${e.start_time}-${e.end_time}-${e.location ?? ""}`))];
+		let e = this.week.roster.type_color, t = [...this.week.slots].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.id - t.id);
 		return C`
       ${this.error ? C`
             <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
@@ -1506,7 +1514,7 @@ var Et = 5e3, Dt = 10, Ot = [
               </tr>
             </thead>
             <tbody>
-              ${n.length === 0 ? C`
+              ${t.length === 0 ? C`
                     <tr>
                       <td colspan="8" class="srg-empty">
                         <p>No time slots defined for this roster yet.</p>
@@ -1516,55 +1524,52 @@ var Et = 5e3, Dt = 10, Ot = [
                       </td>
                     </tr>
                   ` : T}
-              ${n.map((e) => {
-			let n = t.find((t) => `${t.start_time}-${t.end_time}-${t.location ?? ""}` === e);
-			return C`
+              ${t.map((e) => C`
                   <tr>
                     <th scope="row" class="srg-slot-cell">
-                      <span class="srg-slot-time">${n.start_time.slice(0, 5)}–${n.end_time.slice(0, 5)}</span>
-                      ${n.location ? C`<small class="text-muted d-block">${n.location}</small>` : T}
+                      <span class="srg-slot-time">${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</span>
+                      ${e.location ? C`<small class="text-muted d-block">${e.location}</small>` : T}
                     </th>
-                    ${Ot.map((n, r) => {
-				let i = kt(r), a = t.find((t) => `${t.start_time}-${t.end_time}-${t.location ?? ""}` === e && t.day_of_week === i), o = this.cellDate(r), s = this.exceptionFor(o);
-				if (!a) return C`<td class="srg-cell-empty"></td>`;
-				if (s) return C`<td class="srg-cell-exception"><small>closed</small></td>`;
-				let c = this.assignmentsFor(a.id, o), l = c.length;
-				return C`
+                    ${Ot.map((t, n) => {
+			let r = kt[n], i = e.days_of_week.includes(r), a = this.cellDate(n), o = this.exceptionFor(a);
+			if (!i) return C`<td class="srg-cell-empty"></td>`;
+			if (o) return C`<td class="srg-cell-exception"><small>closed</small></td>`;
+			let s = this.assignmentsFor(e.id, a), c = s.length;
+			return C`
                         <td
                           class="srg-cell"
                           @dragover=${(e) => {
-					e.preventDefault(), e.currentTarget.classList.add("srg-dropping");
-				}}
+				e.preventDefault(), e.currentTarget.classList.add("srg-dropping");
+			}}
                           @dragleave=${(e) => {
-					e.currentTarget.classList.remove("srg-dropping");
-				}}
-                          @drop=${async (e) => {
-					e.preventDefault(), e.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(a, o);
-				}}
+				e.currentTarget.classList.remove("srg-dropping");
+			}}
+                          @drop=${async (t) => {
+				t.preventDefault(), t.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(e, a);
+			}}
                         >
-                          ${Ze(c, (e) => e.id, (e) => C`
+                          ${Ze(s, (e) => e.id, (e) => C`
                               <div
                                 class="srg-assignment srg-status-${e.status}"
                                 draggable="true"
                                 title="${e.firstname} ${e.surname} (${e.status}). Click to remove."
                                 @dragstart=${(t) => {
-					this.dragging = {
-						kind: "assignment",
-						assignment: e
-					}, t.dataTransfer?.setData("text/plain", String(e.id));
-				}}
+				this.dragging = {
+					kind: "assignment",
+					assignment: e
+				}, t.dataTransfer?.setData("text/plain", String(e.id));
+			}}
                                 @click=${() => this.requestDelete(e)}
                               >
                                 ${e.surname}, ${e.firstname}
                               </div>
                             `)}
-                          <small class="srg-capacity">${l}/${a.max_staff}</small>
+                          <small class="srg-capacity">${c}/${e.max_staff}</small>
                         </td>
                       `;
-			})}
-                  </tr>
-                `;
 		})}
+                  </tr>
+                `)}
             </tbody>
           </table>
         </section>

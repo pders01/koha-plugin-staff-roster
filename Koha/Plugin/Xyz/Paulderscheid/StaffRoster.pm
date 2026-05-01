@@ -115,13 +115,18 @@ sub install() {
     }
     );
 
-    # Table 3: Roster Slots (time slots within a roster)
+    # Table 3: Roster Slots (time slots with iCal RRULE recurrence)
+    # recurrence_rule stores an RFC 5545 RRULE subset, e.g.
+    #   FREQ=WEEKLY;BYDAY=MO,WE,FR
+    # The plugin currently only parses FREQ=WEEKLY + BYDAY; richer rules
+    # (INTERVAL, BYSETPOS, UNTIL, monthly patterns) are forward-compatible
+    # because we keep the column wide.
     $dbh->do(
         q{
         CREATE TABLE IF NOT EXISTS staff_roster_slots (
             id INT AUTO_INCREMENT PRIMARY KEY,
             roster_id INT NOT NULL,
-            day_of_week TINYINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+            recurrence_rule VARCHAR(512) NOT NULL,
             start_time TIME NOT NULL,
             end_time TIME NOT NULL,
             min_staff INT DEFAULT 1,
@@ -130,7 +135,7 @@ sub install() {
             notes TEXT,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL,
-            KEY idx_slots_roster_day (roster_id, day_of_week),
+            KEY idx_slots_roster (roster_id),
             CONSTRAINT fk_slot_roster FOREIGN KEY (roster_id)
                 REFERENCES staff_roster(id) ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -537,6 +542,7 @@ sub configure {
         staff_can_self_assign require_swap_approval
         library_group_mode default_library_group_id
         use_koha_calendar koha_calendar_branch koha_calendar_strict
+        staff_categories use_koha_desks
     );
 
     my $template = $self->get_template( { file => 'configure.tt' } );
@@ -544,7 +550,12 @@ sub configure {
     if ( $op eq 'cud-save' ) {
         my %config;
         for my $key (@config_keys) {
-            $config{$key} = $cgi->param($key) // q{};
+            if ( $key eq 'staff_categories' ) {
+                $config{$key} = join q{,}, $cgi->multi_param('staff_categories');
+            }
+            else {
+                $config{$key} = $cgi->param($key) // q{};
+            }
         }
         $self->store_data( \%config );
         $template->param( saved => 1 );
@@ -556,7 +567,19 @@ sub configure {
 
     require Koha::Library::Groups;
     require Koha::Libraries;
+    require Koha::Patron::Categories;
     my $root_groups = Koha::Library::Groups->get_root_groups;
+
+    my $selected_cats = $self->retrieve_data('staff_categories') // q{};
+    my %selected_cat_map = map { $_ => 1 } split /,/smx, $selected_cats;
+
+    my @categories = map {
+        my $code = $_->categorycode;
+        {   code        => $code,
+            description => $_->description,
+            selected    => $selected_cat_map{$code} ? 1 : 0,
+        };
+    } Koha::Patron::Categories->search( {}, { order_by => 'description' } )->as_list;
 
     $template->param(
         enable_email_reminders    => $self->retrieve_data('enable_email_reminders')    // '0',
@@ -569,11 +592,22 @@ sub configure {
         use_koha_calendar         => $self->retrieve_data('use_koha_calendar')         // '1',
         koha_calendar_branch      => $self->retrieve_data('koha_calendar_branch')      // q{},
         koha_calendar_strict      => $self->retrieve_data('koha_calendar_strict')      // '1',
+        use_koha_desks            => $self->retrieve_data('use_koha_desks')            // '0',
         library_groups            => _flatten_groups( $root_groups, 0 ),
         all_libraries             => [ Koha::Libraries->search( {}, { order_by => 'branchname' } )->as_list ],
+        patron_categories         => \@categories,
     );
 
     return $self->output_html( $template->output );
+}
+
+# Returns a list of categorycodes considered "staff" for assignment lookup.
+# Falls back to the Koha-default category_type='S' when admin hasn't picked any.
+sub _staff_categorycodes {
+    my ($self) = @_;
+    my $stored = $self->retrieve_data('staff_categories') // q{};
+    my @codes  = grep { length } split /,/smx, $stored;
+    return @codes;
 }
 
 # Flatten library group tree into list of { id, title, indent } for select rendering.
@@ -810,8 +844,16 @@ sub _tool_delete_roster {
 sub _tool_save_slot {
     my ( $self, $dbh, $cgi, $messages ) = @_;
 
+    my @dows         = sort { $a <=> $b } grep { /^[0-6]$/sm } $cgi->multi_param('day_of_week');
+    my $rrule        = _rrule_from_dows(@dows);
+
+    if ( !$rrule ) {
+        push @{$messages}, { type => 'danger', code => 'slot_no_days_selected' };
+        return;
+    }
+
     my @fields = (
-        $cgi->param('day_of_week'),
+        $rrule,
         $cgi->param('start_time'),
         $cgi->param('end_time'),
         $cgi->param('min_staff') // 1,
@@ -825,7 +867,7 @@ sub _tool_save_slot {
         $dbh->do(
             q{
             UPDATE staff_roster_slots
-            SET day_of_week = ?, start_time = ?, end_time = ?,
+            SET recurrence_rule = ?, start_time = ?, end_time = ?,
                 min_staff = ?, max_staff = ?, location = ?, notes = ?, updated_at = NOW()
             WHERE id = ?
         }, undef, @fields, $slot_id
@@ -835,7 +877,7 @@ sub _tool_save_slot {
         $dbh->do(
             q{
             INSERT INTO staff_roster_slots
-            (roster_id, day_of_week, start_time, end_time, min_staff, max_staff, location, notes, created_at, updated_at)
+            (roster_id, recurrence_rule, start_time, end_time, min_staff, max_staff, location, notes, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         }, undef, $cgi->param('roster_id'), @fields
         );
@@ -950,9 +992,17 @@ sub _tool_view_manage_slots {
         q{
         SELECT * FROM staff_roster_slots
         WHERE roster_id = ?
-        ORDER BY day_of_week, start_time
+        ORDER BY start_time, recurrence_rule
     }, { Slice => {} }, $roster_id
     );
+
+    # Decorate slots with derived day info for the template
+    my @day_names = qw( Sunday Monday Tuesday Wednesday Thursday Friday Saturday );
+    for my $slot ( @{$slots} ) {
+        my $dows = _dows_from_rrule( $slot->{recurrence_rule} );
+        $slot->{days_of_week_set} = { map { $_ => 1 } @{$dows} };
+        $slot->{days_label} = join q{, }, map { substr $day_names[$_], 0, 3 } sort { $a <=> $b } @{$dows};
+    }
 
     $template->param( roster => $roster, slots => $slots );
     return;
@@ -1106,6 +1156,53 @@ sub _is_closed_for_roster {
         return 0 if !$cal->is_holiday($dt);    # at least one branch open -> not closed
     }
     return 1;
+}
+
+# RRule helpers -------------------------------------------------------------
+# Minimal subset of RFC 5545: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA,SU.
+# Keeps the plugin self-contained without pulling in DateTime::Format::ICal.
+
+# Map iCal weekday codes (BYDAY) <-> 0..6 with Sunday = 0 (Perl/JS convention).
+my %ICAL_TO_DOW = ( SU => 0, MO => 1, TU => 2, WE => 3, TH => 4, FR => 5, SA => 6 );
+my %DOW_TO_ICAL = reverse %ICAL_TO_DOW;
+
+# RRule string from a list of 0..6 day-of-week ints.
+sub _rrule_from_dows {
+    my (@dows) = @_;
+    return q{} if !@dows;
+    my @codes = grep { defined } map { $DOW_TO_ICAL{$_} } @dows;
+    return q{} if !@codes;
+    return 'FREQ=WEEKLY;BYDAY=' . join q{,}, @codes;
+}
+
+# 0..6 day-of-week ints from an RRule string.
+sub _dows_from_rrule {
+    my ($rrule) = @_;
+    return [] if !$rrule;
+    my ($byday) = $rrule =~ /BYDAY=([A-Z,]+)/sm;
+    return [] if !$byday;
+    return [ grep { defined } map { $ICAL_TO_DOW{$_} } split /,/sm, $byday ];
+}
+
+# iCal day codes from an RRule (for client serialization).
+sub _byday_from_rrule {
+    my ($rrule) = @_;
+    return [] if !$rrule;
+    my ($byday) = $rrule =~ /BYDAY=([A-Z,]+)/sm;
+    return [] if !$byday;
+    return [ split /,/sm, $byday ];
+}
+
+# Does the slot's RRule apply on the given ISO date?
+sub _slot_applies_on {
+    my ( $rrule, $date ) = @_;
+    my $dows = _dows_from_rrule($rrule);
+    return 0 if !@{$dows};
+    require Koha::DateUtils;
+    my $dt = eval { Koha::DateUtils::dt_from_string( $date, 'iso' ) };
+    return 0 if !$dt;
+    my $wday = $dt->day_of_week % 7;    # DateTime: 1=Mon..7=Sun -> 0..6 with Sunday=0
+    return scalar grep { $_ == $wday } @{$dows};
 }
 
 sub _get_current_week_start {

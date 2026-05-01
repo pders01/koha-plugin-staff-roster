@@ -243,6 +243,8 @@
                 <span>Time slot saved successfully.</span>
             [% CASE 'slot_deleted' %]
                 <span>Time slot deleted successfully.</span>
+            [% CASE 'slot_no_days_selected' %]
+                <span>Pick at least one day of the week for the slot.</span>
             [% CASE 'access_denied' %]
                 <span>You are not authorized to view that roster.</span>
             [% CASE %]
@@ -495,17 +497,25 @@
                 <fieldset class="rows">
                     <legend id="slot_form_legend">Add Time Slot</legend>
                     <ol>
-                        <li>
-                            <label for="day_of_week" class="required">Day of week:</label>
-                            <select name="day_of_week" id="day_of_week" required="required">
-                                <option value="0">Sunday</option>
-                                <option value="1">Monday</option>
-                                <option value="2">Tuesday</option>
-                                <option value="3">Wednesday</option>
-                                <option value="4">Thursday</option>
-                                <option value="5">Friday</option>
-                                <option value="6">Saturday</option>
-                            </select>
+                        <li class="day-picker">
+                            <label class="required">Days of week:</label>
+                            <div class="staff-roster-day-picker" role="group" aria-label="Days of week">
+                                [% FOREACH d IN [
+                                    { v => 1, n => 'Mon' }
+                                    { v => 2, n => 'Tue' }
+                                    { v => 3, n => 'Wed' }
+                                    { v => 4, n => 'Thu' }
+                                    { v => 5, n => 'Fri' }
+                                    { v => 6, n => 'Sat' }
+                                    { v => 0, n => 'Sun' }
+                                ] %]
+                                    <label class="staff-roster-day-checkbox">
+                                        <input type="checkbox" name="day_of_week" value="[% d.v %]" class="day-of-week-input" />
+                                        <span>[% d.n %]</span>
+                                    </label>
+                                [% END %]
+                            </div>
+                            <span class="hint">Pick one or more days; the slot recurs weekly on each.</span>
                         </li>
                         <li>
                             <label for="start_time" class="required">Start time:</label>
@@ -543,49 +553,56 @@
         </div>
 
         <div class="page-section">
-            <div class="slot-grid">
-                [% FOREACH day IN ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %]
-                    [% day_index = loop.index %]
-                    [% day_count = 0 %]
-                    <div class="slot-day" data-day="[% day_index %]">
-                        <div class="slot-day-header">[% day %]</div>
-                        <div class="slot-day-body">
+                [% IF slots.size %]
+                    <table id="slots_table">
+                        <thead>
+                            <tr>
+                                <th scope="col" data-colname="time">Time</th>
+                                <th scope="col" data-colname="days">Days</th>
+                                <th scope="col" data-colname="location">Location</th>
+                                <th scope="col" data-colname="staff">Staff</th>
+                                <th scope="col" class="noExport" data-colname="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             [% FOREACH slot IN slots %]
-                                [% IF slot.day_of_week == day_index %]
-                                    [% day_count = day_count + 1 %]
-                                    <div class="slot-item" style="border-left-color: [% roster.type_color | html %];">
+                                <tr>
+                                    <td>
                                         <strong>[% slot.start_time.substr(0,5) | html %]–[% slot.end_time.substr(0,5) | html %]</strong>
-                                        [% IF slot.location %]<div class="text-muted"><small>[% slot.location | html %]</small></div>[% END %]
-                                        <div class="text-muted"><small>Staff [% slot.min_staff %]–[% slot.max_staff %]</small></div>
-                                        <div class="slot-actions">
-                                            <a href="#" class="btn btn-link btn-xs edit-slot"
-                                               title="Edit slot"
-                                               data-id="[% slot.id %]"
-                                               data-day="[% slot.day_of_week %]"
-                                               data-start="[% slot.start_time %]"
-                                               data-end="[% slot.end_time %]"
-                                               data-min="[% slot.min_staff %]"
-                                               data-max="[% slot.max_staff %]"
-                                               data-location="[% slot.location | html %]"
-                                               data-notes="[% slot.notes | html %]">
-                                                <i class="fa fa-pencil"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-link btn-xs slot-delete-trigger"
-                                                    title="Delete slot"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#delete-slot-modal"
-                                                    data-slot-id="[% slot.id | html %]"
-                                                    data-slot-info="[% day | html %], [% slot.start_time.substr(0,5) | html %]–[% slot.end_time.substr(0,5) | html %]">
-                                                <i class="fa fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                [% END %]
+                                    </td>
+                                    <td>[% slot.days_label | html %]</td>
+                                    <td>
+                                        [% IF slot.location %][% slot.location | html %]
+                                        [% ELSE %]<span class="text-muted">—</span>[% END %]
+                                    </td>
+                                    <td>[% slot.min_staff %]–[% slot.max_staff %]</td>
+                                    <td class="actions">
+                                        <a href="#" class="btn btn-default btn-xs edit-slot"
+                                           data-id="[% slot.id | html %]"
+                                           data-days="[% FOREACH dow IN slot.days_of_week_set.keys.nsort %][% dow %][% UNLESS loop.last %],[% END %][% END %]"
+                                           data-start="[% slot.start_time | html %]"
+                                           data-end="[% slot.end_time | html %]"
+                                           data-min="[% slot.min_staff | html %]"
+                                           data-max="[% slot.max_staff | html %]"
+                                           data-location="[% slot.location | html %]"
+                                           data-notes="[% slot.notes | html %]">
+                                            <i class="fa fa-pencil"></i> Edit
+                                        </a>
+                                        <button type="button" class="btn btn-default btn-xs slot-delete-trigger"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#delete-slot-modal"
+                                                data-slot-id="[% slot.id | html %]"
+                                                data-slot-info="[% slot.days_label | html %], [% slot.start_time.substr(0,5) | html %]–[% slot.end_time.substr(0,5) | html %]">
+                                            <i class="fa fa-trash"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
                             [% END %]
-                            [% IF day_count == 0 %]
-                                <div class="slot-day-empty">No slots</div>
-                            [% END %]
-                        </div>
+                        </tbody>
+                    </table>
+                [% ELSE %]
+                    <div class="alert alert-info">
+                        No time slots defined yet. Use <em>Add time slot</em> to create one.
                     </div>
                 [% END %]
             </div>
@@ -694,9 +711,14 @@
                 e.preventDefault();
                 var $this = $(this);
 
-                // Populate form with slot data
+                // Reset day-of-week checkboxes, then check the slot's days
+                $(".day-of-week-input").prop("checked", false);
+                var days = String($this.data("days") || "").split(",").filter(Boolean);
+                days.forEach(function(d) {
+                    $('.day-of-week-input[value="' + d + '"]').prop("checked", true);
+                });
+
                 $("#slot_id").val($this.data("id"));
-                $("#day_of_week").val($this.data("day"));
                 $("#start_time").val($this.data("start"));
                 $("#end_time").val($this.data("end"));
                 $("#min_staff").val($this.data("min"));
@@ -704,14 +726,17 @@
                 $("#location").val($this.data("location") || "");
                 $("#slot_notes").val($this.data("notes") || "");
 
-                // Show form with edit title
                 $("#slot_form_legend").text("Edit Time Slot");
                 $("#slot_form_container").slideDown();
 
-                // Scroll to form
                 $('html, body').animate({
                     scrollTop: $("#slot_form_container").offset().top - 100
                 }, 300);
+            });
+
+            // Reset day checkboxes on Add (form.reset() doesn't always uncheck programmatically)
+            $("#add_slot_btn").on("click", function() {
+                $(".day-of-week-input").prop("checked", false);
             });
 
             // Week navigation

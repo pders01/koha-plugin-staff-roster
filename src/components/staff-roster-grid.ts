@@ -17,9 +17,8 @@ const POLL_MS = 5000;
 const UNDO_LIMIT = 10;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// Slot.day_of_week uses 0=Sunday..6=Saturday (matches the slot form).
-// The grid is Monday-anchored, so column index -> day_of_week is shifted.
-const dayOfWeekForColumn = (col: number): number => (col + 1) % 7;
+// iCal BYDAY codes per Monday-anchored column index.
+const ICAL_FOR_COLUMN = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
 
 type UndoOp =
   | { kind: "create"; id: number }
@@ -217,10 +216,11 @@ export class StaffRosterGrid extends LitElement {
     if (!this.week) return html`<div class="text-center text-muted py-4">Loading…</div>`;
 
     const color = this.week.roster.type_color;
-    const slotsByTime = [...this.week.slots].sort(
-      (a, b) => a.start_time.localeCompare(b.start_time) || a.day_of_week - b.day_of_week,
+    // One row per slot (no time-based dedup needed now that a single slot
+    // covers multiple days via its RRule).
+    const slotsByTime = [...this.week.slots].sort((a, b) =>
+      a.start_time.localeCompare(b.start_time) || a.id - b.id,
     );
-    const slotKeys = [...new Set(slotsByTime.map((s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}`))];
 
     return html`
       ${this.error
@@ -314,7 +314,7 @@ export class StaffRosterGrid extends LitElement {
               </tr>
             </thead>
             <tbody>
-              ${slotKeys.length === 0
+              ${slotsByTime.length === 0
                 ? html`
                     <tr>
                       <td colspan="8" class="srg-empty">
@@ -326,26 +326,21 @@ export class StaffRosterGrid extends LitElement {
                     </tr>
                   `
                 : nothing}
-              ${slotKeys.map((key) => {
-                const sample = slotsByTime.find(
-                  (s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}` === key,
-                )!;
+              ${slotsByTime.map((slot) => {
                 return html`
                   <tr>
                     <th scope="row" class="srg-slot-cell">
-                      <span class="srg-slot-time">${sample.start_time.slice(0, 5)}–${sample.end_time.slice(0, 5)}</span>
-                      ${sample.location
-                        ? html`<small class="text-muted d-block">${sample.location}</small>`
+                      <span class="srg-slot-time">${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}</span>
+                      ${slot.location
+                        ? html`<small class="text-muted d-block">${slot.location}</small>`
                         : nothing}
                     </th>
                     ${DAYS.map((_, day) => {
-                      const dow = dayOfWeekForColumn(day);
-                      const slot = slotsByTime.find(
-                        (s) => `${s.start_time}-${s.end_time}-${s.location ?? ""}` === key && s.day_of_week === dow,
-                      );
+                      const ical = ICAL_FOR_COLUMN[day];
+                      const applies = slot.days_of_week.includes(ical);
                       const date = this.cellDate(day);
                       const isException = this.exceptionFor(date);
-                      if (!slot) return html`<td class="srg-cell-empty"></td>`;
+                      if (!applies) return html`<td class="srg-cell-empty"></td>`;
                       if (isException)
                         return html`<td class="srg-cell-exception"><small>closed</small></td>`;
                       const assignments = this.assignmentsFor(slot.id, date);
