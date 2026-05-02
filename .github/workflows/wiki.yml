@@ -25,31 +25,41 @@ jobs:
           mkdir -p wiki
           cp docs/wiki/*.md wiki/
 
-          # Rewrite repo-style links [Text](Page-Name.md) into the wiki
-          # form [[Text|Page-Name]]. Repo Markdown viewers happily follow
-          # the .md path; the rendered wiki uses the bracketed form.
-          # Skip already-bracketed [[...]] links (none today, defensive).
+          # Rewrite repo-style links [Text](Page-Name.md) into wiki
+          # [[Page-Name]] form. We deliberately drop the display-text
+          # override: the [[Display|Page]] variant collides with
+          # Markdown table-cell pipes and gets truncated at the |.
+          # Page names like "Self-Service" / "Translation-Guide" read
+          # fine as nav labels; the few prose-link sites lose their
+          # custom casing but stay clickable. Links carrying a #anchor
+          # tail (e.g. User-Manual.md#email-reminders) don't match and
+          # ride out as plain relative links — the wiki renders them
+          # as text rather than 404'ing the page.
           for f in wiki/*.md; do
-            sed -i -E 's/\[([^]]+)\]\(([A-Za-z0-9_-]+)\.md\)/[[\1|\2]]/g' "$f"
+            sed -i -E 's/\[[^]]+\]\(([A-Za-z0-9_-]+)\.md\)/[[\1]]/g' "$f"
           done
 
           # Sidebar grouped by section instead of alpha so the nav
           # mirrors Home.md's table-of-contents order. Hyphenated page
           # names get a friendly display label via [[Display|Page]].
+          # Sidebar uses bare [[Page-Name]] for the same table-pipe
+          # reason as the inline rewrite — keeps one link convention
+          # across the wiki. Pages just render with their hyphenated
+          # name as the label.
           {
             echo "## Getting started"
             for n in Installation Configuration; do
-              [ -f "wiki/${n}.md" ] && echo "- [[${n//-/ }|${n}]]"
+              [ -f "wiki/${n}.md" ] && echo "- [[${n}]]"
             done
             echo
             echo "## Use"
             for n in User-Manual Self-Service Permissions; do
-              [ -f "wiki/${n}.md" ] && echo "- [[${n//-/ }|${n}]]"
+              [ -f "wiki/${n}.md" ] && echo "- [[${n}]]"
             done
             echo
             echo "## Reference"
             for n in Architecture Database-Schema Translation-Guide; do
-              [ -f "wiki/${n}.md" ] && echo "- [[${n//-/ }|${n}]]"
+              [ -f "wiki/${n}.md" ] && echo "- [[${n}]]"
             done
           } > wiki/_Sidebar.md
 
