@@ -24,6 +24,13 @@ $dbh->{AutoCommit} = 0;
 $dbh->{RaiseError} = 1;
 END { eval { $dbh->rollback } if $dbh; }
 
+# Stub a superlibrarian userenv so _gate (and any audit lookup of userenv)
+# passes through. flags=1 is Koha's superlibrarian bit. Use a real
+# borrowernumber so the FK from staff_roster_exceptions.created_by holds.
+my ($test_bn) = $dbh->selectrow_array(q{SELECT borrowernumber FROM borrowers LIMIT 1});
+plan skip_all => 'no borrowers in database' if !$test_bn;
+C4::Context->set_userenv( $test_bn, 'test_runner', '0', 'Test', 'Runner', undef, undef, 1 );
+
 my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
 
 my ($rid) = $dbh->selectrow_array(q{SELECT id FROM staff_roster LIMIT 1});

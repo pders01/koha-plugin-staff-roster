@@ -299,6 +299,28 @@ sub _unregister_permissions {
 
 # Permission check used by every gated handler. Superlibrarians bypass all
 # checks (matches Koha's convention everywhere else). Returns 1/0.
+# Run $code inside a transaction. Plack's $dbh defaults to AutoCommit=1, so
+# any handler that does several related $dbh->do calls risks a torn write
+# (one row committed, the next throws). Wrap the related work in this and
+# the helper rolls everything back on error. Returns whatever $code returns.
+sub _txn {
+    my ( $dbh, $code ) = @_;
+    my $autocommit_was = $dbh->{AutoCommit};
+    $dbh->begin_work if $autocommit_was;
+    my @result;
+    my $rv = eval {
+        @result = wantarray ? $code->() : ( scalar $code->() );
+        $dbh->commit if $autocommit_was;
+        1;
+    };
+    if ( !$rv ) {
+        my $err = $@ || 'unknown';
+        eval { $dbh->rollback } if $autocommit_was;
+        die $err;
+    }
+    return wantarray ? @result : $result[0];
+}
+
 sub _has_perm {
     my ($code) = @_;
     my $env = C4::Context->userenv;
@@ -946,15 +968,24 @@ sub _tool_save_roster {
         $verb   = 'insert';
     }
 
-    my $ok = $dbh->do( $sql, undef, @params );
-    if ($ok) {
-        $roster_id ||= $dbh->last_insert_id( undef, undef, 'staff_roster', undef );
-        _save_additional_fields( $dbh, 'staff_roster', $roster_id, $cgi );
+    my $ok = eval {
+        _txn(
+            $dbh,
+            sub {
+                $dbh->do( $sql, undef, @params ) or die "roster save failed\n";
+                $roster_id ||= $dbh->last_insert_id( undef, undef, 'staff_roster', undef );
+                _save_additional_fields( $dbh, 'staff_roster', $roster_id, $cgi );
+            }
+        );
         _audit(
             $verb eq 'insert' ? 'CREATE' : 'MODIFY',
             $roster_id,
             { entity => 'roster', name => $cgi->param('name'), branch_id => $branch_id, group_id => $group_id }
         );
+        1;
+    };
+    if ( !$ok ) {
+        warn "StaffRoster: $verb roster failed: $@";
     }
     push @{$messages}, $ok
         ? { type => 'success', code => "success_on_$verb" }
@@ -1245,32 +1276,68 @@ sub _tool_respond_swap {
         }
     }
 
-    if ( $decision eq 'approve' ) {
-        # Reassign the originating shift; if mutual, swap both.
-        $dbh->do(
-            q{UPDATE staff_roster_assignments SET borrowernumber = ?, updated_at = NOW() WHERE id = ?},
-            undef, $swap->{to_borrowernumber}, $swap->{from_assignment_id}
-        );
-        if ( $swap->{to_assignment_id} ) {
-            my ($from_borrower) = $dbh->selectrow_array(
-                q{SELECT borrowernumber FROM staff_roster_assignments
-                  WHERE id = (SELECT from_assignment_id FROM staff_roster_swap_requests WHERE id = ?)},
+    my $new_status = $decision eq 'approve' ? 'approved' : 'rejected';
+
+    # Wrap the approve path: a mutual swap touches three rows (from, to,
+    # status). Without the txn, a deadlock between (1) and (2) would leave
+    # one assignment already mutated while the swap still reads pending; the
+    # next approver would re-read the wrong from_borrower and double-swap.
+    # Re-check status under the lock to close the TOCTOU window between two
+    # concurrent approves.
+    my $ok = eval {
+        _txn(
+            $dbh,
+            sub {
+            my ($current_status) = $dbh->selectrow_array(
+                q{SELECT status FROM staff_roster_swap_requests WHERE id = ? FOR UPDATE},
                 undef, $swap_id
             );
+            die "swap_no_longer_pending\n" if !$current_status || $current_status ne 'pending';
+
+            if ( $decision eq 'approve' ) {
+                # Capture from_borrower before mutating the from_assignment so a
+                # later mutual update doesn't pick up the just-written value.
+                my $from_borrower;
+                if ( $swap->{to_assignment_id} ) {
+                    ($from_borrower) = $dbh->selectrow_array(
+                        q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
+                        undef, $swap->{from_assignment_id}
+                    );
+                }
+                $dbh->do(
+                    q{UPDATE staff_roster_assignments SET borrowernumber = ?, updated_at = NOW() WHERE id = ?},
+                    undef, $swap->{to_borrowernumber}, $swap->{from_assignment_id}
+                );
+                if ( $swap->{to_assignment_id} && $from_borrower ) {
+                    $dbh->do(
+                        q{UPDATE staff_roster_assignments SET borrowernumber = ?, updated_at = NOW() WHERE id = ?},
+                        undef, $from_borrower, $swap->{to_assignment_id}
+                    );
+                }
+            }
+
             $dbh->do(
-                q{UPDATE staff_roster_assignments SET borrowernumber = ?, updated_at = NOW() WHERE id = ?},
-                undef, $from_borrower, $swap->{to_assignment_id}
-            ) if $from_borrower;
+                q{UPDATE staff_roster_swap_requests
+                    SET status = ?, response_message = ?, responded_at = NOW(), updated_at = NOW()
+                  WHERE id = ?},
+                undef, $new_status, $response, $swap_id
+            );
         }
+        );
+        1;
+    };
+    if ( !$ok ) {
+        my $err = $@ // 'unknown';
+        if ( $err =~ /swap_no_longer_pending/ ) {
+            push @{$messages}, { type => 'danger', code => 'swap_not_pending' };
+        }
+        else {
+            warn "StaffRoster: swap respond txn failed: $err";
+            push @{$messages}, { type => 'danger', code => 'swap_not_pending' };
+        }
+        return;
     }
 
-    my $new_status = $decision eq 'approve' ? 'approved' : 'rejected';
-    $dbh->do(
-        q{UPDATE staff_roster_swap_requests
-            SET status = ?, response_message = ?, responded_at = NOW(), updated_at = NOW()
-          WHERE id = ?},
-        undef, $new_status, $response, $swap_id
-    );
     _audit(
         'MODIFY', $swap_id,
         {   entity   => 'swap_request',
@@ -1565,6 +1632,10 @@ sub cronjob_nightly {
     $days = ( $days =~ /^\d+$/sm ) ? int $days : 1;
 
     my $dbh = C4::Context->dbh;
+    # Idempotency: skip assignments where we already have a reminder row in
+    # action_logs for STAFFROSTER NOTICE today. Re-running the cron same day
+    # (after a scheduler restart, manual invocation, or partial failure) no
+    # longer enqueues duplicate emails.
     my $rows = $dbh->selectall_arrayref(
         q{SELECT a.id, a.borrowernumber, a.assignment_date,
                  s.start_time, s.end_time, s.location,
@@ -1575,14 +1646,25 @@ sub cronjob_nightly {
             JOIN staff_roster        r ON s.roster_id = r.id
             JOIN borrowers           b ON a.borrowernumber = b.borrowernumber
            WHERE a.assignment_date = DATE_ADD(CURRENT_DATE(), INTERVAL ? DAY)
-             AND a.status IN ('scheduled', 'confirmed')},
+             AND a.status IN ('scheduled', 'confirmed')
+             AND NOT EXISTS (
+                 SELECT 1 FROM action_logs al
+                  WHERE al.module = 'STAFFROSTER'
+                    AND al.action = 'NOTICE'
+                    AND al.object = a.id
+                    AND DATE(al.timestamp) = CURRENT_DATE()
+             )},
         { Slice => {} }, $days
     ) || [];
 
     require C4::Letters;
-    my $sent = 0;
+    my $sent   = 0;
+    my $failed = 0;
     for my $a ( @{$rows} ) {
-        next if !$a->{email};
+        if ( !$a->{email} ) {
+            warn "StaffRoster: skipping reminder for borrower $a->{borrowernumber} (no email on file)";
+            next;
+        }
         my $title   = "Reminder: roster shift on $a->{assignment_date}";
         my $content = sprintf
             "Hi,\n\nReminder of your upcoming shift:\n\n  Roster: %s\n  Date: %s\n  Time: %s - %s\n  Location: %s\n\nThanks.\n",
@@ -1592,16 +1674,18 @@ sub cronjob_nightly {
             substr( $a->{end_time},   0, 5 ),
             $a->{location} // '(unspecified)';
 
-        my $message_id = C4::Letters::EnqueueLetter(
-            {   letter => {
-                    title          => $title,
-                    content        => $content,
-                    'content-type' => 'text/plain; charset=utf-8',
-                },
-                borrowernumber         => $a->{borrowernumber},
-                message_transport_type => 'email',
-            }
-        );
+        my $message_id = eval {
+            C4::Letters::EnqueueLetter(
+                {   letter => {
+                        title          => $title,
+                        content        => $content,
+                        'content-type' => 'text/plain; charset=utf-8',
+                    },
+                    borrowernumber         => $a->{borrowernumber},
+                    message_transport_type => 'email',
+                }
+            );
+        };
         if ($message_id) {
             $sent++;
             _audit(
@@ -1613,8 +1697,20 @@ sub cronjob_nightly {
                 }
             );
         }
+        else {
+            $failed++;
+            my $err = $@ || 'EnqueueLetter returned undef';
+            warn "StaffRoster: reminder enqueue failed for assignment $a->{id} (borrower $a->{borrowernumber}): $err";
+            _audit(
+                'NOTICE_FAILED', $a->{id},
+                {   entity         => 'reminder',
+                    borrowernumber => $a->{borrowernumber},
+                    error          => "$err",
+                }
+            );
+        }
     }
-    return $sent;
+    return wantarray ? ( $sent, $failed ) : $sent;
 }
 
 sub _tool_view_manage_swaps {

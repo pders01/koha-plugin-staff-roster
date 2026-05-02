@@ -12,22 +12,29 @@ _Empty — pick the next batch._
 
 ## Phase 2 (planned features, each its own work block)
 
-- [ ] **Swap workflow UI**: schema exists (`staff_roster_swap_requests`)
-      but no UI. Request → approve/reject → swap. Manager approval gated
-      by `require_swap_approval` config.
-- [ ] **Email reminders via cronjob_nightly hook**: send "you're scheduled
-      tomorrow" email N days before assignment, gated by
-      `enable_email_reminders` + `reminder_days_before`.
 - [ ] **Self-service patron view**: borrower sees own shifts, can
       self-assign to open slots if `staff_can_self_assign`. Group-scoped.
       Read-only calendar view is a great kalendus fit.
 - [ ] **Skills / competencies**: schema doesn't model "John can work CIRC
       but not REF". Add `staff_skills` table + per-roster-type required
       skills; filter `/staff/available` by competency.
-- [ ] **Activity audit**: track who reassigned/cancelled/created what.
-      Useful for "who moved Sara off Tuesday?". Schema TBD.
 - [ ] **i18n**: all strings hardcoded English. Either Koha's gettext or
       `@jpahd/lit-stack/i18n` for the Lit component.
+
+## Hardening follow-ups (from cross-codebase review 2026-05-02)
+
+- [ ] **Bulk assignment conflict check**: AssignmentController#bulk move
+      runs one UPDATE on every id without `_conflict_check`; two
+      simultaneous bulk moves can overfill `max_staff`. Decide on
+      fail-on-first-conflict vs skip-and-report semantics, then wrap
+      the move in a per-id loop or a transaction with a count guard.
+- [ ] **Lit grid poll/drag race**: pause `pollTimer` while a mutation is
+      in flight, or discard poll results that resolve while
+      `this.dragging` is non-null. Today a fast drag during a poll can
+      double-fire.
+- [ ] **Edit modal first-focus**: `pendingFocusModal` lands on the
+      Cancel button; for the edit modal it should target the first form
+      control (status select). Delete modal current behaviour is fine.
 
 ## Distribution (blocks release, not dev)
 
@@ -59,6 +66,27 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Granular sub-permissions**: 8 staffroster_* sub-perms registered
+      under Koha plugins flag (bit 19) via INSERT...ON DUPLICATE KEY
+      UPDATE so existing user_permissions grants survive upgrades.
+      _has_perm + _gate wired into every CUD handler + assignment +
+      staff API. intranet_js injects labels client-side since core
+      permissions.inc has a hardcoded CASE map. Sub-perm descriptions
+      shown on the Set Permissions page.
+- [x] **Swap workflow UI**: per-roster manage_swaps op with request
+      form, status table, approve/reject/cancel actions. Approval
+      respects require_swap_approval. Mutual swap supported.
+      Swap-respond approve runs in a single transaction with FOR UPDATE
+      to close the TOCTOU window between concurrent approvers.
+- [x] **Email reminders cronjob**: cronjob_nightly enqueues reminder
+      emails N days ahead via C4::Letters::EnqueueLetter; idempotent
+      within the calendar day via NOT EXISTS against action_logs.
+      Failures warn + record NOTICE_FAILED. cron/staff_roster_nightly.pl
+      runner exits non-zero on any failure.
+- [x] **Audit log**: every plugin mutation flows into Koha's
+      action_logs (module='STAFFROSTER') with an entity tag + ids in
+      the JSON info blob. Visible from tools/viewlog.pl alongside
+      borrower/catalogue audit trail.
 - [x] **Concurrent-edit indicator**: snapshot per-assignment updated_at
       across polls; chips that advance pulse an amber outline for ~4s.
       Initial load skipped so first paint isn't fireworks.

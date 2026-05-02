@@ -19,5 +19,10 @@ use Modern::Perl;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
 
 my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
-my $sent   = $plugin->cronjob_nightly // 0;
-print "staff_roster_nightly: enqueued $sent reminder(s).\n";
+my ( $sent, $failed ) = $plugin->cronjob_nightly;
+$sent   //= 0;
+$failed //= 0;
+print "staff_roster_nightly: enqueued $sent reminder(s)";
+print ", $failed failure(s)" if $failed;
+print ".\n";
+exit( $failed ? 1 : 0 );
