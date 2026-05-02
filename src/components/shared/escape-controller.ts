@@ -16,7 +16,7 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
  */
 export class EscapeController implements ReactiveController {
   constructor(
-    private host: ReactiveControllerHost,
+    host: ReactiveControllerHost,
     private isActive: () => boolean,
     private onEscape: () => void,
   ) {

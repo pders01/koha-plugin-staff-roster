@@ -90,7 +90,6 @@ export class StaffRosterGrid extends LitElement {
   private editOriginEl: HTMLElement | null = null;
   @state() private liveMessage = "";
   @state() private focusedCellKey = "";
-  @state() private focusedPillIdx = 0;
 
   private undoStack: UndoOp[] = [];
   private pollTimer?: ReturnType<typeof setInterval>;
@@ -690,7 +689,6 @@ export class StaffRosterGrid extends LitElement {
       const next = e.key === "ArrowDown"
         ? Math.min(this.available.length - 1, idx + 1)
         : Math.max(0, idx - 1);
-      this.focusedPillIdx = next;
       this.pendingFocusPillIdx = next;
     }
   }
@@ -830,7 +828,6 @@ export class StaffRosterGrid extends LitElement {
                       else this.pickUpStaff(s, e.currentTarget as HTMLElement);
                     }}
                     @keydown=${(e: KeyboardEvent) => this.onPillKeyDown(e, s, i)}
-                    @focus=${() => (this.focusedPillIdx = i)}
                   >
                     <i class="fa fa-user text-muted" aria-hidden="true"></i>
                     <span>${s.surname}, ${s.firstname}</span>

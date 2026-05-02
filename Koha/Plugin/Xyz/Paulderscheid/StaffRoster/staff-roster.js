@@ -1821,7 +1821,7 @@ function Gt(e) {
 //#region src/components/shared/escape-controller.ts
 var J = class {
 	constructor(e, t, n) {
-		this.host = e, this.isActive = t, this.onEscape = n, this.onKey = (e) => {
+		this.isActive = t, this.onEscape = n, this.onKey = (e) => {
 			e.key === "Escape" && this.isActive() && (e.preventDefault(), e.stopPropagation(), this.onEscape());
 		}, e.addController(this);
 	}
@@ -1891,7 +1891,7 @@ var qt = 5e3, Jt = 10, Yt = () => [
 			status: "scheduled",
 			notes: "",
 			fields: {}
-		}, this.editOriginEl = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.fetchGeneration = 0, this.recentlyChanged = /* @__PURE__ */ new Set(), this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
+		}, this.editOriginEl = null, this.liveMessage = "", this.focusedCellKey = "", this.undoStack = [], this.fetchGeneration = 0, this.recentlyChanged = /* @__PURE__ */ new Set(), this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
 			(e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey && (e.preventDefault(), this.undo());
 		}, new J(this, () => this.editing !== null, () => this.cancelEdit()), new J(this, () => this.pendingDelete !== null, () => this.cancelDelete()), new J(this, () => this.pickedUp !== null, () => this.cancelPickup()), new J(this, () => this.dragging !== null, () => this.cancelDrag());
 	}
@@ -2250,7 +2250,7 @@ var qt = 5e3, Jt = 10, Yt = () => [
 		if (e.key === "ArrowDown" || e.key === "ArrowUp") {
 			e.preventDefault(), e.stopPropagation();
 			let t = e.key === "ArrowDown" ? Math.min(this.available.length - 1, n + 1) : Math.max(0, n - 1);
-			this.focusedPillIdx = t, this.pendingFocusPillIdx = t;
+			this.pendingFocusPillIdx = t;
 		}
 	}
 	onAssignmentKeyDown(e, t) {
@@ -2343,7 +2343,6 @@ var qt = 5e3, Jt = 10, Yt = () => [
 				n ? this.cancelPickup() : this.pickUpStaff(e, t.currentTarget);
 			}}
                     @keydown=${(n) => this.onPillKeyDown(n, e, t)}
-                    @focus=${() => this.focusedPillIdx = t}
                   >
                     <i class="fa fa-user text-muted" aria-hidden="true"></i>
                     <span>${e.surname}, ${e.firstname}</span>
@@ -2644,7 +2643,7 @@ Y([D({
 })], Z.prototype, "rosterId", void 0), Y([D({
 	type: String,
 	attribute: "week-start"
-})], Z.prototype, "weekStart", void 0), Y([O()], Z.prototype, "week", void 0), Y([O()], Z.prototype, "available", void 0), Y([O()], Z.prototype, "availableMeta", void 0), Y([O()], Z.prototype, "availableContextDay", void 0), Y([O()], Z.prototype, "staffQuery", void 0), Y([O()], Z.prototype, "error", void 0), Y([O()], Z.prototype, "activeCargo", void 0), Y([O()], Z.prototype, "activeMode", void 0), Y([O()], Z.prototype, "pendingDelete", void 0), Y([O()], Z.prototype, "editing", void 0), Y([O()], Z.prototype, "editForm", void 0), Y([O()], Z.prototype, "liveMessage", void 0), Y([O()], Z.prototype, "focusedCellKey", void 0), Y([O()], Z.prototype, "focusedPillIdx", void 0), Y([O()], Z.prototype, "recentlyChanged", void 0), Z = Y([ze("staff-roster-grid")], Z);
+})], Z.prototype, "weekStart", void 0), Y([O()], Z.prototype, "week", void 0), Y([O()], Z.prototype, "available", void 0), Y([O()], Z.prototype, "availableMeta", void 0), Y([O()], Z.prototype, "availableContextDay", void 0), Y([O()], Z.prototype, "staffQuery", void 0), Y([O()], Z.prototype, "error", void 0), Y([O()], Z.prototype, "activeCargo", void 0), Y([O()], Z.prototype, "activeMode", void 0), Y([O()], Z.prototype, "pendingDelete", void 0), Y([O()], Z.prototype, "editing", void 0), Y([O()], Z.prototype, "editForm", void 0), Y([O()], Z.prototype, "liveMessage", void 0), Y([O()], Z.prototype, "focusedCellKey", void 0), Y([O()], Z.prototype, "recentlyChanged", void 0), Z = Y([ze("staff-roster-grid")], Z);
 //#endregion
 //#region src/components/shared/day-groups.ts
 function Zt(e, t) {
