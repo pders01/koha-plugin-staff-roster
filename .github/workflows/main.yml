@@ -127,23 +127,26 @@ jobs:
       - name: Start koha-testing-docker
         run: docker compose -p koha up --detach
 
-      - name: Wait for Koha DB
+      - name: Wait for ktd ready signal
         run: |
-          # The prove suite only needs MariaDB + the kohadev schema +
-          # the plugins dir. Plack/Starman boots later (~2 extra min)
-          # but we don't depend on it for prove. Poll koha-mysql at
-          # 2s intervals — fires the moment the DB accepts SELECT 1.
-          for i in $(seq 1 180); do
-            if docker exec koha-koha-1 koha-mysql kohadev -e 'SELECT 1' >/dev/null 2>&1; then
-              echo "Koha DB up after ${i} polls (~$((i*2))s)"
+          # ktd's entrypoint emits this exact line as the last step of
+          # its bootstrap, after koha-create + plack + zebra + workers
+          # are all live. Polling for this is more reliable than
+          # grep'ing Plack's own logs (which Starman writes elsewhere
+          # in some Koha builds) or hitting koha-mysql (which races
+          # the koha-create instance setup). 240*5s = 20 min ceiling
+          # for the rare slow runner.
+          for i in $(seq 1 240); do
+            if docker compose -p koha logs koha 2>&1 | grep -q "koha-testing-docker has started up"; then
+              echo "Koha ready after ${i} polls (~$((i*5))s)"
               break
             fi
-            if [ "$i" = "180" ]; then
-              echo "Timed out waiting for Koha DB"
-              docker compose -p koha logs koha
+            if [ "$i" = "240" ]; then
+              echo "Timed out waiting for ktd ready signal"
+              docker compose -p koha logs koha | tail -200
               exit 1
             fi
-            sleep 2
+            sleep 5
           done
 
       - name: Sync plugin into the container
