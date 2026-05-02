@@ -14,6 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      - name: Cache bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
       - run: bun run check
       - run: bun run build
@@ -72,7 +79,7 @@ jobs:
           git fetch --depth 1 origin main
           git reset --hard origin/main
 
-      - name: Stand up koha-testing-docker against main
+      - name: Fetch ktd compose + defaults
         run: |
           sudo sysctl -w vm.max_map_count=262144
           wget -q -O docker-compose.yml \
@@ -93,8 +100,32 @@ jobs:
             echo "RUN_TESTS_AND_EXIT=no"
           } >> .env
 
+      # ktd images sit in the koha-community gitlab registry. The `main`
+      # tag is mutable, so cache the saved tarball weekly and refresh on
+      # cache miss. docker save+load shaves ~3 min off the cold pull.
+      - name: Cache ktd images
+        id: ktd-image-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/ktd-images.tar.gz
+          key: ktd-images-${{ steps.cache-key.outputs.week }}
+          restore-keys: |
+            ktd-images-
+
+      - name: Load cached ktd images
+        if: steps.ktd-image-cache.outputs.cache-hit == 'true'
+        run: gunzip -c ~/ktd-images.tar.gz | docker load
+
+      - name: Pull ktd images (cache miss)
+        if: steps.ktd-image-cache.outputs.cache-hit != 'true'
+        run: |
           docker compose -p koha pull --quiet
-          docker compose -p koha up --detach
+          # Save every image the compose stack references so the next
+          # run's cache hit covers koha + db + memcached + es alike.
+          docker compose -p koha config --images | xargs docker save | gzip > ~/ktd-images.tar.gz
+
+      - name: Start koha-testing-docker
+        run: docker compose -p koha up --detach
 
       - name: Wait for Koha plack
         run: |
@@ -146,6 +177,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - uses: extractions/setup-just@v3
+      - name: Cache bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
 
       - name: Build bundle
         run: |
