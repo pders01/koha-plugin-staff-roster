@@ -153,23 +153,25 @@ export class MyShiftsList extends LitElement {
             </span>`
           : nothing}
         <span class="srg-my-shift-status badge">${STATUS_LABELS()[s.status] ?? s.status}</span>
-        <a
-          class="btn btn-default btn-xs"
-          href="?class=${getClass()}&method=tool&op=manage_swaps&roster_id=${s.roster_id}"
-          title="${__("Request swap on this roster")}"
-        >
-          <i class="fa fa-exchange" aria-hidden="true"></i> ${__("Swap")}
-        </a>
-        <button
-          type="button"
-          class="btn btn-default btn-xs"
-          ?disabled=${this.dropping === s.assignment_id}
-          @click=${() => this.requestDrop(s)}
-          title="${__("Drop this shift")}"
-        >
-          <i class="fa fa-times" aria-hidden="true"></i>
-          ${this.dropping === s.assignment_id ? __("Dropping…") : __("Drop")}
-        </button>
+        <span class="srg-my-shift-actions">
+          <a
+            class="btn btn-default btn-xs"
+            href="?class=${getClass()}&method=tool&op=manage_swaps&roster_id=${s.roster_id}"
+            title="${__("Request swap on this roster")}"
+          >
+            <i class="fa fa-exchange" aria-hidden="true"></i> ${__("Swap")}
+          </a>
+          <button
+            type="button"
+            class="btn btn-default btn-xs"
+            ?disabled=${this.dropping === s.assignment_id}
+            @click=${() => this.requestDrop(s)}
+            title="${__("Drop this shift")}"
+          >
+            <i class="fa fa-times" aria-hidden="true"></i>
+            ${this.dropping === s.assignment_id ? __("Dropping…") : __("Drop")}
+          </button>
+        </span>
       </li>
     `;
   }

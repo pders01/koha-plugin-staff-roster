@@ -30,6 +30,12 @@
 
 .srg-grid-wrap {
     align-self: start;
+    /* page-section adds 1rem padding by default (Koha staff-global.css).
+       That padding inset keeps the sticky col floating away from the
+       card's left edge — the col docks at left:0 of the wrap's content
+       area, not the visual card boundary. Drop it so the sticky col
+       hugs the card edge. */
+    padding: 0;
 }
 
 .srg-panel-title {
@@ -88,6 +94,11 @@
 .srg-grid {
     margin-bottom: 0;
     table-layout: fixed;
+    /* Collapse so the sticky col's background sits flush against the
+       day cell's left edge (Bootstrap 5 .table flips border-collapse
+       to separate, which leaves a hairline gap that lets scrolled
+       content peek past the sticky col on mobile). */
+    border-collapse: collapse;
     /* Day cols collapse below this on mobile; the table widens past
        viewport and .srg-grid-wrap scrolls. The slot col stays sticky
        so the time anchor doesn't disappear. */
@@ -117,10 +128,13 @@
 .srg-slot-cell {
     position: sticky;
     left: 0;
-    z-index: 2;
+    /* Sit above the assignment chips that scroll behind it. */
+    z-index: 3;
     background: #fff;
-    /* Right-edge shadow only shows when the day cells scroll under. */
-    box-shadow: 1px 0 0 #e3e3e3;
+    /* Solid divider line as part of the cell so border-collapse: collapse
+       merges it with the next cell's left edge — no hairline gap for
+       scrolled chip text to peek through. */
+    border-right: 1px solid #e3e3e3;
 }
 
 .srg-slot-col {
@@ -146,6 +160,9 @@
     position: relative;
     background: #fff;
     box-shadow: inset 3px 0 0 var(--srg-type-color, #418940);
+    /* When the browser scrolls a focused cell into view, leave room for
+       the sticky slot col so Monday doesn't end up hidden behind it. */
+    scroll-margin-left: 140px;
 }
 
 .srg-cell:hover {
@@ -350,12 +367,24 @@
         grid-template-columns: 1fr;
     }
 
+    /* On the stacked single-column layout the staff list flows above
+       the grid; capping its height to a tiny inner scrollbox feels
+       cramped, so let it expand and rely on the page's own scroll. */
     .srg-staff-panel {
-        max-height: 30vh;
+        max-height: none;
+        overflow-y: visible;
     }
 }
 
 @media (max-width: 575px) {
+    /* Match the table min-width to exactly 8 * 88px so the slot col
+       and every day col render the same width. With a non-divisible
+       min-width the day cols round up by ~2px each, leaving a sliver
+       of the Monday cell peeking past the sticky col while scrolled. */
+    .srg-grid {
+        min-width: 704px;
+    }
+
     /* Slim the slot anchor on phones so day cells get more room
        before the table starts scrolling horizontally. */
     .srg-slot-col,
@@ -372,6 +401,7 @@
 
     .srg-cell {
         height: 56px;
+        scroll-margin-left: 88px;
     }
 
     .srg-assignment {
@@ -420,6 +450,10 @@
         inset 3px 0 0 var(--srg-type-color, #418940),
         inset 0 0 0 1px rgba(65, 137, 64, 0.35);
     background: #fbfdfb;
+    /* iOS Safari skips synthesized click events on <td> elements that
+       have no `cursor: pointer`; without this the tap-to-drop fallback
+       silently no-ops on touch. */
+    cursor: pointer;
 }
 
 .srg-pickup-active .srg-drop-target:focus-visible {
@@ -461,6 +495,13 @@
     color: #495057;
     padding: 0.15em 0.6em;
     border-radius: 999px;
+}
+
+.srg-my-shift-actions {
+    display: inline-flex;
+    gap: 0.25rem;
+    margin-left: auto;
+    flex-wrap: nowrap;
 }
 
 .srg-day-heading {

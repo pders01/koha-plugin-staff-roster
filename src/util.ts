@@ -17,14 +17,17 @@ export function shiftDate(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-const FULL_DAY_NAMES = [
-  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
-];
+// Locale comes from the <html lang> attribute Koha sets per user
+// preference; falls back to "en" so server-rendered tests stay stable.
+function activeLocale(): string {
+  return (typeof document !== "undefined" && document.documentElement.lang) || "en";
+}
 
 export function formatLongDate(iso: string): string {
   const d = new Date(iso + "T00:00:00");
-  return `${FULL_DAY_NAMES[d.getDay()]}, ${d.toLocaleDateString(undefined, {
+  return new Intl.DateTimeFormat(activeLocale(), {
+    weekday: "long",
     month: "short",
     day: "numeric",
-  })}`;
+  }).format(d);
 }
