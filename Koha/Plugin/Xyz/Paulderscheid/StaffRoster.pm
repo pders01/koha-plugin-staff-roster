@@ -53,6 +53,7 @@ use Koha::Patrons;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions;
 
 # Recurrence helpers; pulled in early so the slot save path doesn't pay the
 # require cost on first request.
@@ -347,69 +348,15 @@ sub _register_notice_templates {
 # grant plugins in limited mode can hand out exactly the slice each tier of
 # staff needs. Superlibrarians always pass every check via the bypass in
 # _has_perm. Re-run on every install + upgrade so descriptions can evolve.
-my %SUBPERMISSIONS = (
-    staffroster_view           => 'Staff Roster: view rosters and own schedule',
-    staffroster_assign         => 'Staff Roster: drag staff onto slots and edit assignments',
-    staffroster_manage_rosters => 'Staff Roster: create or edit rosters, slots, exceptions',
-    staffroster_manage_types   => 'Staff Roster: manage roster types catalogue',
-    staffroster_swap_request   => 'Staff Roster: request a shift swap',
-    staffroster_swap_respond   => 'Staff Roster: accept or reject a swap directed at you',
-    staffroster_swap_approve   => 'Staff Roster: approve swaps as a manager',
-    staffroster_self_assign    => 'Staff Roster: self-claim open shifts and drop own shifts',
-    staffroster_configure      => 'Staff Roster: change plugin configuration',
-);
-
-sub _register_permissions {
-    my ($dbh) = @_;
-
-    # Upsert rather than REPLACE: the latter does a DELETE + INSERT, which
-    # would cascade-clobber any existing user_permissions grants for the same
-    # (module_bit, code) every time the plugin upgrades.
-    for my $code ( sort keys %SUBPERMISSIONS ) {
-        $dbh->do(
-            q{INSERT INTO permissions (module_bit, code, description)
-              VALUES (19, ?, ?)
-              ON DUPLICATE KEY UPDATE description = VALUES(description)},
-            undef, $code, $SUBPERMISSIONS{$code}
-        );
-    }
-    return;
-}
-
-sub _unregister_permissions {
-    my ($dbh) = @_;
-    my @codes = keys %SUBPERMISSIONS;
-    return if !@codes;
-    my $perm_sth = $dbh->prepare(q{DELETE FROM permissions      WHERE module_bit = 19 AND code = ?});
-    my $user_sth = $dbh->prepare(q{DELETE FROM user_permissions WHERE module_bit = 19 AND code = ?});
-    for my $code (@codes) {
-        $perm_sth->execute($code);
-        $user_sth->execute($code);
-    }
-    return;
-}
-
-# Permission check used by every gated handler. Superlibrarians bypass all
-# checks (matches Koha's convention everywhere else). Returns 1/0.
-sub _txn { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::txn(@_); }
-
-sub _has_perm {
-    my ($code) = @_;
-    my $env = C4::Context->userenv;
-    return 0 if !$env;
-    my $flags = $env->{flags} // 0;
-    return 1 if $flags == 1 || ( $flags & 1 );
-    return C4::Auth::haspermission( $env->{id}, { plugins => $code } ) ? 1 : 0;
-}
-
-# Gate convenience: returns 1 when the user has $code, else pushes a denial
-# message and returns 0 so the calling handler can `return if !_gate(...)`.
-sub _gate {
-    my ( $code, $messages ) = @_;
-    return 1 if _has_perm($code);
-    push @{$messages}, { type => 'danger', code => 'access_denied' };
-    return 0;
-}
+# Backwards-compat shims: the actual logic lives in Lib::Permissions /
+# Lib::Audit. Existing call sites use these private names; future
+# commits will migrate them to the public Lib::* APIs.
+sub _txn               { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::txn(@_); }
+sub _has_perm          { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm(@_); }
+sub _gate              { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::gate(@_); }
+sub _is_superlib       { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::is_superlib(); }
+sub _register_permissions   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::register(@_); }
+sub _unregister_permissions { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::unregister(@_); }
 
 =head3 upgrade
 
@@ -2040,12 +1987,6 @@ sub _user_branch {
         return $patron->branchcode if $patron;
     }
     return;
-}
-
-sub _is_superlib {
-    my $env   = C4::Context->userenv or return 0;
-    my $flags = $env->{flags} // 0;
-    return ( $flags == 1 ) || ( $flags & 1 );
 }
 
 # Memoize per-process: each Koha::Library::Groups->find($pid) round-trip
