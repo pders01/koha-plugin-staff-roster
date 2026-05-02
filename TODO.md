@@ -98,36 +98,30 @@ Earlier "Now" candidates (still open):
 
 ## Next (single-feature batches)
 
-- [ ] **Reorganize the plugin's module layout — flat is not enough.**
-      `Koha/Plugin/Xyz/Paulderscheid/StaffRoster/` is currently a flat
-      bag of `.pm` files (the 2400-line main module + three
-      controllers + I18N). At plugin scale this is hard to navigate.
-      Group by concern:
-      - `Lib/Schema.pm` — install / upgrade / uninstall DDL + a real
-        numbered migration registry (kill the imperative `if version
-        < X` chain in `upgrade()`).
-      - `Lib/Business.pm` — shared helpers controllers reach for
-        today via the main module's private `_*` subs (`_audit`,
-        `_has_perm`, `_gate`, `_slot_applies_on`, `_conflict_check`,
-        `_is_closed_for_roster`, `_can_view_roster`,
-        `_load_additional_fields`). Removes the implicit
-        controller -> main-module-private contract and the per-request
-        `Koha::Plugin::...->new` instantiation inside hot paths.
-      - `Lib/Visibility.pm` — the library-group walking
-        (`_user_group_ids`, `_visibility_clause`, `_can_view_roster`).
-      - `Lib/Audit.pm` — `_audit`, `_txn`, JSON Diff plumbing.
-      - `Lib/Rrule.pm` — RRULE helpers
-        (`_byday_from_rrule`, `_rrule_from_params`, `_slot_applies_on`,
-        plus the DateTime::Event::ICal fast-path).
-      - `Lib/DateUtils.pm` — the `_current_week_start` triplet
-        (currently duplicated across main + two controllers).
-      - `Controllers/Tool/{List,Form,Slots,Exceptions,Swaps,Assignments,SelfService}.pm`
+- [ ] **Module reorganization — phase 2 + finish line.** The Lib::*
+      extraction is mostly done; the remaining work is:
+      - **Lib::Schema** (install + upgrade + uninstall DDL): the
+        install body still lives inline at ~165 lines on the main
+        module. Move into `Lib/Schema.pm` and introduce a numbered
+        migration registry so `upgrade()` walks an ordered list of
+        closures keyed by schema version, gated by a stored
+        `__SCHEMA_VERSION__` plugin_data row. Replaces the
+        imperative `if version < X` chain.
+      - **Migrate the controllers off the private `_*` shims**: the
+        backwards-compat shims on the main module
+        (`_audit` / `_txn` / `_has_perm` / `_gate` / `_can_view_roster`
+        / `_slot_applies_on` / `_load_additional_fields` / etc.) all
+        delegate to the new `Lib::*` packages. Migrate the call sites
+        in `AssignmentController.pm`, `RosterController.pm`,
+        `StaffController.pm` to use the public `Lib::*` names; once
+        every caller is gone the shims can be deleted.
+      - **`Controllers/Tool/{List,Form,Slots,Exceptions,Swaps,SelfService}.pm`**
         — split the `_tool_view_*` + `_tool_*_handler` chunks out of
         the main module's `tool` dispatcher. The dispatcher map stays
         small.
-      Migration is mechanical (move + add `use`, no behavior change),
-      but it touches every controller and the test harness, so it
-      probably wants its own branch + cypress + prove run.
+      Already shipped Lib modules: I18N, DateUtils, Audit,
+      Permissions, Visibility, Rrule, AdditionalFields. Main module
+      shrunk from ~2400 to ~2240 lines so far.
 - [ ] **Per-component bundle entry points**: `src/grid.ts`,
       `src/my-shifts.ts`, `src/open-shifts.ts` so each TT op only
       ships the component it actually mounts (currently every op
