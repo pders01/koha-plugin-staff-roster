@@ -61,18 +61,15 @@ sub create {
             $assigned_by,
         );
 
-        my $id = $dbh->last_insert_id( undef, undef, undef, undef );
+        my $id    = $dbh->last_insert_id( undef, undef, undef, undef );
+        my $after = _load( $dbh, $id );
         require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
             'CREATE', $id,
-            {   entity          => 'assignment',
-                slot_id         => $slot_id,
-                borrowernumber  => $borrowernumber,
-                assignment_date => $date,
-                status          => $body->{status} // 'scheduled',
-            }
+            { entity => 'assignment', %{$after} },
+            $after,
         );
-        return $c->render( status => 201, openapi => _load( $dbh, $id ) );
+        return $c->render( status => 201, openapi => $after );
     }
     catch {
         $c->unhandled_exception($_);
@@ -139,18 +136,18 @@ sub update {
             );
         }
 
+        my $after = _load( $dbh, $id );
         require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
             'MODIFY', $id,
-            {   entity     => 'assignment',
-                changed    => [ sort keys %{$body} ],
-                slot_id    => $merged{slot_id},
-                borrowernumber  => $merged{borrowernumber},
-                assignment_date => $merged{assignment_date},
-            }
+            {   entity  => 'assignment',
+                changed => [ sort keys %{$body} ],
+                %{$after},
+            },
+            $current,
         );
 
-        return $c->render( status => 200, openapi => _load( $dbh, $id ) );
+        return $c->render( status => 200, openapi => $after );
     }
     catch {
         $c->unhandled_exception($_);
@@ -170,17 +167,20 @@ sub delete {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
 
-        my $id    = $c->validation->param('assignment_id');
-        my $dbh   = C4::Context->dbh;
-        my $count = $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id = ?}, undef, $id );
+        my $id  = $c->validation->param('assignment_id');
+        my $dbh = C4::Context->dbh;
 
-        if ( !$count || $count eq '0E0' ) {
+        my $original = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_assignments WHERE id = ?}, undef, $id );
+        if ( !$original ) {
             return $c->render( status => 404, openapi => { error => 'Assignment not found' } );
         }
 
+        $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id = ?}, undef, $id );
+
         require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
-            'DELETE', $id, { entity => 'assignment' } );
+            'DELETE', $id, { entity => 'assignment' }, $original );
 
         return $c->render_resource_deleted;
     }
@@ -370,17 +370,14 @@ sub self_create {
             $borrowernumber,
         );
 
-        my $id = $dbh->last_insert_id( undef, undef, undef, undef );
+        my $id    = $dbh->last_insert_id( undef, undef, undef, undef );
+        my $after = _load( $dbh, $id );
         Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
             'SELF_CLAIM', $id,
-            {   entity          => 'assignment',
-                slot_id         => $slot_id,
-                borrowernumber  => $borrowernumber,
-                assignment_date => $date,
-                status          => 'scheduled',
-            }
+            { entity => 'assignment', %{$after} },
+            $after,
         );
-        return $c->render( status => 201, openapi => _load( $dbh, $id ) );
+        return $c->render( status => 201, openapi => $after );
     }
     catch {
         $c->unhandled_exception($_);
@@ -413,20 +410,21 @@ sub self_delete {
         my $id  = $c->validation->param('assignment_id');
         my $dbh = C4::Context->dbh;
 
-        my ($owner) = $dbh->selectrow_array(
-            q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
-            undef, $id
-        );
-        if ( !defined $owner ) {
+        my $original = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_assignments WHERE id = ?}, undef, $id );
+        if ( !$original ) {
             return $c->render( status => 404, openapi => { error => 'Assignment not found' } );
         }
-        if ( $owner != $borrowernumber ) {
+        if ( $original->{borrowernumber} != $borrowernumber ) {
             return $c->render( status => 403, openapi => { error => 'Not your assignment' } );
         }
 
         $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id = ?}, undef, $id );
         Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
-            'SELF_UNCLAIM', $id, { entity => 'assignment', borrowernumber => $borrowernumber } );
+            'SELF_UNCLAIM', $id,
+            { entity => 'assignment', borrowernumber => $borrowernumber },
+            $original,
+        );
         return $c->render_resource_deleted;
     }
     catch {

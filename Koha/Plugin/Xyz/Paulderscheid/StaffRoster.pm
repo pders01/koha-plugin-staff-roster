@@ -14,12 +14,16 @@ use Mojo::JSON qw( decode_json );
 # blob. Loaded lazily so the plugin still works in environments where C4::Log
 # isn't available (very old Koha).
 sub _audit {
-    my ( $action, $object_id, $info ) = @_;
+    my ( $action, $object_id, $infos, $original ) = @_;
     return if !defined $action;
     eval {
         require C4::Log;
-        $info //= {};
-        C4::Log::logaction( 'STAFFROSTER', $action, $object_id, $info );
+        $infos //= {};
+        # ACTN1 / Bug 25159: pass $original (pre-state) so logaction can
+        # produce a structured JSON diff in action_logs.diff. CREATE/DELETE
+        # branches in C4::Log diff against {} when $original is undef, so
+        # for those we still pass a hashref representing the full row.
+        C4::Log::logaction( 'STAFFROSTER', $action, $object_id, $infos, undef, $original );
         1;
     };
     return;
