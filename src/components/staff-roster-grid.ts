@@ -14,6 +14,9 @@ import {
   type Staff,
 } from "../api.js";
 import { getClass, isoMonday } from "../util.js";
+import { renderWeekToolbar } from "./shared/toolbar.js";
+import { renderToasts } from "./shared/toasts.js";
+import { renderModalShell } from "./shared/modal.js";
 
 const POLL_MS = 5000;
 const UNDO_LIMIT = 10;
@@ -668,44 +671,27 @@ export class StaffRosterGrid extends LitElement {
     return html`
       <div class="srg-sr-only" aria-live="polite" aria-atomic="true">${this.liveMessage}</div>
 
-      ${this.error
-        ? html`
-            <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
-              <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-              <span>${this.error}</span>
-              <button
-                type="button"
-                class="btn-close"
-                aria-label="Dismiss"
-                @click=${() => (this.error = "")}
-              ></button>
-            </div>
-          `
-        : nothing}
+      ${renderToasts({
+        error: this.error,
+        onDismissError: () => (this.error = ""),
+      })}
 
-      <div class="btn-toolbar srg-toolbar" role="toolbar">
-        <div class="btn-group" role="group">
-          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(-7)}>
-            <i class="fa fa-arrow-left" aria-hidden="true"></i> Previous
-          </button>
-          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(7)}>
-            Next <i class="fa fa-arrow-right" aria-hidden="true"></i>
-          </button>
-        </div>
-        <span class="srg-week-label">Week of ${this.weekStart}</span>
-        <div class="btn-group" role="group">
-          <button
-            class="btn btn-default btn-sm"
-            @click=${() => void this.undo()}
-            ?disabled=${this.undoStack.length === 0}
-          >
-            <i class="fa fa-undo" aria-hidden="true"></i> Undo (${this.undoStack.length})
-          </button>
-          <button class="btn btn-default btn-sm" @click=${() => void this.refresh()}>
-            <i class="fa fa-refresh" aria-hidden="true"></i> Refresh
-          </button>
-        </div>
-      </div>
+      ${renderWeekToolbar({
+        weekStart: this.weekStart,
+        onShift: (d) => this.shiftWeek(d),
+        onRefresh: () => void this.refresh(),
+        extras: html`
+          <div class="btn-group" role="group">
+            <button
+              class="btn btn-default btn-sm"
+              @click=${() => void this.undo()}
+              ?disabled=${this.undoStack.length === 0}
+            >
+              <i class="fa fa-undo" aria-hidden="true"></i> Undo (${this.undoStack.length})
+            </button>
+          </div>
+        `,
+      })}
 
       <div class="srg-layout" style=${`--srg-type-color: ${color}`}>
         <section class="page-section srg-staff-panel">
@@ -1035,40 +1021,22 @@ export class StaffRosterGrid extends LitElement {
   }
 
   private renderDeleteModal(a: Assignment) {
-    return html`
-      <div
-        class="modal show staff-roster-modal-open"
-        tabindex="-1"
-        role="dialog"
-        aria-modal="true"
-        style="display: block;"
-        @click=${(e: MouseEvent) => {
-          if ((e.target as HTMLElement).classList.contains("modal")) this.cancelDelete();
-        }}
-      >
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h1 class="modal-title">Remove assignment?</h1>
-              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelDelete()}></button>
-            </div>
-            <div class="modal-body">
-              <p>Remove <strong>${a.surname}, ${a.firstname}</strong> from this slot on ${a.assignment_date}?</p>
-              <p class="text-muted">You can undo with Cmd-Z (or the Undo button) if this was a mistake.</p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-danger" @click=${() => void this.confirmDelete()}>
-                <i class="fa fa-trash"></i> Remove
-              </button>
-              <button type="button" class="btn btn-default" @click=${() => this.cancelDelete()}>
-                <i class="fa fa-times"></i> Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-backdrop fade show staff-roster-modal-backdrop"></div>
-    `;
+    return renderModalShell({
+      title: "Remove assignment?",
+      onCancel: () => this.cancelDelete(),
+      body: html`
+        <p>Remove <strong>${a.surname}, ${a.firstname}</strong> from this slot on ${a.assignment_date}?</p>
+        <p class="text-muted">You can undo with Cmd-Z (or the Undo button) if this was a mistake.</p>
+      `,
+      footer: html`
+        <button type="button" class="btn btn-danger" @click=${() => void this.confirmDelete()}>
+          <i class="fa fa-trash"></i> Remove
+        </button>
+        <button type="button" class="btn btn-default" @click=${() => this.cancelDelete()}>
+          <i class="fa fa-times"></i> Cancel
+        </button>
+      `,
+    });
   }
 }
 

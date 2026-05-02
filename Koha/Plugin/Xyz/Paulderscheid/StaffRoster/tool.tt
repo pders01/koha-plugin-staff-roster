@@ -1121,19 +1121,7 @@
 </div>
 
 [% MACRO jsinclude BLOCK %]
-    [% IF post_redirect_op %]
-    <script>
-        // Post-Redirect-Get guard: replace cud-* URL with the GET landing URL
-        // so browser refresh doesn't re-POST the form.
-        if (window.history && window.history.replaceState) {
-            var url = '/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=[% post_redirect_op | uri %]';
-            [% IF post_redirect_roster_id %]
-            url += '&roster_id=[% post_redirect_roster_id | uri %]';
-            [% END %]
-            window.history.replaceState({}, '', url);
-        }
-    </script>
-    [% END %]
+    [% INCLUDE "$PLUGIN_DIR/_prg_guard.inc" prg_method = 'tool' %]
     [% UNLESS op == 'view_assignments' || op == 'my_shifts' || op == 'open_shifts' %]
         [% INCLUDE 'calendar.inc' %]
         [% INCLUDE 'datatables.inc' %]

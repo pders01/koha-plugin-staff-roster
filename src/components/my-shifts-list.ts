@@ -1,6 +1,5 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
 import {
   fetchMyWeek,
   selfUnclaim,
@@ -9,6 +8,10 @@ import {
   type MyWeekRoster,
 } from "../api.js";
 import { formatLongDate, getClass, isoMonday, shiftDate } from "../util.js";
+import { renderWeekToolbar } from "./shared/toolbar.js";
+import { renderToasts } from "./shared/toasts.js";
+import { renderModalShell } from "./shared/modal.js";
+import { groupByDate, renderDayGroups } from "./shared/day-groups.js";
 
 const STATUS_LABELS: Record<MyShift["status"], string> = {
   scheduled: "Scheduled",
@@ -86,86 +89,34 @@ export class MyShiftsList extends LitElement {
     }
   }
 
-  private groupByDate(): { date: string; shifts: MyShift[] }[] {
-    const map = new Map<string, MyShift[]>();
-    for (const s of this.week?.shifts ?? []) {
-      const list = map.get(s.assignment_date);
-      if (list) list.push(s);
-      else map.set(s.assignment_date, [s]);
-    }
-    return [...map.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, shifts]) => ({ date, shifts }));
-  }
-
   override render() {
     if (this.loading && !this.week) {
       return html`<div class="text-center text-muted py-4">Loading…</div>`;
     }
 
-    const groups = this.groupByDate();
+    const groups = groupByDate(
+      this.week?.shifts ?? [],
+      (s) => s.assignment_date,
+    );
 
     return html`
-      ${this.successMsg
-        ? html`
-            <div class="srg-toast alert alert-success" role="status" aria-live="polite">
-              <i class="fa fa-check" aria-hidden="true"></i>
-              <span>${this.successMsg}</span>
-            </div>
-          `
-        : nothing}
-      ${this.error
-        ? html`
-            <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
-              <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-              <span>${this.error}</span>
-              <button
-                type="button"
-                class="btn-close"
-                aria-label="Dismiss"
-                @click=${() => (this.error = "")}
-              ></button>
-            </div>
-          `
-        : nothing}
+      ${renderToasts({
+        successMsg: this.successMsg,
+        error: this.error,
+        onDismissError: () => (this.error = ""),
+      })}
 
-      <div class="btn-toolbar srg-toolbar" role="toolbar">
-        <div class="btn-group" role="group">
-          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(-7)}>
-            <i class="fa fa-arrow-left" aria-hidden="true"></i> Previous
-          </button>
-          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(7)}>
-            Next <i class="fa fa-arrow-right" aria-hidden="true"></i>
-          </button>
-        </div>
-        <span class="srg-week-label">Week of ${this.weekStart}</span>
-        <div class="btn-group" role="group">
-          <button class="btn btn-default btn-sm" @click=${() => void this.refresh()}>
-            <i class="fa fa-refresh" aria-hidden="true"></i> Refresh
-          </button>
-        </div>
-      </div>
+      ${renderWeekToolbar({
+        weekStart: this.weekStart,
+        onShift: (d) => this.shiftWeek(d),
+        onRefresh: () => void this.refresh(),
+      })}
 
-      <section class="page-section">
-        ${groups.length === 0
-          ? html`<p class="text-muted">No shifts scheduled this week.</p>`
-          : html`
-              <ul class="list-group">
-                ${repeat(
-                  groups,
-                  (g) => g.date,
-                  (g) => html`
-                    <li class="list-group-item">
-                      <h4 class="srg-day-heading">${formatLongDate(g.date)}</h4>
-                      <ul class="list-unstyled">
-                        ${g.shifts.map((s) => this.renderShift(s))}
-                      </ul>
-                    </li>
-                  `,
-                )}
-              </ul>
-            `}
-      </section>
+      ${renderDayGroups({
+        groups,
+        emptyText: "No shifts scheduled this week.",
+        renderItem: (s) => this.renderShift(s),
+      })}
 
       ${this.pendingDrop ? this.renderDropModal(this.pendingDrop) : nothing}
     `;
@@ -221,47 +172,29 @@ export class MyShiftsList extends LitElement {
 
   private renderDropModal(s: MyShift) {
     const r = this.rosterById(s.roster_id);
-    return html`
-      <div
-        class="modal show staff-roster-modal-open"
-        tabindex="-1"
-        role="dialog"
-        aria-modal="true"
-        style="display: block;"
-        @click=${(e: MouseEvent) => {
-          if ((e.target as HTMLElement).classList.contains("modal")) this.cancelDrop();
-        }}
-      >
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h1 class="modal-title">Drop this shift?</h1>
-              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelDrop()}></button>
-            </div>
-            <div class="modal-body">
-              <p>
-                Drop your shift on
-                <strong>${formatLongDate(s.assignment_date)}</strong>,
-                <strong>${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}</strong>
-                (${r?.name ?? "Roster #" + s.roster_id})?
-              </p>
-              <p class="text-muted">
-                The slot will be re-opened for someone else to claim. If you
-                need a one-for-one trade instead, use Swap.
-              </p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-danger" @click=${() => void this.confirmDrop()}>
-                <i class="fa fa-times"></i> Drop shift
-              </button>
-              <button type="button" class="btn btn-default" @click=${() => this.cancelDrop()}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-backdrop fade show staff-roster-modal-backdrop"></div>
-    `;
+    return renderModalShell({
+      title: "Drop this shift?",
+      onCancel: () => this.cancelDrop(),
+      body: html`
+        <p>
+          Drop your shift on
+          <strong>${formatLongDate(s.assignment_date)}</strong>,
+          <strong>${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}</strong>
+          (${r?.name ?? "Roster #" + s.roster_id})?
+        </p>
+        <p class="text-muted">
+          The slot will be re-opened for someone else to claim. If you need a
+          one-for-one trade instead, use Swap.
+        </p>
+      `,
+      footer: html`
+        <button type="button" class="btn btn-danger" @click=${() => void this.confirmDrop()}>
+          <i class="fa fa-times"></i> Drop shift
+        </button>
+        <button type="button" class="btn btn-default" @click=${() => this.cancelDrop()}>
+          Cancel
+        </button>
+      `,
+    });
   }
 }
