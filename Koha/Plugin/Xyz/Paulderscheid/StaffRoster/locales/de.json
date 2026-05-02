@@ -260,6 +260,7 @@
   "Optional note shown alongside the exception in the schedule.": "Optionale Notiz, die neben der Ausnahme im Plan angezeigt wird.",
   "Save exception": "Ausnahme speichern",
   "Edit exception": "Ausnahme bearbeiten",
+  "Delete exception for DATE?": "Ausnahme für DATE löschen?",
   "No exceptions defined. Use Add exception to create one.": "Keine Ausnahmen definiert. Verwenden Sie 'Ausnahme hinzufügen', um eine zu erstellen.",
 
   "Request swap": "Tausch anfragen",
@@ -320,6 +321,8 @@
   "slot, closed.": "Zeitfenster, geschlossen.",
   "staff assigned": "Personal zugewiesen",
   "Press Enter to pick up.": "Drücken Sie Eingabe zum Aufnehmen.",
+  "Press Enter to move, Delete to remove. Click to edit.": "Eingabe zum Verschieben drücken, Entfernen zum Löschen. Klicken zum Bearbeiten.",
+  "Click to edit.": "Zum Bearbeiten klicken.",
   "Undo": "Rückgängig",
   "Available staff": "Verfügbares Personal",
   "Search staff…": "Personal suchen…",
