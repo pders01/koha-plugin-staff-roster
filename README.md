@@ -86,6 +86,7 @@ Koha/Plugin/Xyz/Paulderscheid/StaffRoster/      Controllers, templates, locales
   locales/de.json                                German UI translations
 src/                                             Lit components (TypeScript)
 t/                                               Plugin tests (live container DB)
+cypress/                                         Cypress integration specs
 docs/wiki/                                       User manual + wiki sources
 ```
 
@@ -106,6 +107,17 @@ docker exec dev-koha-1 sh -c \
 51 tests across 8 files cover RRule semantics, self-service flow,
 swap ownership, exception CRUD, additional fields, the
 `_conflict_check` capacity gate, and the recursive group walk.
+
+For the live REST round-trip (calendar merge, exception precedence,
+grid render):
+
+```bash
+just test-cypress
+```
+
+The script syncs the plugin into the kohadev container, restarts
+Plack, and runs `cypress/integration/staffroster/*_spec.ts` through
+ktd's bundled cypress install.
 
 ## License
 

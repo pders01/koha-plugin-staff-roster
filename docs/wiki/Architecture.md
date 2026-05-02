@@ -57,7 +57,9 @@ deciding where to add something.
 | `src/components/open-shifts-list.ts` | "Open shifts" view (Lit). |
 | `src/components/shared/` | `toolbar`, `toasts`, `modal`, `day-groups`, `escape-controller` — small reusable bits. |
 | `src/i18n/index.ts` + `de.ts` | Lit-side translation shim. `de.ts` re-exports the JSON so Perl + JS share one source. |
-| `t/*.t` | Plugin tests. Run inside the kohadev container. |
+| `src/labels.ts` | Shared `STATUS_LABELS` map (assignment status → translated label) consumed by the grid + my-shifts list. |
+| `t/*.t` | Plugin tests. Run inside the kohadev container via `prove`. |
+| `cypress/integration/staffroster/` | Cypress integration specs (real REST round-trip). Run via `just test-cypress`; reuses ktd's bundled cypress install. |
 | `cron/staff_roster_nightly.pl` | Cron runner, calls `cronjob_nightly`. |
 
 ## Request shapes
@@ -141,6 +143,14 @@ files are story-style integration tests against the kohadev
 container's live MariaDB, wrapped in `AutoCommit=0` + rollback so
 nothing leaks between runs. See the README for the prove
 invocation.
+
+`cypress/integration/staffroster/` covers the live REST round-trip
+(`get_week` calendar merge, applies_on_dates, exception precedence)
+and a grid render assertion that locks in the column-date
+derivation. Specs reuse `_fixtures.ts` (`createRosterFixture` /
+`cleanupRosterFixture`) for namespaced setup + teardown. Run via
+`just test-cypress` — the helper syncs the plugin into the kohadev
+container, restarts Plack, and invokes ktd's bundled cypress.
 
 ## Where to start a new feature
 
