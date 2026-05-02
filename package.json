@@ -2,13 +2,13 @@
     "author": "Paul Derscheid",
     "dependencies": {
         "@jpahd/lit-stack": "file:../../../pers/web/lit-framework",
-        "@lit/context": "^1.1.6",
-        "lit": "^3.3.2"
+        "@lit/context": "~1.1.6",
+        "lit": "~3.3.2"
     },
     "description": "Manage staff duty rosters and schedules across library branches",
     "devDependencies": {
-        "typescript": "^6.0.0-beta",
-        "vite": "^8.0.4"
+        "typescript": "6.0.3",
+        "vite": "~8.0.4"
     },
     "name": "koha-plugin-staff-roster",
     "private": true,

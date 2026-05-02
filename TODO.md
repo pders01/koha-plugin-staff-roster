@@ -46,8 +46,6 @@ _Empty — pick the next batch._
 - [ ] Force-push origin once we're ready to publish. Origin is still at
       the original POC commit; main now has 100+ commits including the
       scaffold reset.
-- [ ] Pin Lit / vite versions compatible with the Koha versions we
-      support. Currently `^3.3.2` etc — minor bumps could break.
 
 ## Backlog
 
@@ -65,6 +63,11 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Pin frontend deps**: `lit` + `@lit/context` + `vite` switched
+      from `^` to `~` (patch-only); `typescript` pinned exact to
+      `6.0.3` since betas carry no semver guarantee. `@jpahd/lit-stack`
+      stays on its `file:` link — distribution is its own open item,
+      not addressed by version pinning.
 - [x] **Hot-path test coverage**: `t/conflict_check.t` (8 subtests
       against AssignmentController::_conflict_check — capacity,
       self-overlap, exclude_id branch, slot-not-found, RRule
