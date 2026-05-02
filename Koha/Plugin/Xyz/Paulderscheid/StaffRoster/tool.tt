@@ -142,7 +142,7 @@
             </li>
         </ul>
 
-        [% IF op == 'manage_slots' || op == 'view_assignments' || op == 'edit_roster' || op == 'delete_confirm' || op == 'manage_exceptions' %]
+        [% IF op == 'manage_slots' || op == 'view_assignments' || op == 'edit_roster' || op == 'delete_confirm' || op == 'manage_exceptions' || op == 'manage_swaps' %]
             <h5>This roster</h5>
             <ul>
                 <li[% IF op == 'view_assignments' %] class="active"[% END %]>
@@ -153,6 +153,9 @@
                 </li>
                 <li[% IF op == 'manage_exceptions' %] class="active"[% END %]>
                     <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_exceptions&roster_id=[% roster.id | uri %]">Exceptions</a>
+                </li>
+                <li[% IF op == 'manage_swaps' %] class="active"[% END %]>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_swaps&roster_id=[% roster.id | uri %]">Swap requests</a>
                 </li>
                 <li[% IF op == 'edit_roster' %] class="active"[% END %]>
                     <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=edit_roster&roster_id=[% roster.id | uri %]">Settings</a>
@@ -256,6 +259,26 @@
                 <span>Provide a valid date in YYYY-MM-DD format.</span>
             [% CASE 'exception_bad_type' %]
                 <span>Pick one of the supported exception types.</span>
+            [% CASE 'swap_requested' %]
+                <span>Swap request sent.</span>
+            [% CASE 'swap_approved' %]
+                <span>Swap approved; the assignment has been reassigned.</span>
+            [% CASE 'swap_rejected' %]
+                <span>Swap rejected.</span>
+            [% CASE 'swap_cancelled' %]
+                <span>Swap cancelled.</span>
+            [% CASE 'swap_missing_fields' %]
+                <span>Pick a shift and a target staff member.</span>
+            [% CASE 'swap_assignment_mismatch' %]
+                <span>That shift doesn't belong to this roster.</span>
+            [% CASE 'swap_bad_decision' %]
+                <span>Pick approve or reject.</span>
+            [% CASE 'swap_not_pending' %]
+                <span>That swap is no longer pending.</span>
+            [% CASE 'swap_needs_manager' %]
+                <span>Manager approval is required for this swap.</span>
+            [% CASE 'swap_not_authorised' %]
+                <span>You don't have permission to act on this swap.</span>
             [% CASE 'slot_location_not_in_av' %]
                 <span>Location &quot;[% m.value | html %]&quot; is not in authorised value category &quot;[% m.category | html %]&quot;. Pick a value from the list.</span>
             [% CASE 'access_denied' %]
@@ -836,6 +859,182 @@
 
     [% END %]
 
+    [% IF op == 'manage_swaps' %]
+        <div id="toolbar" class="btn-toolbar">
+            <a class="btn btn-default" href="#" id="add_swap_btn">
+                <i class="fa fa-exchange"></i> Request swap
+            </a>
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
+                <i class="fa fa-arrow-left"></i> Back to rosters
+            </a>
+        </div>
+
+        <h1>Swap requests - [% roster.name | html %]</h1>
+        <p class="text-muted">
+            Request a shift swap, then the targeted staff member (and a manager,
+            when manager approval is enabled) can approve or reject it. On
+            approval the assignment is reassigned automatically; if a return
+            assignment was named, both shifts swap borrowers in one transaction.
+        </p>
+
+        <div id="swap_form_container" style="display: none; margin: 16px 0;">
+            <form method="post" action="/cgi-bin/koha/plugins/run.pl" class="validated">
+                [% INCLUDE 'csrf-token.inc' %]
+                <input type="hidden" name="class" value="[% CLASS | html %]" />
+                <input type="hidden" name="method" value="tool" />
+                <input type="hidden" name="op" value="cud-request_swap" />
+                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+
+                <fieldset class="rows">
+                    <legend>Request shift swap</legend>
+                    <ol>
+                        <li>
+                            <label for="from_assignment_id" class="required">Give up shift:</label>
+                            <select name="from_assignment_id" id="from_assignment_id" required="required">
+                                <option value="">— Pick an upcoming assignment —</option>
+                                [% FOREACH a IN roster_assignments %]
+                                    <option value="[% a.id | html %]">
+                                        [% a.assignment_date | html %] · [% a.start_time.substr(0,5) | html %]–[% a.end_time.substr(0,5) | html %] · [% a.surname | html %], [% a.firstname | html %]
+                                    </option>
+                                [% END %]
+                            </select>
+                        </li>
+                        <li>
+                            <label for="to_borrowernumber" class="required">Hand off to:</label>
+                            <select name="to_borrowernumber" id="to_borrowernumber" required="required">
+                                <option value="">— Pick a staff member —</option>
+                                [% FOREACH s IN candidate_staff %]
+                                    <option value="[% s.borrowernumber | html %]">[% s.surname | html %], [% s.firstname | html %] ([% s.cardnumber | html %])</option>
+                                [% END %]
+                            </select>
+                        </li>
+                        <li>
+                            <label for="to_assignment_id">In exchange for (optional):</label>
+                            <select name="to_assignment_id" id="to_assignment_id">
+                                <option value="">— No return shift, one-way handoff —</option>
+                                [% FOREACH a IN roster_assignments %]
+                                    <option value="[% a.id | html %]">
+                                        [% a.assignment_date | html %] · [% a.start_time.substr(0,5) | html %]–[% a.end_time.substr(0,5) | html %] · [% a.surname | html %], [% a.firstname | html %]
+                                    </option>
+                                [% END %]
+                            </select>
+                            <span class="hint">Leaving this empty creates a one-way reassignment on approval.</span>
+                        </li>
+                        <li>
+                            <label for="request_message">Message:</label>
+                            <textarea name="request_message" id="request_message" rows="2" cols="50"></textarea>
+                        </li>
+                    </ol>
+                </fieldset>
+
+                <fieldset class="action">
+                    <input type="submit" class="btn btn-primary" value="Send request" />
+                    <button type="button" class="btn btn-default" id="cancel_swap">Cancel</button>
+                </fieldset>
+            </form>
+        </div>
+
+        <div class="page-section">
+            [% IF swaps.size %]
+                <table id="swaps_table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Status</th>
+                            <th scope="col">Shift</th>
+                            <th scope="col">Requester</th>
+                            <th scope="col">Target</th>
+                            <th scope="col">Requested</th>
+                            <th scope="col">Message</th>
+                            <th scope="col" class="noExport">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        [% FOREACH s IN swaps %]
+                            [% can_act = s.status == 'pending' && (is_superlib || s.from_borrowernumber == current_borrowernumber || s.to_borrowernumber == current_borrowernumber) %]
+                            <tr>
+                                <td>
+                                    [% IF s.status == 'pending' %]
+                                        <span class="label label-warning">Pending</span>
+                                    [% ELSIF s.status == 'approved' %]
+                                        <span class="label label-success">Approved</span>
+                                    [% ELSIF s.status == 'rejected' %]
+                                        <span class="label label-danger">Rejected</span>
+                                    [% ELSE %]
+                                        <span class="label label-default">Cancelled</span>
+                                    [% END %]
+                                </td>
+                                <td>
+                                    [% s.from_date | html %]<br />
+                                    <small class="text-muted">[% s.from_start.substr(0,5) | html %]–[% s.from_end.substr(0,5) | html %][% IF s.from_location %] · [% s.from_location | html %][% END %]</small>
+                                </td>
+                                <td>[% s.from_surname | html %], [% s.from_firstname | html %]</td>
+                                <td>[% s.to_surname | html %], [% s.to_firstname | html %]</td>
+                                <td>[% s.requested_at | html %]</td>
+                                <td>
+                                    [% IF s.request_message %]<small>[% s.request_message | html %]</small>[% END %]
+                                    [% IF s.response_message %]<br /><small class="text-muted">→ [% s.response_message | html %]</small>[% END %]
+                                </td>
+                                <td class="actions">
+                                    [% IF can_act %]
+                                        [% can_approve = is_superlib || (!approval_gated && s.to_borrowernumber == current_borrowernumber) %]
+                                        [% IF can_approve %]
+                                            <form method="post" action="/cgi-bin/koha/plugins/run.pl" style="display:inline;">
+                                                [% INCLUDE 'csrf-token.inc' %]
+                                                <input type="hidden" name="class" value="[% CLASS | html %]" />
+                                                <input type="hidden" name="method" value="tool" />
+                                                <input type="hidden" name="op" value="cud-respond_swap" />
+                                                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                                                <input type="hidden" name="swap_id" value="[% s.id | html %]" />
+                                                <input type="hidden" name="decision" value="approve" />
+                                                <button type="submit" class="btn btn-success btn-xs">
+                                                    <i class="fa fa-check"></i> Approve
+                                                </button>
+                                            </form>
+                                        [% END %]
+                                        [% IF s.to_borrowernumber == current_borrowernumber || is_superlib %]
+                                            <form method="post" action="/cgi-bin/koha/plugins/run.pl" style="display:inline;">
+                                                [% INCLUDE 'csrf-token.inc' %]
+                                                <input type="hidden" name="class" value="[% CLASS | html %]" />
+                                                <input type="hidden" name="method" value="tool" />
+                                                <input type="hidden" name="op" value="cud-respond_swap" />
+                                                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                                                <input type="hidden" name="swap_id" value="[% s.id | html %]" />
+                                                <input type="hidden" name="decision" value="reject" />
+                                                <button type="submit" class="btn btn-default btn-xs">
+                                                    <i class="fa fa-times"></i> Reject
+                                                </button>
+                                            </form>
+                                        [% END %]
+                                        [% IF s.from_borrowernumber == current_borrowernumber || is_superlib %]
+                                            <form method="post" action="/cgi-bin/koha/plugins/run.pl" style="display:inline;">
+                                                [% INCLUDE 'csrf-token.inc' %]
+                                                <input type="hidden" name="class" value="[% CLASS | html %]" />
+                                                <input type="hidden" name="method" value="tool" />
+                                                <input type="hidden" name="op" value="cud-cancel_swap" />
+                                                <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
+                                                <input type="hidden" name="swap_id" value="[% s.id | html %]" />
+                                                <button type="submit" class="btn btn-default btn-xs"
+                                                        onclick="return confirm('Cancel this swap request?');">
+                                                    <i class="fa fa-ban"></i> Cancel
+                                                </button>
+                                            </form>
+                                        [% END %]
+                                    [% ELSE %]
+                                        <span class="text-muted">—</span>
+                                    [% END %]
+                                </td>
+                            </tr>
+                        [% END %]
+                    </tbody>
+                </table>
+            [% ELSE %]
+                <div class="alert alert-info">
+                    No swap requests on this roster yet.
+                </div>
+            [% END %]
+        </div>
+    [% END %]
+
     [% IF op == 'view_assignments' %]
         <div id="toolbar" class="btn-toolbar">
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">
@@ -843,6 +1042,9 @@
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_exceptions&roster_id=[% roster.id | uri %]">
                 <i class="fa fa-calendar-times"></i> Exceptions
+            </a>
+            <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_swaps&roster_id=[% roster.id | uri %]">
+                <i class="fa fa-exchange"></i> Swap requests
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
                 <i class="fa fa-arrow-left"></i> Back to rosters
@@ -998,6 +1200,16 @@
                 $("#exception_form_legend").text("Edit exception");
                 $("#exception_form_container").slideDown();
                 $('html, body').animate({ scrollTop: $("#exception_form_container").offset().top - 100 }, 300);
+            });
+
+            // Swap request form toggle (manage_swaps op).
+            $("#add_swap_btn").on("click", function(e) {
+                e.preventDefault();
+                $("#swap_form_container").slideDown();
+                $('html, body').animate({ scrollTop: $("#swap_form_container").offset().top - 100 }, 300);
+            });
+            $("#cancel_swap").on("click", function() {
+                $("#swap_form_container").slideUp();
             });
         });
         </script>
