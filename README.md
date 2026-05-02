@@ -1,107 +1,112 @@
-# koha-plugin
+# koha-plugin-staff-roster
 
-A scaffolding tool for Koha plugins. Generates correct, working plugin code with interactive hook selection, API route composition, and version management.
+Manage staff duty rosters and shifts inside Koha. Drag-and-drop schedule
+grid, recurring time slots with iCal RRULE, library-group scoping,
+calendar-aware closures, swap workflow, self-service claim/drop, and
+nightly email reminders. German UI translation included.
 
-[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
+> **Status:** active development. Backend tested against Koha kohadev
+> (24.05+); 51 plugin tests cover the hot paths. The REST surface uses
+> Koha terminology (`patron_id`) so it slots into the rest of the API
+> without surprise.
 
-## What it does
+## Features
 
-- **`init`** — Interactive plugin initialization: prompts for metadata, lets you pick from 50+ Koha hooks, generates the plugin module with working stubs, config file, manifest, templates, and `.gitignore`
-- **`add`** — Incrementally add components: UI page templates, API routes (with controller generation), Node.js frontend projects
-- **`increment`** — Semver-aware version bumping across config, module, and package.json
-- **`package`** — Create `.kpz` files for Koha plugin installation
-- **`ktd`** — One-command deployment to KTD containers
+- **Schedule grid** — drag staff onto time slots, drop assignments
+  between cells, undo with Cmd-Z, optimistic UI with concurrent-edit
+  highlighting.
+- **Recurring slots** — `FREQ=WEEKLY` and `FREQ=MONTHLY` with
+  `BYDAY` (incl. ordinals like `1MO`, `-1FR`), `INTERVAL`, and
+  `UNTIL`.
+- **Library scope** — branch-bound, group-bound, or all-branches
+  rosters. Off / filter / strict modes for cross-branch visibility.
+- **Calendar integration** — Koha holiday calendars merge into
+  exception rows; hard mode blocks assignment on closed dates.
+- **Self-service** — staff can claim open shifts and drop their own,
+  gated by sub-permission, kill-switch setting, and a configurable
+  hour-window lockout.
+- **Swap workflow** — request a one-way handoff or a mutual swap;
+  manager approval optional per setting.
+- **Nightly email reminders** — N days before each shift, via a Koha
+  notice template (`STAFFROSTER`/`REMINDER`) admins can edit.
+- **Audit trail** — every mutation flows into Koha's `action_logs`
+  with full pre/post diff support.
+- **i18n** — English + German shipped; partial translations fall
+  through to English so a missing key never breaks a page.
 
-The generated plugin code is standard Koha — no runtime dependency on this tool. You can stop using the scaffolder at any time and continue developing by hand.
+See **[docs/wiki/](docs/wiki/Home.md)** for the full user manual,
+configuration guide, and architecture notes. The same files double as
+the GitHub Wiki source.
 
-## Quick start
+## Install
+
+1. Build the `.kpz` package:
+
+   ```bash
+   bun install && bun run build
+   # then zip the Koha/ directory into a .kpz the way Koha expects
+   ```
+
+   Or grab a release from the project's GitHub Releases page.
+
+2. Upload via Koha's plugin admin (Administration → Manage plugins →
+   Upload plugin) and run the installer when prompted.
+
+3. Grant the `staffroster_*` sub-permissions (under the `plugins`
+   flag) to the staff who need them.
+
+4. Open **Tools → Staff Roster** to start.
+
+## Configure
+
+Defaults are usable out of the box, but the **Configuration** page
+(under the plugin's tool view) exposes:
+
+- email reminder toggle + days-before
+- library group enforcement mode (off / filter / strict)
+- staff patron-categories filter
+- Koha calendar integration + branch override
+- Koha desks / authorised values for slot locations
+- self-service kill-switch + lockout window
+- swap-approval requirement
+
+See **[docs/wiki/Configuration.md](docs/wiki/Configuration.md)** for the
+field-by-field walkthrough.
+
+## Project layout
+
+```
+Koha/Plugin/Xyz/Paulderscheid/StaffRoster.pm    Main module + CGI handlers
+Koha/Plugin/Xyz/Paulderscheid/StaffRoster/      Controllers, templates, locales
+  AssignmentController.pm                        REST: assignments + self-service
+  RosterController.pm                            REST: per-roster week view
+  StaffController.pm                             REST: staff lookup + my/open
+  Lib/I18N.pm                                    Translation helper
+  *.tt                                           Tool / admin / configure / report
+  locales/de.json                                German UI translations
+src/                                             Lit components (TypeScript)
+t/                                               Plugin tests (live container DB)
+docs/wiki/                                       User manual + wiki sources
+```
+
+## Testing
+
+Inside the kohadev container:
 
 ```bash
-git clone https://github.com/pders01/koha-plugin.git my-plugin
-cd my-plugin && rm -rf .git && git init
-carton install    # or: cpanm --installdeps .
-perl bin/koha-plugin.pl init
+docker cp t dev-koha-1:/var/lib/koha/kohadev/plugins/t
+docker exec dev-koha-1 sh -c \
+  "cd /var/lib/koha/kohadev/plugins && \
+   KOHA_CONF=/etc/koha/sites/kohadev/koha-conf.xml \
+   prove t/00-load.t t/rrule.t t/self_service.t t/swap_ownership.t \
+         t/exceptions.t t/additional_fields.t t/conflict_check.t \
+         t/visibility.t"
 ```
 
-See the [quickstart guide](docs/quickstart.md) for the full walkthrough.
-
-## Installation
-
-### Dependencies
-
-Install via [Carton](https://metacpan.org/pod/Carton) (recommended) or any CPAN client:
-
-```bash
-carton install
-# or: cpanm --installdeps .
-```
-
-The tool also works with globally installed modules or `local::lib`. Carton is not required.
-
-### Task runner (optional)
-
-[just](https://just.systems/) provides convenient shortcuts. Run `just` for available commands. Everything `just` does can also be done directly with `perl bin/koha-plugin.pl`.
-
-### Standalone binary
-
-Build a self-contained binary that needs no Perl setup on the target system:
-
-```bash
-just binary
-# Binary at dist/koha-plugin
-```
-
-## Documentation
-
-- [Quickstart](docs/quickstart.md) — zero to working plugin in 5 minutes
-- [Command reference](docs/commands.md) — all commands and options
-- [Hook reference](docs/koha-plugin-hooks.md) — every Koha plugin hook with descriptions, return types, and groupings
-- [Vue Islands guide](docs/vue-islands.md) — Vue micro frontends in Koha plugins
-- [Writing a simple plugin](docs/how-to-write-a-simple-plugin.md) — minimal example
-- [POD style guide](docs/pod-style-guide.md) — conventions for hook stubs
-- [Live Circ Feed example](examples/circ-feed/) — full-featured demo plugin with API, Vue island, and polling
-
-## Configuration
-
-The tool reads plugin metadata from `koha-plugin.yml` (or `koha-plugin.json`):
-
-```yaml
-name: "Koha::Plugin::Com::Example::MyPlugin"
-author: "Your Name"
-version: "0.1.0"
-description: "What your plugin does"
-minimum_version: "22.11.00.000"
-maximum_version: ""
-release_filename: "example-myplugin"
-static_dir_name: "static"
-date_authored: "2026-03-20"
-date_updated: "2026-03-20"
-```
-
-Legacy `.env` files are still supported. Migrate with `koha-plugin migrate yml`.
-
-## Examples
-
-- [koha-plugin-pomodoro](https://github.com/pders01/koha-plugin-pomodoro)
-- [koha-plugin-command-palette](https://github.com/pders01/koha-plugin-command-palette)
-
-## Related
-
-- [LMSCloud plugin utils](https://github.com/LMSCloudPaulD/koha-plugin-lmscloud-util) — shared utilities for database migrations, OPAC pages, and i18n
-- [Kitchen Sink plugin](https://github.com/bywatersolutions/dev-koha-plugin-kitchen-sink) — reference implementation of every Koha plugin hook
-
-## Contributing
-
-Contributions welcome. Please use `perltidy` and `perlimports` with the shipped configuration files.
+51 tests across 8 files cover RRule semantics, self-service flow,
+swap ownership, exception CRUD, additional fields, the
+`_conflict_check` capacity gate, and the recursive group walk.
 
 ## License
 
-[GPL v3](https://github.com/pders01/koha-plugin?tab=GPL-3.0-1-ov-file#readme)
-
-## Support
-
-Ping me on [Koha's Mattermost](https://chat.koha-community.org) **@paulderscheid**.
-
-## Author
-
-[@pders01](https://www.github.com/pders01)
+GPL v3.
