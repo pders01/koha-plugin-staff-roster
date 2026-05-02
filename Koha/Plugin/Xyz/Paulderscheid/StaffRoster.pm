@@ -1213,6 +1213,20 @@ sub _tool_request_swap {
         return;
     }
 
+    # Ownership check: the requester can only surrender their own shift. The
+    # dropdown is server-filtered to own_assignments, so this guards against a
+    # forged from_assignment_id post.
+    my $env = C4::Context->userenv;
+    my $current_bn = $env ? $env->{number} : undef;
+    my ($from_owner) = $dbh->selectrow_array(
+        q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
+        undef, $from_assignment_id
+    );
+    if ( !defined $from_owner || !defined $current_bn || $from_owner != $current_bn ) {
+        push @{$messages}, { type => 'danger', code => 'swap_not_your_shift' };
+        return;
+    }
+
     $dbh->do(
         q{INSERT INTO staff_roster_swap_requests
           (from_assignment_id, to_borrowernumber, to_assignment_id, status,
@@ -1762,9 +1776,15 @@ sub _tool_view_manage_swaps {
         { Slice => {} }, $roster_id
     );
 
-    # Pending assignments + candidate staff for the in-page request form.
+    my $env_user = C4::Context->userenv;
+    my $current_bn = $env_user ? $env_user->{number} : undef;
+
+    # Upcoming assignments on this roster, joined with borrower for the
+    # "In exchange for" dropdown. Filtered client-side to the selected
+    # to_borrowernumber so the requester only sees that staffer's shifts.
     my $assignments = $dbh->selectall_arrayref(
-        q{SELECT a.id, a.assignment_date, p.firstname, p.surname,
+        q{SELECT a.id, a.borrowernumber, a.assignment_date,
+                 p.firstname, p.surname,
                  sl.start_time, sl.end_time
             FROM staff_roster_assignments a
             JOIN staff_roster_slots       sl ON a.slot_id = sl.id
@@ -1775,6 +1795,13 @@ sub _tool_view_manage_swaps {
         ORDER BY a.assignment_date, sl.start_time},
         { Slice => {} }, $roster_id
     );
+
+    # Own upcoming shifts populate the "Give up shift" dropdown. Server-side
+    # filter so users can't surrender someone else's shift even with a forged
+    # form post (handler also enforces the same invariant).
+    my @own_assignments = defined $current_bn
+        ? grep { $_->{borrowernumber} == $current_bn } @{ $assignments || [] }
+        : ();
 
     my @categorycodes = $self->_staff_categorycodes;
     my $staff_sql     = q{SELECT borrowernumber, firstname, surname, cardnumber FROM borrowers};
@@ -1789,16 +1816,16 @@ sub _tool_view_manage_swaps {
     $staff_sql .= q{ ORDER BY surname, firstname LIMIT 500};
     my $staff = $dbh->selectall_arrayref( $staff_sql, { Slice => {} }, @staff_params );
 
-    my $env             = C4::Context->userenv;
-    my $is_superlib     = $env && ( ( $env->{flags} // 0 ) == 1 || ( ( $env->{flags} // 0 ) & 1 ) );
+    my $is_superlib     = $env_user && ( ( $env_user->{flags} // 0 ) == 1 || ( ( $env_user->{flags} // 0 ) & 1 ) );
     my $approval_gated  = ( $self->retrieve_data('require_swap_approval') // '1' ) eq '1';
 
     $template->param(
         roster              => $roster,
         swaps               => $swaps,
         roster_assignments  => $assignments,
+        own_assignments     => \@own_assignments,
         candidate_staff     => $staff,
-        current_borrowernumber => $env ? $env->{number} : undef,
+        current_borrowernumber => $current_bn,
         is_superlib         => $is_superlib ? 1 : 0,
         approval_gated      => $approval_gated ? 1 : 0,
     );

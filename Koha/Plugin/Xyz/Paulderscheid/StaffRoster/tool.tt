@@ -904,12 +904,15 @@
                             <label for="from_assignment_id" class="required">Give up shift:</label>
                             <select name="from_assignment_id" id="from_assignment_id" required="required">
                                 <option value="">— Pick an upcoming assignment —</option>
-                                [% FOREACH a IN roster_assignments %]
+                                [% FOREACH a IN own_assignments %]
                                     <option value="[% a.id | html %]">
-                                        [% a.assignment_date | html %] · [% a.start_time.substr(0,5) | html %]–[% a.end_time.substr(0,5) | html %] · [% a.surname | html %], [% a.firstname | html %]
+                                        [% a.assignment_date | html %] · [% a.start_time.substr(0,5) | html %]–[% a.end_time.substr(0,5) | html %]
                                     </option>
                                 [% END %]
                             </select>
+                            [% IF !own_assignments.size %]
+                                <span class="hint">You have no upcoming shifts on this roster to swap.</span>
+                            [% END %]
                         </li>
                         <li>
                             <label for="to_borrowernumber" class="required">Hand off to:</label>
@@ -925,12 +928,13 @@
                             <select name="to_assignment_id" id="to_assignment_id">
                                 <option value="">— No return shift, one-way handoff —</option>
                                 [% FOREACH a IN roster_assignments %]
-                                    <option value="[% a.id | html %]">
+                                    [% NEXT IF a.borrowernumber == current_borrowernumber %]
+                                    <option value="[% a.id | html %]" data-borrowernumber="[% a.borrowernumber | html %]">
                                         [% a.assignment_date | html %] · [% a.start_time.substr(0,5) | html %]–[% a.end_time.substr(0,5) | html %] · [% a.surname | html %], [% a.firstname | html %]
                                     </option>
                                 [% END %]
                             </select>
-                            <span class="hint">Leaving this empty creates a one-way reassignment on approval.</span>
+                            <span class="hint">Filtered to the staffer selected above. Empty = one-way reassignment.</span>
                         </li>
                         <li>
                             <label for="request_message">Message:</label>
@@ -1257,6 +1261,33 @@
             $("#cancel_swap").on("click", function() {
                 $("#swap_form_container").slideUp();
             });
+
+            // "In exchange for" should only list shifts of the selected
+            // staffer. Hide non-matching options + reset value when the
+            // staffer changes so a stale pick can't slip through on submit.
+            (function() {
+                var $to = $("#to_borrowernumber");
+                var $ex = $("#to_assignment_id");
+                if (!$to.length || !$ex.length) return;
+
+                var $options = $ex.find("option").map(function() {
+                    return { el: this, bn: $(this).attr("data-borrowernumber") || "" };
+                }).get();
+
+                function applyFilter() {
+                    var bn = $to.val() || "";
+                    var keepValue = false;
+                    $options.forEach(function(o) {
+                        if (!o.bn) return;  // placeholder option
+                        var match = (o.bn === bn);
+                        $(o.el).prop("disabled", !match).toggle(match);
+                        if (match && o.el.value === $ex.val()) keepValue = true;
+                    });
+                    if (!keepValue) $ex.val("");
+                }
+                $to.on("change", applyFilter);
+                applyFilter();
+            })();
         });
         </script>
     [% END %]
