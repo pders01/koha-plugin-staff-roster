@@ -55,6 +55,7 @@ use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule;
 
 # Recurrence helpers; pulled in early so the slot save path doesn't pay the
 # require cost on first request.
@@ -1989,155 +1990,14 @@ sub _can_view_roster          { return Koha::Plugin::Xyz::Paulderscheid::StaffRo
 sub _branchcodes_for_roster   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::branchcodes_for_roster(@_); }
 sub _is_closed_for_roster     { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::is_closed_for_roster(@_); }
 
-# RRule helpers -------------------------------------------------------------
-# Subset of RFC 5545: FREQ=WEEKLY|MONTHLY, BYDAY (with optional ordinal
-# prefix for monthly: 1MO, -1FR), INTERVAL, UNTIL. Backed by
-# DateTime::Event::ICal for canonical apply-checks; the fast path below skips
-# the heavy machinery for the common weekly INTERVAL=1 + no-UNTIL case.
-
-# Map iCal weekday codes (BYDAY) <-> 0..6 with Sunday = 0 (Perl/JS convention).
-my %ICAL_TO_DOW = ( SU => 0, MO => 1, TU => 2, WE => 3, TH => 4, FR => 5, SA => 6 );
-my %DOW_TO_ICAL = reverse %ICAL_TO_DOW;
-
-# RRule string from a structured params hash. Keys:
-#   freq       'WEEKLY' (default) or 'MONTHLY'
-#   dows       arrayref of 0..6 weekday ints (required)
-#   ordinal    signed int -1..4; only meaningful when freq=MONTHLY (1MO, -1FR)
-#   interval   positive int; omitted unless > 1
-#   until_date 'YYYY-MM-DD'; encoded as UTC end-of-day
-sub _rrule_from_params {
-    my (%p)  = @_;
-    my $freq = $p{freq} || 'WEEKLY';
-    my @dows = @{ $p{dows} || [] };
-    return q{} if !@dows;
-    my @codes = grep {defined} map { $DOW_TO_ICAL{$_} } @dows;
-    return q{} if !@codes;
-    if ( $freq eq 'MONTHLY' && defined $p{ordinal} && $p{ordinal} != 0 ) {
-        my $ord = int $p{ordinal};
-        @codes = map {"$ord$_"} @codes;
-    }
-    my @parts = ("FREQ=$freq");
-    push @parts, "INTERVAL=$p{interval}" if $p{interval} && $p{interval} > 1;
-    push @parts, 'BYDAY=' . join q{,}, @codes;
-    if ( $p{until_date} && $p{until_date} =~ /^(\d{4})-(\d{2})-(\d{2})$/ ) {
-        push @parts, "UNTIL=$1$2${3}T235959Z";
-    }
-    return join q{;}, @parts;
-}
-
-# Parse RRULE into a structured hashref for UI prefill, validation, and
-# label rendering. Always returns the same shape (with sane defaults).
-sub _parsed_rrule {
-    my ($rrule) = @_;
-    my %out = (
-        freq        => 'WEEKLY',
-        interval    => 1,
-        dows        => [],
-        byday_codes => [],
-        ordinal     => undef,
-        until_date  => undef,
-    );
-    return \%out if !$rrule;
-    if ( $rrule =~ /FREQ=([A-Z]+)/sm )               { $out{freq}       = $1; }
-    if ( $rrule =~ /INTERVAL=(\d+)/sm )              { $out{interval}   = $1 + 0; }
-    if ( $rrule =~ /UNTIL=(\d{4})(\d{2})(\d{2})/sm ) { $out{until_date} = "$1-$2-$3"; }
-    if ( $rrule =~ /BYDAY=([^;]+)/sm ) {
-        my @dows;
-        my @byday_codes;
-        my %ord_seen;
-        for my $tok ( split /,/sm, $1 ) {
-            next if $tok !~ /^(-?\d+)?([A-Z]{2})$/sm;
-            my ( $ord, $code ) = ( $1, $2 );
-            next if !defined $ICAL_TO_DOW{$code};
-            push @dows,        $ICAL_TO_DOW{$code};
-            push @byday_codes, $code;
-            $ord_seen{$ord} = 1 if defined $ord;
-        }
-        $out{dows}        = \@dows;
-        $out{byday_codes} = \@byday_codes;
-        my @ord_list = keys %ord_seen;
-        $out{ordinal} = $ord_list[0] + 0 if @ord_list == 1;
-    }
-    return \%out;
-}
-
-# Thin shims kept for callers that only want one slice of the parse result.
-sub _dows_from_rrule  { return _parsed_rrule( $_[0] )->{dows}; }
-sub _byday_from_rrule { return _parsed_rrule( $_[0] )->{byday_codes}; }
-
-# Human-readable summary of an RRule, e.g. "Mon, Wed", "Every 2 weeks: Mon",
-# "1st Monday of month (until 2026-08-31)".
-sub _rrule_label {
-    my ($rrule) = @_;
-    my $p = _parsed_rrule($rrule);
-    return q{} if !@{ $p->{dows} };
-    my @day_names    = qw( Sunday Monday Tuesday Wednesday Thursday Friday Saturday );
-    my $days         = join q{, }, map { substr $day_names[$_], 0, 3 } @{ $p->{dows} };
-    my $until_suffix = $p->{until_date} ? " (until $p->{until_date})" : q{};
-    if ( $p->{freq} eq 'MONTHLY' ) {
-        my %ord_label = ( 1 => '1st', 2 => '2nd', 3 => '3rd', 4 => '4th', -1 => 'Last' );
-        my $ord       = $p->{ordinal}      ? ( $ord_label{ $p->{ordinal} } || $p->{ordinal} ) : 'Each';
-        my $every     = $p->{interval} > 1 ? "Every $p->{interval} months: "                  : q{};
-        return "$every$ord $days of month$until_suffix";
-    }
-    my $every = $p->{interval} > 1 ? "Every $p->{interval} weeks: " : q{};
-    return "$every$days$until_suffix";
-}
-
-# Does the slot's RRule apply on the given ISO date?
-# $anchor_iso (optional, YYYY-MM-DD) is the recurrence dtstart; required for
-# INTERVAL>1 to be deterministic. Falls back to $date if omitted, which keeps
-# the old behavior for plain weekly rules.
-sub _slot_applies_on {
-    my ( $rrule, $date, $anchor_iso ) = @_;
-    return 0 if !$rrule || !$date;
-    my $dt = eval { Koha::DateUtils::dt_from_string( $date, 'iso' ) };
-    return 0 if !$dt;
-
-    my $p = _parsed_rrule($rrule);
-    return 0 if !@{ $p->{dows} };
-
-    # Fast path: weekly + INTERVAL=1 + no UNTIL collapses to a weekday match,
-    # which is what nearly every existing slot stores. Avoid loading the
-    # DateTime::Event::ICal stack for it.
-    if ( $p->{freq} eq 'WEEKLY' && $p->{interval} == 1 && !$p->{until_date} ) {
-        my $wday = $dt->day_of_week % 7;    # 1=Mon..7=Sun -> 0..6 with Sunday=0
-        return scalar grep { $_ == $wday } @{ $p->{dows} };
-    }
-
-    my $anchor
-        = $anchor_iso
-        ? eval { Koha::DateUtils::dt_from_string( $anchor_iso, 'iso' ) }
-        : $dt->clone;
-    $anchor ||= $dt->clone;
-    $anchor->truncate( to => 'day' );
-
-    my $set = eval { DateTime::Format::ICal->parse_recurrence( recurrence => $rrule, dtstart => $anchor, ); };
-    if ( !$set ) {
-
-        # Surface the failure to the plack error log so corrupt RRULEs are
-        # noticed rather than silently making slots disappear from every week.
-        my $err = $@ || 'unknown';
-        warn "StaffRoster: RRule parse failed for '$rrule': $err";
-        return 0;
-    }
-
-    my $check = $dt->clone->truncate( to => 'day' );
-    return $set->contains($check) ? 1 : 0;
-}
-
-# Lookup a slot's recurrence anchor (its parent roster's effective_from) for
-# deterministic INTERVAL handling. Cheap single-row read.
-sub _slot_anchor {
-    my ( $dbh, $slot_id ) = @_;
-    return if !$slot_id;
-    my ($anchor) = $dbh->selectrow_array(
-        q{SELECT r.effective_from FROM staff_roster_slots s
-          JOIN staff_roster r ON s.roster_id = r.id WHERE s.id = ?},
-        undef, $slot_id
-    );
-    return $anchor;
-}
+# RRule helpers — actual logic in Lib::Rrule. Backwards-compat shims.
+sub _rrule_from_params { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::rrule_from_params(@_); }
+sub _parsed_rrule      { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::parsed_rrule(@_); }
+sub _dows_from_rrule   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::dows_from_rrule(@_); }
+sub _byday_from_rrule  { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::byday_from_rrule(@_); }
+sub _rrule_label       { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::rrule_label(@_); }
+sub _slot_applies_on   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on(@_); }
+sub _slot_anchor       { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_anchor(@_); }
 
 # Additional fields helpers --------------------------------------------------
 # Plumbing on top of Koha's additional_fields / additional_field_values tables.
