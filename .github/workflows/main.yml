@@ -195,16 +195,31 @@ jobs:
 
       - name: Install scaffold's perl deps via apt
         run: |
-          # The scaffold CLI bin/koha-plugin.pl needs Path::Tiny + a few
-          # other CPAN modules listed in cpanfile. Local dev uses carton
-          # against ./local/lib/perl5; on CI we install the same modules
-          # from apt (much faster than running carton install in CI).
+          # The scaffold CLI bin/koha-plugin.pl pulls in the modules
+          # listed in cpanfile. Local dev runs them through carton
+          # against ./local/lib/perl5; on CI we resolve the same set
+          # from Debian apt names — much cheaper than cpanm + the
+          # snapshot. Mapping:
+          #   Path::Tiny       libpath-tiny-perl
+          #   DateTime         libdatetime-perl
+          #   JSON             libjson-perl
+          #   Perl::Tidy       perltidy   (no lib...-perl variant)
+          #   Readonly         libreadonly-perl
+          #   Template         libtemplate-perl
+          #   Term::Choose     libterm-choose-perl
+          #   Term::UI         libterm-ui-perl
+          #   Types::Standard  libtype-tiny-perl
+          #   YAML::Tiny       libyaml-tiny-perl
+          # Term::ANSIColor + Term::ReadLine ship in core perl. PAR::Packer
+          # (cpanfile's `pp`) is only for the standalone-binary target,
+          # not for `just package`.
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             libpath-tiny-perl libdatetime-perl libjson-perl \
-            libreadonly-perl libtemplate-perl libterm-ui-perl \
-            libterm-readline-perl-perl libtype-tiny-perl libyaml-tiny-perl \
-            libperl-tidy-perl
+            libreadonly-perl libtemplate-perl \
+            libterm-choose-perl libterm-ui-perl \
+            libtype-tiny-perl libyaml-tiny-perl \
+            perltidy
 
       - name: Build bundle
         run: |
