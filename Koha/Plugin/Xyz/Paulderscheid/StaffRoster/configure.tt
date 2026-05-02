@@ -109,6 +109,16 @@
                             </option>
                         [% END %]
                     </select>
+                    [% IF effective_staff_categories.size %]
+                        <div class="alert alert-info staff-roster-effective-cats" role="status">
+                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                            <strong>[% tr('Currently effective (default):') | html %]</strong>
+                            [% tr('all category_type S patrons') | html %] —
+                            [% FOREACH c IN effective_staff_categories %]
+                                [% c.description | html %] ([% c.code | html %])[% UNLESS loop.last %], [% END %]
+                            [% END %]
+                        </div>
+                    [% END %]
                     <span class="hint">[% tr("Categories whose patrons can be assigned to slots. Hold Ctrl/Cmd to multi-select. Empty = fall back to all category_type='S' patrons.") | html %]</span>
                 </li>
             </ol>

@@ -96,6 +96,8 @@
   "None": "Keine",
   "Pre-selected for new rosters.": "Voreinstellung für neue Dienstpläne.",
   "Staff patron categories:": "Personalkategorien:",
+  "Currently effective (default):": "Aktuell wirksam (Standard):",
+  "all category_type S patrons": "alle Benutzer der Kategorie S",
   "Categories whose patrons can be assigned to slots. Hold Ctrl/Cmd to multi-select. Empty = fall back to all category_type='S' patrons.": "Kategorien, deren Benutzer Zeitfenstern zugewiesen werden können. Strg/Cmd halten für Mehrfachauswahl. Leer = Rückfall auf alle category_type='S' Benutzer.",
   "Calendar integration": "Kalenderintegration",
   "Use Koha calendar:": "Koha-Kalender verwenden:",

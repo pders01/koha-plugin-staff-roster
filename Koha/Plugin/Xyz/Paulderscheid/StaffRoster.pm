@@ -825,6 +825,20 @@ sub configure {
         };
     } Koha::Patron::Categories->search( {}, { order_by => 'description' } )->as_list;
 
+    # Effective set: when admin hasn't picked any explicit categories, the
+    # plugin falls back to all category_type='S' patrons. Surface that
+    # implicit default so admins can see which categories are currently
+    # in scope without reading the hint paragraph.
+    my @effective_categories;
+    if ( !%selected_cat_map ) {
+        @effective_categories = map {
+            { code => $_->categorycode, description => $_->description };
+        } Koha::Patron::Categories->search(
+            { category_type => 'S' },
+            { order_by      => 'description' }
+        )->as_list;
+    }
+
     $template->param(
         enable_email_reminders             => $self->retrieve_data('enable_email_reminders')         // '0',
         reminder_days_before               => $self->retrieve_data('reminder_days_before')           // '1',
@@ -841,9 +855,10 @@ sub configure {
         use_authorised_value_locations     => $self->retrieve_data('use_authorised_value_locations') // '0',
         authorised_value_location_category => $self->retrieve_data('authorised_value_location_category')
             // 'STAFFROSTER_LOCATION',
-        library_groups    => _flatten_groups( $root_groups, 0 ),
-        all_libraries     => [ Koha::Libraries->search( {}, { order_by => 'branchname' } )->as_list ],
-        patron_categories => \@categories,
+        library_groups               => _flatten_groups( $root_groups, 0 ),
+        all_libraries                => [ Koha::Libraries->search( {}, { order_by => 'branchname' } )->as_list ],
+        patron_categories            => \@categories,
+        effective_staff_categories   => \@effective_categories,
     );
 
     return $self->output_html( $template->output );

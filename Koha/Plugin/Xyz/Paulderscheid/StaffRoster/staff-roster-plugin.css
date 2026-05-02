@@ -82,6 +82,17 @@ fieldset.rows label {
     }
 }
 
+.staff-roster-effective-cats {
+    display: inline-block;
+    margin: 0.4rem 0 0;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9em;
+}
+
+.staff-roster-effective-cats .fa {
+    margin-right: 0.3rem;
+}
+
 /* Form hints in <fieldset class="rows"> default to inline siblings of
  * the input. German hint copy runs off the right viewport, so flow
  * them under the control on a new line aligned with the input
