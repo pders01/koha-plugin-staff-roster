@@ -1,0 +1,10 @@
+dist/
+local/
+templates/Koha/Plugin/
+
+.env
+.DS_Store
+*.bak
+koha-plugin-*.kpz
+
+TODO.md
