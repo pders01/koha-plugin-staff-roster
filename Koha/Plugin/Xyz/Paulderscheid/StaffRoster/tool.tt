@@ -1170,24 +1170,6 @@
                 $(".day-of-week-input").prop("checked", false);
             });
 
-            // Week navigation
-            $("#prev_week, #next_week").on("click", function() {
-                var current = $("#week_date").val();
-                var date = new Date(current);
-                if ($(this).attr("id") === "prev_week") {
-                    date.setDate(date.getDate() - 7);
-                } else {
-                    date.setDate(date.getDate() + 7);
-                }
-                var newDate = date.toISOString().split('T')[0];
-                window.location.href = "/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]&week_start=" + newDate;
-            });
-
-            $("#go_to_week").on("click", function() {
-                var date = $("#week_date").val();
-                window.location.href = "/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]&week_start=" + date;
-            });
-
             // Exception form toggle + edit prefill (manage_exceptions op).
             $("#add_exception_btn").on("click", function(e) {
                 e.preventDefault();

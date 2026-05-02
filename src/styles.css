@@ -358,10 +358,6 @@
     }
 }
 
-.staff-roster-menu h5 {
-    margin-top: 0.75rem;
-}
-
 @media (max-width: 991px) {
     .srg-layout {
         grid-template-columns: 1fr;

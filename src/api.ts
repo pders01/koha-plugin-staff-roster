@@ -14,7 +14,6 @@ const ENDPOINTS: ApiEndpoints = {
   },
   post: {
     assignments: { url: `${BASE}/assignments`, ignoreCache: true },
-    bulk: { url: `${BASE}/assignments/bulk`, ignoreCache: true },
     selfClaim: { url: `${BASE}/me/claim`, ignoreCache: true },
   },
   put: {

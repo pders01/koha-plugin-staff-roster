@@ -1608,10 +1608,6 @@ var K = "/api/v1/contrib/staffroster", q = new wt(K, {
 			url: `${K}/assignments`,
 			ignoreCache: !0
 		},
-		bulk: {
-			url: `${K}/assignments/bulk`,
-			ignoreCache: !0
-		},
 		selfClaim: {
 			url: `${K}/me/claim`,
 			ignoreCache: !0
