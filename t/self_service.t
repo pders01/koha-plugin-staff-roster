@@ -16,7 +16,7 @@ for my $cand ( "$RealBin/..", '/var/lib/koha/kohadev/plugins' ) {
 unshift @INC, '/kohadevbox/koha/';
 unshift @INC, '/kohadevbox/koha/t/lib/';
 
-eval { require C4::Context; 1 } or plan skip_all => 'C4::Context not available';
+eval { require C4::Context;                                   1 } or plan skip_all => 'C4::Context not available';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster; 1 }
     or plan skip_all => 'plugin module did not load';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::AssignmentController; 1 }
@@ -27,7 +27,10 @@ eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::StaffController; 1
 my $dbh = C4::Context->dbh;
 $dbh->{AutoCommit} = 0;
 $dbh->{RaiseError} = 1;
-END { eval { $dbh->rollback } if $dbh; }
+
+END {
+    eval { $dbh->rollback } if $dbh;
+}
 
 # The plugin's _has_perm bypasses every check for superlibrarians (flags=1),
 # which suits us for the happy-path tests. For permission-denied tests we
@@ -44,18 +47,16 @@ my ($rid) = $dbh->selectrow_array(q{SELECT id FROM staff_roster WHERE is_active 
 plan skip_all => 'no active staff_roster rows' if !$rid;
 
 # Pick a slot that runs every weekday for max coverage on the date matrix.
-my ($slot_id) = $dbh->selectrow_array(
-    q{SELECT id FROM staff_roster_slots WHERE roster_id = ? ORDER BY id LIMIT 1},
-    undef, $rid,
-);
+my ($slot_id)
+    = $dbh->selectrow_array( q{SELECT id FROM staff_roster_slots WHERE roster_id = ? ORDER BY id LIMIT 1}, undef, $rid, );
 plan skip_all => 'no slots on test roster' if !$slot_id;
 
 # Bump capacity to 2 for the duration of these tests so we can exercise
 # both "still room" and "full" without churning fixtures.
-$dbh->do(q{UPDATE staff_roster_slots SET max_staff = 2 WHERE id = ?}, undef, $slot_id);
+$dbh->do( q{UPDATE staff_roster_slots SET max_staff = 2 WHERE id = ?}, undef, $slot_id );
 
 # Pick a date the slot actually runs on. We brute-force the next 14 days.
-my ($rrule, $anchor) = $dbh->selectrow_array(
+my ( $rrule, $anchor ) = $dbh->selectrow_array(
     q{SELECT s.recurrence_rule, r.effective_from
       FROM staff_roster_slots s JOIN staff_roster r ON s.roster_id = r.id
       WHERE s.id = ?}, undef, $slot_id,
@@ -65,8 +66,7 @@ my $today_dt = Koha::DateUtils::dt_from_string()->truncate( to => 'day' );
 my $test_date;
 for my $i ( 0 .. 30 ) {
     my $candidate = $today_dt->clone->add( days => $i )->ymd;
-    if ( Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on(
-        $rrule, $candidate, $anchor ) ) {
+    if ( Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $rrule, $candidate, $anchor ) ) {
         $test_date = $candidate;
         last;
     }
@@ -75,10 +75,8 @@ plan skip_all => 'cannot find an applicable date for slot' if !$test_date;
 
 # Wipe assignments on (slot, date) so each subtest starts clean.
 sub clean_slot_date {
-    $dbh->do(
-        q{DELETE FROM staff_roster_assignments WHERE slot_id = ? AND assignment_date = ?},
-        undef, $slot_id, $test_date,
-    );
+    $dbh->do( q{DELETE FROM staff_roster_assignments WHERE slot_id = ? AND assignment_date = ?},
+        undef, $slot_id, $test_date, );
 }
 
 # Mock the Mojolicious controller surface ----------------------------------
@@ -87,9 +85,9 @@ sub clean_slot_date {
 # the controllers so unhandled exceptions land in $c->unhandled_exception
 # (also captured here).
 package StubReq;
-sub new { bless { json => $_[1] || {}, params => $_[2] || {} }, $_[0] }
-sub json   { return $_[0]->{json} }
-sub param  { return $_[0]->{params}{ $_[1] } }
+sub new   { bless { json => $_[1] || {}, params => $_[2] || {} }, $_[0] }
+sub json  { return $_[0]->{json} }
+sub param { return $_[0]->{params}{ $_[1] } }
 
 package StubValidation;
 sub new   { bless { p => $_[1] || {} }, $_[0] }
@@ -97,20 +95,21 @@ sub param { return $_[0]->{p}{ $_[1] } }
 
 package StubOpenAPI;
 sub new         { bless { c => $_[1] }, $_[0] }
-sub valid_input { return $_[0]->{c} }    # No JSON-schema enforcement in tests.
+sub valid_input { return $_[0]->{c} }             # No JSON-schema enforcement in tests.
 
 package StubUser;
 sub new            { bless { bn => $_[1] }, $_[0] }
 sub borrowernumber { return $_[0]->{bn} }
 
 package StubController;
+
 sub new {
     my ( $class, %args ) = @_;
     return bless {
-        json     => $args{json}     || {},
-        params   => $args{params}   || {},
-        path     => $args{path}     || {},
-        user     => exists $args{user} ? $args{user} : StubUser->new($args{borrowernumber}),
+        json     => $args{json}   || {},
+        params   => $args{params} || {},
+        path     => $args{path}   || {},
+        user     => exists $args{user} ? $args{user} : StubUser->new( $args{borrowernumber} ),
         rendered => undef,
         deleted  => 0,
         thrown   => undef,
@@ -120,17 +119,20 @@ sub openapi    { return StubOpenAPI->new( $_[0] ) }
 sub req        { return StubReq->new( $_[0]{json}, $_[0]{params} ) }
 sub validation { return StubValidation->new( $_[0]{path} ) }
 sub stash      { return $_[1] eq 'koha.user' ? $_[0]{user} : undef }
+
 sub render {
     my ( $self, %args ) = @_;
     $self->{rendered} = \%args;
     return $self;
 }
+
 sub render_resource_deleted {
     my ($self) = @_;
     $self->{deleted}  = 1;
     $self->{rendered} = { status => 204 };
     return $self;
 }
+
 sub unhandled_exception {
     my ( $self, $err ) = @_;
     $self->{thrown}   = $err;
@@ -191,15 +193,14 @@ subtest 'kill-switch: setting off returns 403' => sub {
         undef, $slot_id, $test_date,
     );
     is( $n, 0, 'no assignment was created' );
-    $plugin->store_data( { staff_can_self_assign => '1' } );  # restore
+    $plugin->store_data( { staff_can_self_assign => '1' } );    # restore
 };
 
 subtest 'body patron_id is ignored — session wins' => sub {
     clean_slot_date();
-    my ($other_bn) = $dbh->selectrow_array(
-        q{SELECT borrowernumber FROM borrowers WHERE borrowernumber != ? LIMIT 1},
-        undef, $test_bn,
-    );
+    my ($other_bn)
+        = $dbh->selectrow_array( q{SELECT borrowernumber FROM borrowers WHERE borrowernumber != ? LIMIT 1},
+        undef, $test_bn, );
 SKIP: {
         skip 'only one borrower available', 1 if !$other_bn;
         my $res = call_self_create( json => { patron_id => $other_bn } );
@@ -216,33 +217,32 @@ SKIP: {
 subtest 'capacity: claim returns 409 when slot is full' => sub {
     clean_slot_date();
 
-    my ($other_bn) = $dbh->selectrow_array(
-        q{SELECT borrowernumber FROM borrowers WHERE borrowernumber != ? LIMIT 1},
-        undef, $test_bn,
-    );
+    my ($other_bn)
+        = $dbh->selectrow_array( q{SELECT borrowernumber FROM borrowers WHERE borrowernumber != ? LIMIT 1},
+        undef, $test_bn, );
 SKIP: {
         skip 'need a second borrower for the full-slot test', 1 if !$other_bn;
+
         # Fill capacity (2): one for $test_bn, one for $other_bn.
         $dbh->do(
             q{INSERT INTO staff_roster_assignments
               (slot_id, borrowernumber, assignment_date, status, created_at, updated_at)
               VALUES (?, ?, ?, 'scheduled', NOW(), NOW()), (?, ?, ?, 'scheduled', NOW(), NOW())},
             undef,
-            $slot_id, $test_bn, $test_date,
+            $slot_id, $test_bn,  $test_date,
             $slot_id, $other_bn, $test_date,
         );
+
         # The session borrower already has an assignment; create with a new
         # session would fail conflict_check on dup, not capacity. To exercise
         # capacity-full cleanly, drop our own assignment first.
-        $dbh->do(
-            q{DELETE FROM staff_roster_assignments WHERE slot_id = ? AND borrowernumber = ? AND assignment_date = ?},
-            undef, $slot_id, $test_bn, $test_date,
-        );
+        $dbh->do( q{DELETE FROM staff_roster_assignments WHERE slot_id = ? AND borrowernumber = ? AND assignment_date = ?},
+            undef, $slot_id, $test_bn, $test_date, );
+
         # Add a third filler under another id to push to 2/2 again.
-        my ($third_bn) = $dbh->selectrow_array(
-            q{SELECT borrowernumber FROM borrowers WHERE borrowernumber NOT IN (?, ?) LIMIT 1},
-            undef, $test_bn, $other_bn,
-        );
+        my ($third_bn)
+            = $dbh->selectrow_array( q{SELECT borrowernumber FROM borrowers WHERE borrowernumber NOT IN (?, ?) LIMIT 1},
+            undef, $test_bn, $other_bn, );
         skip 'need a third borrower', 1 if !$third_bn;
         $dbh->do(
             q{INSERT INTO staff_roster_assignments
@@ -267,18 +267,15 @@ subtest 'self_delete: own assignment is removed' => sub {
     my $del = call_self_delete( assignment_id => $aid );
     is( $del->{status}, 204, 'returns 204' );
 
-    my ($n) = $dbh->selectrow_array(
-        q{SELECT COUNT(*) FROM staff_roster_assignments WHERE id = ?}, undef, $aid,
-    );
+    my ($n) = $dbh->selectrow_array( q{SELECT COUNT(*) FROM staff_roster_assignments WHERE id = ?}, undef, $aid, );
     is( $n, 0, 'row gone' );
 };
 
 subtest 'self_delete: foreign assignment is rejected with 403' => sub {
     clean_slot_date();
-    my ($other_bn) = $dbh->selectrow_array(
-        q{SELECT borrowernumber FROM borrowers WHERE borrowernumber != ? LIMIT 1},
-        undef, $test_bn,
-    );
+    my ($other_bn)
+        = $dbh->selectrow_array( q{SELECT borrowernumber FROM borrowers WHERE borrowernumber != ? LIMIT 1},
+        undef, $test_bn, );
 SKIP: {
         skip 'need a second borrower', 1 if !$other_bn;
         $dbh->do(
@@ -291,28 +288,23 @@ SKIP: {
 
         my $res = call_self_delete( assignment_id => $aid );
         is( $res->{status}, 403, 'rejects foreign delete' );
-        my ($still) = $dbh->selectrow_array(
-            q{SELECT COUNT(*) FROM staff_roster_assignments WHERE id = ?}, undef, $aid,
-        );
+        my ($still) = $dbh->selectrow_array( q{SELECT COUNT(*) FROM staff_roster_assignments WHERE id = ?}, undef, $aid, );
         is( $still, 1, 'foreign row untouched' );
     }
 };
 
 subtest 'staffroster_self_assign sub-perm registers in permissions table' => sub {
     Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_register_permissions($dbh);
-    my ($n) = $dbh->selectrow_array(
-        q{SELECT COUNT(*) FROM permissions WHERE module_bit = 19 AND code = ?},
-        undef, 'staffroster_self_assign',
-    );
+    my ($n) = $dbh->selectrow_array( q{SELECT COUNT(*) FROM permissions WHERE module_bit = 19 AND code = ?},
+        undef, 'staffroster_self_assign', );
     is( $n, 1, 'row inserted under plugins module_bit' );
 };
 
 subtest 'me_week: only own assignments returned' => sub {
     clean_slot_date();
-    my ($other_bn) = $dbh->selectrow_array(
-        q{SELECT borrowernumber FROM borrowers WHERE borrowernumber != ? LIMIT 1},
-        undef, $test_bn,
-    );
+    my ($other_bn)
+        = $dbh->selectrow_array( q{SELECT borrowernumber FROM borrowers WHERE borrowernumber != ? LIMIT 1},
+        undef, $test_bn, );
 SKIP: {
         skip 'need a second borrower', 1 if !$other_bn;
 
@@ -323,12 +315,12 @@ SKIP: {
               VALUES (?, ?, ?, 'scheduled', NOW(), NOW()),
                      (?, ?, ?, 'scheduled', NOW(), NOW())},
             undef,
-            $slot_id, $test_bn, $test_date,
+            $slot_id, $test_bn,  $test_date,
             $slot_id, $other_bn, $test_date,
         );
 
         # Compute the Monday of $test_date for me_week's start param.
-        my $dt = Koha::DateUtils::dt_from_string( $test_date, 'iso' );
+        my $dt     = Koha::DateUtils::dt_from_string( $test_date, 'iso' );
         my $monday = $dt->clone->subtract( days => ( $dt->day_of_week - 1 ) )->ymd;
 
         my $c = StubController->new(
@@ -354,15 +346,9 @@ subtest 'self-unclaim lockout window' => sub {
     # so the window is guaranteed to be open.
     $plugin->store_data( { self_unclaim_lockout_hours => '1000000' } );
     my $blocked = call_self_delete( assignment_id => $aid );
-    is( $blocked->{status}, 403, 'drop blocked inside lockout window' );
-    is(
-        ref $blocked->{openapi},   'HASH',
-        'response is a structured payload',
-    );
-    like(
-        $blocked->{openapi}{error}, qr/^Self-unclaim closed/,
-        'reports lockout in error message',
-    );
+    is( $blocked->{status},      403,    'drop blocked inside lockout window' );
+    is( ref $blocked->{openapi}, 'HASH', 'response is a structured payload', );
+    like( $blocked->{openapi}{error}, qr/^Self-unclaim closed/, 'reports lockout in error message', );
     is( $blocked->{openapi}{lockout_hours}, 1000000, 'echoes configured hours' );
 
     # Disable lockout, drop should now succeed.
@@ -370,10 +356,7 @@ subtest 'self-unclaim lockout window' => sub {
     my $ok = call_self_delete( assignment_id => $aid );
     is( $ok->{status}, 204, 'drop succeeds when lockout cleared' );
 
-    my ($still_there) = $dbh->selectrow_array(
-        q{SELECT COUNT(*) FROM staff_roster_assignments WHERE id = ?},
-        undef, $aid,
-    );
+    my ($still_there) = $dbh->selectrow_array( q{SELECT COUNT(*) FROM staff_roster_assignments WHERE id = ?}, undef, $aid, );
     is( $still_there, 0, 'row is gone after the unblocked drop' );
 };
 

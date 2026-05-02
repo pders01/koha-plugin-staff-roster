@@ -46,8 +46,10 @@ sub available {
 
     return try {
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
-            return $c->render( status => 403,
-                openapi => { error => 'staffroster_assign permission required' } );
+            return $c->render(
+                status  => 403,
+                openapi => { error => 'staffroster_assign permission required' }
+            );
         }
 
         my $date    = $c->req->param('date');
@@ -61,10 +63,11 @@ sub available {
 
         my $dbh = C4::Context->dbh;
 
-        my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
+        my $plugin           = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
         my @staff_categories = $plugin->_staff_categorycodes;
 
         my %slot_context;
+
         # If slot_id given, scope staff to the parent roster's branches in strict group mode.
         my @group_branches;
         my $group_label;
@@ -82,17 +85,16 @@ sub available {
                 if ( !$plugin->_can_view_roster($roster) ) {
                     return $c->render( status => 403, openapi => { error => 'Not authorized for this roster' } );
                 }
-                if (   ( $plugin->retrieve_data('library_group_mode') // 'off' ) eq 'strict'
+                if ( ( $plugin->retrieve_data('library_group_mode') // 'off' ) eq 'strict'
                     && $roster->{library_group_id} )
                 {
                     @group_branches = $plugin->_branchcodes_for_roster($roster);
-                    $group_label = $roster->{group_title};
+                    $group_label    = $roster->{group_title};
                 }
             }
-            my ($s_start, $s_end) = $dbh->selectrow_array(
-                q{SELECT start_time, end_time FROM staff_roster_slots WHERE id = ?},
-                undef, $slot_id,
-            );
+            my ( $s_start, $s_end )
+                = $dbh->selectrow_array( q{SELECT start_time, end_time FROM staff_roster_slots WHERE id = ?},
+                undef, $slot_id, );
             %slot_context = (
                 slot_id    => $slot_id + 0,
                 date       => $date,
@@ -184,7 +186,7 @@ sub available {
             push @base_params, @group_branches;
         }
         if ($branch) {
-            $base_sql    .= q{ AND p.branchcode = ?};
+            $base_sql .= q{ AND p.branchcode = ?};
             push @base_params, $branch;
         }
         if ($q) {
@@ -194,8 +196,8 @@ sub available {
         }
         my ($pool_size) = $dbh->selectrow_array( $base_sql, undef, @base_params );
 
-        my $branch_scope =
-              @group_branches ? { mode => 'group', label => $group_label, branches => \@group_branches }
+        my $branch_scope
+            = @group_branches ? { mode => 'group', label => $group_label, branches => \@group_branches }
             : $branch         ? { mode => 'branch', label => $branch, branches => [$branch] }
             :                   { mode => 'all', label => undef, branches => [] };
 
@@ -234,8 +236,10 @@ sub me_week {
 
     return try {
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_view') ) {
-            return $c->render( status => 403,
-                openapi => { error => 'staffroster_view permission required' } );
+            return $c->render(
+                status  => 403,
+                openapi => { error => 'staffroster_view permission required' }
+            );
         }
 
         my $user = $c->stash('koha.user');
@@ -282,16 +286,18 @@ sub me_week {
         for my $row ( @{$rows} ) {
             my $rid = $row->{roster_id};
             if ( !exists $roster_ok{$rid} ) {
-                $roster_ok{$rid} = $plugin->_can_view_roster( {
-                    id               => $rid,
-                    branch_id        => $row->{branch_id},
-                    library_group_id => $row->{library_group_id},
-                } ) ? 1 : 0;
+                $roster_ok{$rid} = $plugin->_can_view_roster(
+                    {   id               => $rid,
+                        branch_id        => $row->{branch_id},
+                        library_group_id => $row->{library_group_id},
+                    }
+                ) ? 1 : 0;
             }
             next if !$roster_ok{$rid};
 
             if ( !$roster_seen{$rid}++ ) {
-                push @rosters, {
+                push @rosters,
+                    {
                     id          => $rid,
                     name        => $row->{roster_name},
                     type_name   => $row->{type_name},
@@ -299,10 +305,11 @@ sub me_week {
                     type_color  => $row->{type_color},
                     branch_name => $row->{branch_name},
                     group_name  => $row->{group_name},
-                };
+                    };
             }
 
-            push @shifts, {
+            push @shifts,
+                {
                 assignment_id   => $row->{assignment_id},
                 roster_id       => $rid,
                 slot_id         => $row->{slot_id},
@@ -313,7 +320,7 @@ sub me_week {
                 status          => $row->{status},
                 notes           => $row->{notes},
                 updated_at      => $row->{updated_at},
-            };
+                };
         }
 
         return $c->render(
@@ -345,8 +352,10 @@ sub me_open_slots {
 
     return try {
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_self_assign') ) {
-            return $c->render( status => 403,
-                openapi => { error => 'staffroster_self_assign permission required' } );
+            return $c->render(
+                status  => 403,
+                openapi => { error => 'staffroster_self_assign permission required' }
+            );
         }
 
         my $user = $c->stash('koha.user');
@@ -359,8 +368,10 @@ sub me_open_slots {
 
         my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
         if ( !$plugin->retrieve_data('staff_can_self_assign') ) {
-            return $c->render( status => 200,
-                openapi => { week_start => $week_start, openings => [] } );
+            return $c->render(
+                status  => 200,
+                openapi => { week_start => $week_start, openings => [] }
+            );
         }
 
         my $dbh = C4::Context->dbh;
@@ -379,8 +390,10 @@ sub me_open_slots {
 
         my @visible = grep { $plugin->_can_view_roster($_) } @{ $rosters || [] };
         if ( !@visible ) {
-            return $c->render( status => 200,
-                openapi => { week_start => $week_start, openings => [] } );
+            return $c->render(
+                status  => 200,
+                openapi => { week_start => $week_start, openings => [] }
+            );
         }
 
         my @rids        = map { $_->{id} } @visible;
@@ -396,15 +409,17 @@ sub me_open_slots {
         );
 
         if ( !$slots || !@{$slots} ) {
-            return $c->render( status => 200,
-                openapi => { week_start => $week_start, openings => [] } );
+            return $c->render(
+                status  => 200,
+                openapi => { week_start => $week_start, openings => [] }
+            );
         }
 
         my $start_dt = Koha::DateUtils::dt_from_string( $week_start, 'iso' );
         my $end_iso  = $start_dt->clone->add( days => 6 )->ymd;
 
-        my @slot_ids       = map { $_->{id} } @{$slots};
-        my $slot_holders   = join q{,}, ('?') x @slot_ids;
+        my @slot_ids     = map { $_->{id} } @{$slots};
+        my $slot_holders = join q{,}, ('?') x @slot_ids;
 
         my $count_rows = $dbh->selectall_arrayref(
             q{
@@ -441,12 +456,12 @@ sub me_open_slots {
 
         for my $slot ( @{$slots} ) {
             my $roster = $roster_by_id{ $slot->{roster_id} } or next;
-            my $cap = $slot->{max_staff} // 1;
+            my $cap    = $slot->{max_staff} // 1;
             for my $i ( 0 .. 6 ) {
                 my $date = $start_dt->clone->add( days => $i )->ymd;
                 next
-                    if !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on(
-                    $slot->{recurrence_rule}, $date, $roster->{effective_from} );
+                    if !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $slot->{recurrence_rule},
+                    $date, $roster->{effective_from} );
                 next if $plugin->_is_closed_for_roster( $roster, $date );
 
                 my $taken     = $count_for{ $slot->{id} }{$date} // 0;
@@ -464,7 +479,8 @@ sub me_open_slots {
                 }
                 next if $clash;
 
-                push @openings, {
+                push @openings,
+                    {
                     roster_id          => $roster->{id},
                     roster_name        => $roster->{name},
                     type_name          => $roster->{type_name},
@@ -476,14 +492,14 @@ sub me_open_slots {
                     end_time           => $slot->{end_time},
                     location           => $slot->{location},
                     capacity_remaining => $remaining,
-                };
+                    };
             }
         }
 
         @openings = sort {
                    $a->{assignment_date} cmp $b->{assignment_date}
-                || $a->{start_time}      cmp $b->{start_time}
-                || $a->{roster_name}     cmp $b->{roster_name}
+                || $a->{start_time} cmp $b->{start_time}
+                || $a->{roster_name} cmp $b->{roster_name}
         } @openings;
 
         return $c->render(

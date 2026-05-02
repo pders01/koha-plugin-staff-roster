@@ -46,8 +46,8 @@ sub get_week {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $roster_id     = $c->validation->param('roster_id');
-        my $start_param   = $c->req->param('start');
+        my $roster_id   = $c->validation->param('roster_id');
+        my $start_param = $c->req->param('start');
         my $week_start
             = ( defined $start_param && $start_param =~ /\A\d{4}-\d{2}-\d{2}\z/ )
             ? $start_param
@@ -95,14 +95,15 @@ sub get_week {
         my $week_anchor = Koha::DateUtils::dt_from_string( $week_start, 'iso' );
         my $rec_anchor  = $roster->{effective_from};
         for my $slot ( @{$slots} ) {
-            $slot->{days_of_week} =
-                Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_byday_from_rrule( $slot->{recurrence_rule} );
+            $slot->{days_of_week}
+                = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_byday_from_rrule( $slot->{recurrence_rule} );
             my @applies;
             for my $i ( 0 .. 6 ) {
                 my $date = $week_anchor->clone->add( days => $i )->ymd;
-                push @applies, $date
-                    if Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on(
-                    $slot->{recurrence_rule}, $date, $rec_anchor );
+                push @applies,
+                    $date
+                    if Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $slot->{recurrence_rule},
+                    $date, $rec_anchor );
             }
             $slot->{applies_on_dates} = \@applies;
         }
@@ -128,6 +129,7 @@ sub get_week {
             { Slice => {} }, 'staff_roster_assignments'
         ) || [];
         if ( @{$assignment_fields} ) {
+
             # Dedupe by category before hitting AuthorisedValues so two fields
             # sharing a category (or the same field across many polls) only
             # cost one query instead of one per field per poll.
@@ -138,11 +140,9 @@ sub get_week {
             }
             for my $cat ( keys %by_cat ) {
                 $by_cat{$cat} = [
-                    map { { value => $_->authorised_value, lib => $_->lib } }
-                        Koha::AuthorisedValues->search(
-                        { category => $cat },
-                        { order_by => [ 'lib', 'authorised_value' ] }
-                        )->as_list
+                    map { { value => $_->authorised_value, lib => $_->lib } } Koha::AuthorisedValues->search(
+                        { category => $cat }, { order_by => [ 'lib', 'authorised_value' ] }
+                    )->as_list
                 ];
             }
             for my $f ( @{$assignment_fields} ) {
@@ -151,8 +151,8 @@ sub get_week {
             }
         }
         if ( @{$assignments} && @{$assignment_fields} ) {
-            my $af_values = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_bulk_additional_field_values(
-                $dbh, 'staff_roster_assignments', [ map { $_->{id} } @{$assignments} ] );
+            my $af_values = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_bulk_additional_field_values( $dbh,
+                'staff_roster_assignments', [ map { $_->{id} } @{$assignments} ] );
             for my $a ( @{$assignments} ) {
                 $a->{additional_fields} = $af_values->{ $a->{id} } || {};
             }
@@ -170,7 +170,7 @@ sub get_week {
 
         # Merge Koha calendar closures (if enabled) into exceptions for the week.
         if ( $plugin->retrieve_data('use_koha_calendar') ) {
-            my %seen = map { $_->{exception_date} => 1 } @{$exceptions};
+            my %seen     = map { $_->{exception_date} => 1 } @{$exceptions};
             my $start_dt = Koha::DateUtils::dt_from_string( $week_start, 'iso' );
             for my $i ( 0 .. 6 ) {
                 my $date = $start_dt->clone->add( days => $i )->ymd;

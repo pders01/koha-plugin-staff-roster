@@ -26,6 +26,7 @@ my $ugi = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_user_group_ids;
 # Stub Koha::Library::Groups so search() returns leaves bound to a
 # branchcode and find() climbs the parent chain by id.
 {
+
     package Koha::Library::Groups;
     no warnings 'redefine';
 
@@ -43,8 +44,7 @@ my $ugi = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_user_group_ids;
     sub search {
         my ( $class, $where ) = @_;
         my @ids = @{ $LEAVES_OF{ $where->{branchcode} // q{} } || [] };
-        return Koha::Library::Groups::ResultSet->new(
-            [ map { Koha::Library::Groups::Row->new( $BY_ID{$_} ) } @ids ] );
+        return Koha::Library::Groups::ResultSet->new( [ map { Koha::Library::Groups::Row->new( $BY_ID{$_} ) } @ids ] );
     }
 
     sub find {
@@ -55,12 +55,14 @@ my $ugi = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_user_group_ids;
 }
 
 {
+
     package Koha::Library::Groups::ResultSet;
-    sub new  { my ( $c, $rows ) = @_; bless { rows => $rows, idx => 0 }, $c }
+    sub new { my ( $c, $rows ) = @_; bless { rows => $rows, idx => 0 }, $c }
     sub next { my ($s) = @_; return $s->{rows}[ $s->{idx}++ ]; }
 }
 
 {
+
     package Koha::Library::Groups::Row;
     sub new       { my ( $c, $r ) = @_; bless { %{$r} }, $c }
     sub parent_id { $_[0]->{parent_id} }
@@ -75,11 +77,10 @@ subtest 'walks up parent chain, returns every ancestor id' => sub {
     graph(
         { id => 10, parent_id => undef, branchcode => undef },    # grandparent
         { id => 20, parent_id => 10,    branchcode => undef },    # parent
-        { id => 30, parent_id => 20,    branchcode => 'CPL'   },  # leaf
+        { id => 30, parent_id => 20,    branchcode => 'CPL' },    # leaf
     );
     my %got = map { $_ => 1 } $ugi->('CPL');
-    is_deeply( \%got, { 10 => 1, 20 => 1 },
-        'parent + grandparent ids returned, leaf excluded' );
+    is_deeply( \%got, { 10 => 1, 20 => 1 }, 'parent + grandparent ids returned, leaf excluded' );
 };
 
 subtest 'empty / undef branch short-circuits' => sub {
@@ -89,12 +90,8 @@ subtest 'empty / undef branch short-circuits' => sub {
 };
 
 subtest 'branch not in any group returns empty' => sub {
-    graph(
-        { id => 10, parent_id => undef, branchcode => undef },
-        { id => 30, parent_id => 10,    branchcode => 'CPL' },
-    );
-    is_deeply( [ $ugi->('UNKNOWN') ], [],
-        'walk yields nothing when no leaf row matches the branch' );
+    graph( { id => 10, parent_id => undef, branchcode => undef }, { id => 30, parent_id => 10, branchcode => 'CPL' }, );
+    is_deeply( [ $ugi->('UNKNOWN') ], [], 'walk yields nothing when no leaf row matches the branch' );
 };
 
 subtest 'sibling leaves do not pollute one branch\'s ancestors' => sub {
@@ -105,8 +102,7 @@ subtest 'sibling leaves do not pollute one branch\'s ancestors' => sub {
         { id => 40, parent_id => 20,    branchcode => 'FFL' },    # sibling leaf
     );
     my %got = map { $_ => 1 } $ugi->('CPL');
-    is_deeply( \%got, { 10 => 1, 20 => 1 },
-        'walk anchored to leaf 30 ignores sibling leaf 40' );
+    is_deeply( \%got, { 10 => 1, 20 => 1 }, 'walk anchored to leaf 30 ignores sibling leaf 40' );
 };
 
 subtest 'two leaves for the same branch (multi-group membership)' => sub {
@@ -117,8 +113,7 @@ subtest 'two leaves for the same branch (multi-group membership)' => sub {
         { id => 60, parent_id => 50,    branchcode => 'CPL' },    # leaf in B
     );
     my %got = map { $_ => 1 } $ugi->('CPL');
-    is_deeply( \%got, { 10 => 1, 50 => 1 },
-        'both group roots returned when branch sits under multiple groups' );
+    is_deeply( \%got, { 10 => 1, 50 => 1 }, 'both group roots returned when branch sits under multiple groups' );
 };
 
 done_testing();

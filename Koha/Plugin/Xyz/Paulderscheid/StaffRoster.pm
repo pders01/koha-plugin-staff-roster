@@ -69,6 +69,7 @@ sub _audit {
     eval {
         require C4::Log;
         $infos //= {};
+
         # ACTN1 / Bug 25159: pass $original (pre-state) so logaction can
         # produce a structured JSON diff in action_logs.diff. CREATE/DELETE
         # branches in C4::Log diff against {} when $original is undef, so
@@ -107,7 +108,7 @@ sub get_template {
     my ( $self, $args ) = @_;
     my $template = $self->SUPER::get_template($args);
     $template->param(
-        tr        => Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N::translator(),
+        tr          => Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N::translator(),
         plugin_lang => Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N::_current_lang(),
     );
     return $template;
@@ -362,19 +363,20 @@ sub _register_notice_templates {
 # staff needs. Superlibrarians always pass every check via the bypass in
 # _has_perm. Re-run on every install + upgrade so descriptions can evolve.
 my %SUBPERMISSIONS = (
-    staffroster_view             => 'Staff Roster: view rosters and own schedule',
-    staffroster_assign           => 'Staff Roster: drag staff onto slots and edit assignments',
-    staffroster_manage_rosters   => 'Staff Roster: create or edit rosters, slots, exceptions',
-    staffroster_manage_types     => 'Staff Roster: manage roster types catalogue',
-    staffroster_swap_request     => 'Staff Roster: request a shift swap',
-    staffroster_swap_respond     => 'Staff Roster: accept or reject a swap directed at you',
-    staffroster_swap_approve     => 'Staff Roster: approve swaps as a manager',
-    staffroster_self_assign      => 'Staff Roster: self-claim open shifts and drop own shifts',
-    staffroster_configure        => 'Staff Roster: change plugin configuration',
+    staffroster_view           => 'Staff Roster: view rosters and own schedule',
+    staffroster_assign         => 'Staff Roster: drag staff onto slots and edit assignments',
+    staffroster_manage_rosters => 'Staff Roster: create or edit rosters, slots, exceptions',
+    staffroster_manage_types   => 'Staff Roster: manage roster types catalogue',
+    staffroster_swap_request   => 'Staff Roster: request a shift swap',
+    staffroster_swap_respond   => 'Staff Roster: accept or reject a swap directed at you',
+    staffroster_swap_approve   => 'Staff Roster: approve swaps as a manager',
+    staffroster_self_assign    => 'Staff Roster: self-claim open shifts and drop own shifts',
+    staffroster_configure      => 'Staff Roster: change plugin configuration',
 );
 
 sub _register_permissions {
     my ($dbh) = @_;
+
     # Upsert rather than REPLACE: the latter does a DELETE + INSERT, which
     # would cascade-clobber any existing user_permissions grants for the same
     # (module_bit, code) every time the plugin upgrades.
@@ -394,14 +396,8 @@ sub _unregister_permissions {
     my @codes = keys %SUBPERMISSIONS;
     return if !@codes;
     my $placeholders = join q{,}, ('?') x @codes;
-    $dbh->do(
-        q{DELETE FROM permissions WHERE module_bit = 19 AND code IN (} . $placeholders . q{)},
-        undef, @codes
-    );
-    $dbh->do(
-        q{DELETE FROM user_permissions WHERE module_bit = 19 AND code IN (} . $placeholders . q{)},
-        undef, @codes
-    );
+    $dbh->do( q{DELETE FROM permissions WHERE module_bit = 19 AND code IN (} . $placeholders . q{)},      undef, @codes );
+    $dbh->do( q{DELETE FROM user_permissions WHERE module_bit = 19 AND code IN (} . $placeholders . q{)}, undef, @codes );
     return;
 }
 
@@ -576,7 +572,7 @@ sub uninstall {
     $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_types });
 
     _unregister_permissions($dbh);
-    $dbh->do( q{DELETE FROM letter WHERE module = 'STAFFROSTER'} );
+    $dbh->do(q{DELETE FROM letter WHERE module = 'STAFFROSTER'});
 
     return 1;
 }
@@ -675,9 +671,8 @@ sub _admin_save_type {
 
     my ( $sql, @params, $verb, $original );
     if ($id) {
-        $original = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
-        $sql = q{
+        $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
+        $sql      = q{
             UPDATE staff_roster_types
             SET code = ?, name = ?, description = ?, color = ?, is_active = ?, updated_at = NOW()
             WHERE id = ?
@@ -697,8 +692,7 @@ sub _admin_save_type {
     my $ok = $dbh->do( $sql, undef, @params );
     if ($ok) {
         $id ||= $dbh->last_insert_id( undef, undef, 'staff_roster_types', undef );
-        my $after = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
+        my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
         _audit(
             $verb eq 'insert' ? 'CREATE' : 'MODIFY',
             $id,
@@ -724,9 +718,8 @@ sub _admin_delete_type {
         return;
     }
 
-    my $original = $dbh->selectrow_hashref(
-        q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
-    my $ok = $dbh->do( q{DELETE FROM staff_roster_types WHERE id = ?}, undef, $id );
+    my $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
+    my $ok       = $dbh->do( q{DELETE FROM staff_roster_types WHERE id = ?}, undef, $id );
     _audit( 'DELETE', $id, { entity => 'roster_type' }, $original ) if $ok;
     push @{$messages}, $ok
         ? { type => 'success', code => 'success_on_delete' }
@@ -821,7 +814,7 @@ sub configure {
 
     my $root_groups = Koha::Library::Groups->get_root_groups;
 
-    my $selected_cats = $self->retrieve_data('staff_categories') // q{};
+    my $selected_cats    = $self->retrieve_data('staff_categories') // q{};
     my %selected_cat_map = map { $_ => 1 } split /,/smx, $selected_cats;
 
     my @categories = map {
@@ -833,25 +826,24 @@ sub configure {
     } Koha::Patron::Categories->search( {}, { order_by => 'description' } )->as_list;
 
     $template->param(
-        enable_email_reminders    => $self->retrieve_data('enable_email_reminders')    // '0',
-        reminder_days_before      => $self->retrieve_data('reminder_days_before')      // '1',
-        enable_swap_notifications => $self->retrieve_data('enable_swap_notifications') // '1',
-        staff_can_self_assign     => $self->retrieve_data('staff_can_self_assign')     // '0',
-        self_unclaim_lockout_hours => $self->retrieve_data('self_unclaim_lockout_hours') // '0',
-        require_swap_approval     => $self->retrieve_data('require_swap_approval')     // '1',
-        library_group_mode        => $self->retrieve_data('library_group_mode')        // 'off',
-        default_library_group_id  => $self->retrieve_data('default_library_group_id')  // q{},
-        use_koha_calendar         => $self->retrieve_data('use_koha_calendar')         // '1',
-        koha_calendar_branch      => $self->retrieve_data('koha_calendar_branch')      // q{},
-        koha_calendar_strict      => $self->retrieve_data('koha_calendar_strict')      // '1',
-        use_koha_desks            => $self->retrieve_data('use_koha_desks')            // '0',
-        use_authorised_value_locations =>
-            $self->retrieve_data('use_authorised_value_locations') // '0',
-        authorised_value_location_category =>
-            $self->retrieve_data('authorised_value_location_category') // 'STAFFROSTER_LOCATION',
-        library_groups            => _flatten_groups( $root_groups, 0 ),
-        all_libraries             => [ Koha::Libraries->search( {}, { order_by => 'branchname' } )->as_list ],
-        patron_categories         => \@categories,
+        enable_email_reminders             => $self->retrieve_data('enable_email_reminders')         // '0',
+        reminder_days_before               => $self->retrieve_data('reminder_days_before')           // '1',
+        enable_swap_notifications          => $self->retrieve_data('enable_swap_notifications')      // '1',
+        staff_can_self_assign              => $self->retrieve_data('staff_can_self_assign')          // '0',
+        self_unclaim_lockout_hours         => $self->retrieve_data('self_unclaim_lockout_hours')     // '0',
+        require_swap_approval              => $self->retrieve_data('require_swap_approval')          // '1',
+        library_group_mode                 => $self->retrieve_data('library_group_mode')             // 'off',
+        default_library_group_id           => $self->retrieve_data('default_library_group_id')       // q{},
+        use_koha_calendar                  => $self->retrieve_data('use_koha_calendar')              // '1',
+        koha_calendar_branch               => $self->retrieve_data('koha_calendar_branch')           // q{},
+        koha_calendar_strict               => $self->retrieve_data('koha_calendar_strict')           // '1',
+        use_koha_desks                     => $self->retrieve_data('use_koha_desks')                 // '0',
+        use_authorised_value_locations     => $self->retrieve_data('use_authorised_value_locations') // '0',
+        authorised_value_location_category => $self->retrieve_data('authorised_value_location_category')
+            // 'STAFFROSTER_LOCATION',
+        library_groups    => _flatten_groups( $root_groups, 0 ),
+        all_libraries     => [ Koha::Libraries->search( {}, { order_by => 'branchname' } )->as_list ],
+        patron_categories => \@categories,
     );
 
     return $self->output_html( $template->output );
@@ -862,7 +854,7 @@ sub configure {
 sub _staff_categorycodes {
     my ($self) = @_;
     my $stored = $self->retrieve_data('staff_categories') // q{};
-    my @codes  = grep { length } split /,/smx, $stored;
+    my @codes  = grep {length} split /,/smx, $stored;
     return @codes;
 }
 
@@ -1027,7 +1019,8 @@ sub tool {
     }
 
     # Visibility gate for ops accessing a specific roster
-    state $roster_scoped_ops = { map { $_ => 1 } qw(edit_roster manage_slots manage_exceptions manage_swaps view_assignments delete_confirm) };
+    state $roster_scoped_ops
+        = { map { $_ => 1 } qw(edit_roster manage_slots manage_exceptions manage_swaps view_assignments delete_confirm) };
     if ( $roster_scoped_ops->{$op} && ( my $rid = $cgi->param('roster_id') ) ) {
         my $roster = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $rid );
         if ( !$self->_can_view_roster($roster) ) {
@@ -1041,11 +1034,11 @@ sub tool {
     }
 
     $template->param(
-        op               => $op,
-        messages         => \@messages,
-        roster_types     => $roster_types,
-        branches         => $branches,
-        post_redirect_op => $post_redirect_op,
+        op                      => $op,
+        messages                => \@messages,
+        roster_types            => $roster_types,
+        branches                => $branches,
+        post_redirect_op        => $post_redirect_op,
         post_redirect_roster_id => $post_redirect_op ? $cgi->param('roster_id') : undef,
     );
 
@@ -1067,9 +1060,7 @@ sub _tool_save_roster {
 
     my @fields = (
         $cgi->param('roster_type_id'),
-        $branch_id,
-        $group_id,
-        $cgi->param('name'),
+        $branch_id, $group_id, $cgi->param('name'),
         $cgi->param('description'),
         $cgi->param('effective_from'),
         $cgi->param('effective_to') || undef,
@@ -1079,9 +1070,8 @@ sub _tool_save_roster {
     my $roster_id = $cgi->param('roster_id');
     my ( $sql, @params, $verb, $original );
     if ($roster_id) {
-        $original = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
-        $sql = q{
+        $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
+        $sql      = q{
             UPDATE staff_roster
             SET roster_type_id = ?, branch_id = ?, library_group_id = ?, name = ?, description = ?,
                 effective_from = ?, effective_to = ?, is_active = ?, updated_at = NOW()
@@ -1110,8 +1100,7 @@ sub _tool_save_roster {
                 _save_additional_fields( $dbh, 'staff_roster', $roster_id, $cgi );
             }
         );
-        my $after = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
+        my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
         _audit(
             $verb eq 'insert' ? 'CREATE' : 'MODIFY',
             $roster_id,
@@ -1134,8 +1123,7 @@ sub _tool_delete_roster {
     my ( $self, $dbh, $cgi, $messages ) = @_;
     return if !_gate( 'staffroster_manage_rosters', $messages );
     my $roster_id = $cgi->param('roster_id');
-    my $original  = $dbh->selectrow_hashref(
-        q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
+    my $original  = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
     _delete_additional_fields( $dbh, 'staff_roster', $roster_id );
     my $ok = $dbh->do( q{DELETE FROM staff_roster WHERE id = ?}, undef, $roster_id );
     if ($ok) {
@@ -1151,13 +1139,13 @@ sub _tool_save_slot {
     my ( $self, $dbh, $cgi, $messages ) = @_;
     return if !_gate( 'staffroster_manage_rosters', $messages );
 
-    my @dows = sort { $a <=> $b } grep { /^[0-6]$/sm } $cgi->multi_param('day_of_week');
+    my @dows = sort { $a <=> $b } grep {/^[0-6]$/sm} $cgi->multi_param('day_of_week');
 
-    my $freq       = $cgi->param('freq')       // 'WEEKLY';
+    my $freq = $cgi->param('freq') // 'WEEKLY';
     $freq = 'WEEKLY' if $freq ne 'MONTHLY';
-    my $interval   = $cgi->param('interval')   // 1;
+    my $interval = $cgi->param('interval') // 1;
     $interval = ( $interval =~ /^\d+$/sm && $interval > 0 ) ? int $interval : 1;
-    my $ordinal    = $cgi->param('ordinal');
+    my $ordinal = $cgi->param('ordinal');
     $ordinal = ( defined $ordinal && $ordinal =~ /^-?\d+$/sm ) ? int $ordinal : undef;
     my $until_date = $cgi->param('until_date');
     $until_date = undef if !$until_date || $until_date !~ /^\d{4}-\d{2}-\d{2}$/sm;
@@ -1179,11 +1167,9 @@ sub _tool_save_slot {
     if ( $self->retrieve_data('use_authorised_value_locations') && defined $location && length $location ) {
         my $cat = $self->retrieve_data('authorised_value_location_category')
             || 'STAFFROSTER_LOCATION';
-        my $match = Koha::AuthorisedValues->search(
-            { category => $cat, authorised_value => $location } )->count;
+        my $match = Koha::AuthorisedValues->search( { category => $cat, authorised_value => $location } )->count;
         if ( !$match ) {
-            push @{$messages},
-                { type => 'danger', code => 'slot_location_not_in_av', value => $location, category => $cat };
+            push @{$messages}, { type => 'danger', code => 'slot_location_not_in_av', value => $location, category => $cat };
             return;
         }
     }
@@ -1194,14 +1180,12 @@ sub _tool_save_slot {
         $cgi->param('end_time'),
         $cgi->param('min_staff') // 1,
         $cgi->param('max_staff') // 1,
-        $location,
-        $cgi->param('slot_notes'),
+        $location, $cgi->param('slot_notes'),
     );
 
     my $slot_id = $cgi->param('slot_id');
     if ($slot_id) {
-        my $original = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
+        my $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
         $dbh->do(
             q{
             UPDATE staff_roster_slots
@@ -1210,10 +1194,8 @@ sub _tool_save_slot {
             WHERE id = ?
         }, undef, @fields, $slot_id
         );
-        my $after = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
-        _audit( 'MODIFY', $slot_id,
-            { entity => 'slot', %{ $after // {} } }, $original );
+        my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
+        _audit( 'MODIFY', $slot_id, { entity => 'slot', %{ $after // {} } }, $original );
     }
     else {
         $dbh->do(
@@ -1224,10 +1206,8 @@ sub _tool_save_slot {
         }, undef, $cgi->param('roster_id'), @fields
         );
         my $new_id = $dbh->last_insert_id( undef, undef, 'staff_roster_slots', undef );
-        my $after  = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $new_id );
-        _audit( 'CREATE', $new_id,
-            { entity => 'slot', %{ $after // {} } }, $after );
+        my $after  = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $new_id );
+        _audit( 'CREATE', $new_id, { entity => 'slot', %{ $after // {} } }, $after );
     }
     push @{$messages}, { type => 'success', code => 'slot_saved' };
     return;
@@ -1237,8 +1217,7 @@ sub _tool_delete_slot {
     my ( $self, $dbh, $cgi, $messages ) = @_;
     return if !_gate( 'staffroster_manage_rosters', $messages );
     my $slot_id  = $cgi->param('slot_id');
-    my $original = $dbh->selectrow_hashref(
-        q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
+    my $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
     $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
     _audit( 'DELETE', $slot_id, { entity => 'slot' }, $original );
     push @{$messages}, { type => 'success', code => 'slot_deleted' };
@@ -1267,13 +1246,12 @@ sub _tool_save_exception {
         return;
     }
 
-    my $env       = C4::Context->userenv;
-    my $created_by = $env ? $env->{number} : undef;
+    my $env          = C4::Context->userenv;
+    my $created_by   = $env ? $env->{number} : undef;
     my $exception_id = $cgi->param('exception_id');
 
     if ($exception_id) {
-        my $original = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
+        my $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
             undef, $exception_id, $roster_id );
         $dbh->do(
             q{UPDATE staff_roster_exceptions
@@ -1281,10 +1259,8 @@ sub _tool_save_exception {
               WHERE id = ? AND roster_id = ?},
             undef, $exception_date, $exception_type, $reason, $exception_id, $roster_id
         );
-        my $after = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster_exceptions WHERE id = ?}, undef, $exception_id );
-        _audit( 'MODIFY', $exception_id,
-            { entity => 'exception', %{ $after // {} } }, $original );
+        my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_exceptions WHERE id = ?}, undef, $exception_id );
+        _audit( 'MODIFY', $exception_id, { entity => 'exception', %{ $after // {} } }, $original );
     }
     else {
         $dbh->do(
@@ -1294,10 +1270,8 @@ sub _tool_save_exception {
             undef, $roster_id, $exception_date, $exception_type, $reason, $created_by
         );
         my $new_id = $dbh->last_insert_id( undef, undef, 'staff_roster_exceptions', undef );
-        my $after  = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster_exceptions WHERE id = ?}, undef, $new_id );
-        _audit( 'CREATE', $new_id,
-            { entity => 'exception', %{ $after // {} } }, $after );
+        my $after  = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_exceptions WHERE id = ?}, undef, $new_id );
+        _audit( 'CREATE', $new_id, { entity => 'exception', %{ $after // {} } }, $after );
     }
     push @{$messages}, { type => 'success', code => 'exception_saved' };
     return;
@@ -1308,13 +1282,10 @@ sub _tool_delete_exception {
     return if !_gate( 'staffroster_manage_rosters', $messages );
     my $roster_id    = $cgi->param('roster_id');
     my $exception_id = $cgi->param('exception_id');
-    my $original = $dbh->selectrow_hashref(
-        q{SELECT * FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
+    my $original     = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
         undef, $exception_id, $roster_id );
-    my $count = $dbh->do(
-        q{DELETE FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
-        undef, $exception_id, $roster_id
-    );
+    my $count = $dbh->do( q{DELETE FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
+        undef, $exception_id, $roster_id );
     _audit( 'DELETE', $exception_id, { entity => 'exception', roster_id => $roster_id }, $original )
         if $count && $count ne '0E0';
     push @{$messages}, { type => 'success', code => 'exception_deleted' };
@@ -1368,12 +1339,10 @@ sub _tool_request_swap {
     # Ownership check: the requester can only surrender their own shift. The
     # dropdown is server-filtered to own_assignments, so this guards against a
     # forged from_assignment_id post.
-    my $env = C4::Context->userenv;
-    my $current_bn = $env ? $env->{number} : undef;
-    my ($from_owner) = $dbh->selectrow_array(
-        q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
-        undef, $from_assignment_id
-    );
+    my $env          = C4::Context->userenv;
+    my $current_bn   = $env ? $env->{number} : undef;
+    my ($from_owner) = $dbh->selectrow_array( q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
+        undef, $from_assignment_id );
     if ( !defined $from_owner || !defined $current_bn || $from_owner != $current_bn ) {
         push @{$messages}, { type => 'danger', code => 'swap_not_your_shift' };
         return;
@@ -1387,13 +1356,8 @@ sub _tool_request_swap {
         undef, $from_assignment_id, $to_borrowernumber, $to_assignment_id, $request_message
     );
     my $swap_id = $dbh->last_insert_id( undef, undef, 'staff_roster_swap_requests', undef );
-    my $after = $dbh->selectrow_hashref(
-        q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
-    _audit(
-        'CREATE', $swap_id,
-        { entity => 'swap_request', %{ $after // {} } },
-        $after,
-    );
+    my $after   = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
+    _audit( 'CREATE', $swap_id, { entity => 'swap_request', %{ $after // {} } }, $after, );
     push @{$messages}, { type => 'success', code => 'swap_requested' };
     return;
 }
@@ -1410,10 +1374,7 @@ sub _tool_respond_swap {
         return;
     }
 
-    my $swap = $dbh->selectrow_hashref(
-        q{SELECT * FROM staff_roster_swap_requests WHERE id = ?},
-        undef, $swap_id
-    );
+    my $swap = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
     if ( !$swap || $swap->{status} ne 'pending' ) {
         push @{$messages}, { type => 'danger', code => 'swap_not_pending' };
         return;
@@ -1456,41 +1417,40 @@ sub _tool_respond_swap {
         _txn(
             $dbh,
             sub {
-            my ($current_status) = $dbh->selectrow_array(
-                q{SELECT status FROM staff_roster_swap_requests WHERE id = ? FOR UPDATE},
-                undef, $swap_id
-            );
-            die "swap_no_longer_pending\n" if !$current_status || $current_status ne 'pending';
+                my ($current_status)
+                    = $dbh->selectrow_array( q{SELECT status FROM staff_roster_swap_requests WHERE id = ? FOR UPDATE},
+                    undef, $swap_id );
+                die "swap_no_longer_pending\n" if !$current_status || $current_status ne 'pending';
 
-            if ( $decision eq 'approve' ) {
-                # Capture from_borrower before mutating the from_assignment so a
-                # later mutual update doesn't pick up the just-written value.
-                my $from_borrower;
-                if ( $swap->{to_assignment_id} ) {
-                    ($from_borrower) = $dbh->selectrow_array(
-                        q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
-                        undef, $swap->{from_assignment_id}
-                    );
-                }
-                $dbh->do(
-                    q{UPDATE staff_roster_assignments SET borrowernumber = ?, updated_at = NOW() WHERE id = ?},
-                    undef, $swap->{to_borrowernumber}, $swap->{from_assignment_id}
-                );
-                if ( $swap->{to_assignment_id} && $from_borrower ) {
+                if ( $decision eq 'approve' ) {
+
+                    # Capture from_borrower before mutating the from_assignment so a
+                    # later mutual update doesn't pick up the just-written value.
+                    my $from_borrower;
+                    if ( $swap->{to_assignment_id} ) {
+                        ($from_borrower)
+                            = $dbh->selectrow_array( q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
+                            undef, $swap->{from_assignment_id} );
+                    }
                     $dbh->do(
                         q{UPDATE staff_roster_assignments SET borrowernumber = ?, updated_at = NOW() WHERE id = ?},
-                        undef, $from_borrower, $swap->{to_assignment_id}
+                        undef,
+                        $swap->{to_borrowernumber},
+                        $swap->{from_assignment_id}
                     );
+                    if ( $swap->{to_assignment_id} && $from_borrower ) {
+                        $dbh->do( q{UPDATE staff_roster_assignments SET borrowernumber = ?, updated_at = NOW() WHERE id = ?},
+                            undef, $from_borrower, $swap->{to_assignment_id} );
+                    }
                 }
-            }
 
-            $dbh->do(
-                q{UPDATE staff_roster_swap_requests
+                $dbh->do(
+                    q{UPDATE staff_roster_swap_requests
                     SET status = ?, response_message = ?, responded_at = NOW(), updated_at = NOW()
                   WHERE id = ?},
-                undef, $new_status, $response, $swap_id
-            );
-        }
+                    undef, $new_status, $response, $swap_id
+                );
+            }
         );
         1;
     };
@@ -1506,8 +1466,7 @@ sub _tool_respond_swap {
         return;
     }
 
-    my $after = $dbh->selectrow_hashref(
-        q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
+    my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
     _audit(
         'MODIFY', $swap_id,
         {   entity   => 'swap_request',
@@ -1518,8 +1477,7 @@ sub _tool_respond_swap {
         $swap,
     );
 
-    push @{$messages},
-        { type => 'success', code => $decision eq 'approve' ? 'swap_approved' : 'swap_rejected' };
+    push @{$messages}, { type => 'success', code => $decision eq 'approve' ? 'swap_approved' : 'swap_rejected' };
     return;
 }
 
@@ -1557,13 +1515,8 @@ sub _tool_cancel_swap {
           WHERE id = ?},
         undef, $swap_id
     );
-    my $after = $dbh->selectrow_hashref(
-        q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
-    _audit(
-        'MODIFY', $swap_id,
-        { entity => 'swap_request', decision => 'cancelled', %{ $after // {} } },
-        $swap,
-    );
+    my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
+    _audit( 'MODIFY', $swap_id, { entity => 'swap_request', decision => 'cancelled', %{ $after // {} } }, $swap, );
     push @{$messages}, { type => 'success', code => 'swap_cancelled' };
     return;
 }
@@ -1614,11 +1567,12 @@ sub _tool_view_list {
     # Decorate rosters with their additional-field summaries (one query for the page).
     my $af_defs = $dbh->selectall_arrayref(
         q{SELECT id, name FROM additional_fields WHERE tablename = ? ORDER BY id},
-        { Slice => {} }, 'staff_roster'
+        { Slice => {} },
+        'staff_roster'
     ) || [];
     if ( @{$af_defs} && @{$rosters} ) {
         my %name_for = map { $_->{id} => $_->{name} } @{$af_defs};
-        my $bulk = _bulk_additional_field_values( $dbh, 'staff_roster', [ map { $_->{id} } @{$rosters} ] );
+        my $bulk     = _bulk_additional_field_values( $dbh, 'staff_roster', [ map { $_->{id} } @{$rosters} ] );
         for my $r ( @{$rosters} ) {
             my $vals = $bulk->{ $r->{id} } || {};
             my @summary;
@@ -1722,10 +1676,7 @@ sub _tool_view_manage_slots {
         my $cat = $self->retrieve_data('authorised_value_location_category')
             || 'STAFFROSTER_LOCATION';
         @av_locations = map { { value => $_->authorised_value, lib => $_->lib } }
-            Koha::AuthorisedValues->search(
-            { category => $cat },
-            { order_by => [ 'lib', 'authorised_value' ] }
-            )->as_list;
+            Koha::AuthorisedValues->search( { category => $cat }, { order_by => [ 'lib', 'authorised_value' ] } )->as_list;
     }
 
     $template->param(
@@ -1775,9 +1726,9 @@ sub _tool_view_open_shifts {
     my ( $self, $dbh, $cgi, $template ) = @_;
     my $week_start = $cgi->param('week_start') // _get_current_week_start();
     $template->param(
-        week_start             => $week_start,
-        staff_can_self_assign  => $self->retrieve_data('staff_can_self_assign') ? 1 : 0,
-        has_self_assign_perm   => _has_perm('staffroster_self_assign')          ? 1 : 0,
+        week_start            => $week_start,
+        staff_can_self_assign => $self->retrieve_data('staff_can_self_assign') ? 1 : 0,
+        has_self_assign_perm  => _has_perm('staffroster_self_assign')          ? 1 : 0,
     );
     return;
 }
@@ -1804,10 +1755,10 @@ sub _tool_view_manage_exceptions {
         roster          => $roster,
         exceptions      => $exceptions,
         exception_types => [
-            { code => 'closed',         label => 'Closed' },
-            { code => 'holiday',        label => 'Holiday' },
-            { code => 'special',        label => 'Special event' },
-            { code => 'reduced_hours',  label => 'Reduced hours' },
+            { code => 'closed',        label => 'Closed' },
+            { code => 'holiday',       label => 'Holiday' },
+            { code => 'special',       label => 'Special event' },
+            { code => 'reduced_hours', label => 'Reduced hours' },
         ],
     );
     return;
@@ -1831,6 +1782,7 @@ sub cronjob_nightly {
     $days = ( $days =~ /^\d+$/sm ) ? int $days : 1;
 
     my $dbh = C4::Context->dbh;
+
     # Idempotency: skip assignments where we already have a reminder row in
     # action_logs for STAFFROSTER NOTICE today. Re-running the cron same day
     # (after a scheduler restart, manual invocation, or partial failure) no
@@ -1882,7 +1834,8 @@ sub cronjob_nightly {
             $failed++;
             warn "StaffRoster: REMINDER letter not found in notice templates (assignment $a->{id})";
             _audit(
-                'NOTICE_FAILED', $a->{id},
+                'NOTICE_FAILED',
+                $a->{id},
                 {   entity         => 'reminder',
                     borrowernumber => $a->{borrowernumber},
                     error          => 'letter template missing',
@@ -1902,7 +1855,8 @@ sub cronjob_nightly {
         if ($message_id) {
             $sent++;
             _audit(
-                'NOTICE', $a->{id},
+                'NOTICE',
+                $a->{id},
                 {   entity         => 'reminder',
                     borrowernumber => $a->{borrowernumber},
                     message_id     => $message_id,
@@ -1915,7 +1869,8 @@ sub cronjob_nightly {
             my $err = $@ || 'EnqueueLetter returned undef';
             warn "StaffRoster: reminder enqueue failed for assignment $a->{id} (borrower $a->{borrowernumber}): $err";
             _audit(
-                'NOTICE_FAILED', $a->{id},
+                'NOTICE_FAILED',
+                $a->{id},
                 {   entity         => 'reminder',
                     borrowernumber => $a->{borrowernumber},
                     error          => "$err",
@@ -1954,7 +1909,7 @@ sub _tool_view_manage_swaps {
         { Slice => {} }, $roster_id
     );
 
-    my $env_user = C4::Context->userenv;
+    my $env_user   = C4::Context->userenv;
     my $current_bn = $env_user ? $env_user->{number} : undef;
 
     # Upcoming assignments on this roster, joined with borrower for the
@@ -1977,7 +1932,8 @@ sub _tool_view_manage_swaps {
     # Own upcoming shifts populate the "Give up shift" dropdown. Server-side
     # filter so users can't surrender someone else's shift even with a forged
     # form post (handler also enforces the same invariant).
-    my @own_assignments = defined $current_bn
+    my @own_assignments
+        = defined $current_bn
         ? grep { $_->{borrowernumber} == $current_bn } @{ $assignments || [] }
         : ();
 
@@ -1994,18 +1950,18 @@ sub _tool_view_manage_swaps {
     $staff_sql .= q{ ORDER BY surname, firstname LIMIT 500};
     my $staff = $dbh->selectall_arrayref( $staff_sql, { Slice => {} }, @staff_params );
 
-    my $is_superlib     = $env_user && ( ( $env_user->{flags} // 0 ) == 1 || ( ( $env_user->{flags} // 0 ) & 1 ) );
-    my $approval_gated  = ( $self->retrieve_data('require_swap_approval') // '1' ) eq '1';
+    my $is_superlib    = $env_user && ( ( $env_user->{flags} // 0 ) == 1 || ( ( $env_user->{flags} // 0 ) & 1 ) );
+    my $approval_gated = ( $self->retrieve_data('require_swap_approval') // '1' ) eq '1';
 
     $template->param(
-        roster              => $roster,
-        swaps               => $swaps,
-        roster_assignments  => $assignments,
-        own_assignments     => \@own_assignments,
-        candidate_staff     => $staff,
+        roster                 => $roster,
+        swaps                  => $swaps,
+        roster_assignments     => $assignments,
+        own_assignments        => \@own_assignments,
+        candidate_staff        => $staff,
         current_borrowernumber => $current_bn,
-        is_superlib         => $is_superlib ? 1 : 0,
-        approval_gated      => $approval_gated ? 1 : 0,
+        is_superlib            => $is_superlib    ? 1 : 0,
+        approval_gated         => $approval_gated ? 1 : 0,
     );
     return;
 }
@@ -2021,7 +1977,7 @@ sub _user_branch {
 }
 
 sub _is_superlib {
-    my $env = C4::Context->userenv or return 0;
+    my $env   = C4::Context->userenv or return 0;
     my $flags = $env->{flags} // 0;
     return ( $flags == 1 ) || ( $flags & 1 );
 }
@@ -2053,7 +2009,7 @@ sub _visibility_clause {
 
     my $branch = _user_branch();
     if ( !$branch ) {
-        return ( 'AND 1=0', [] ) if $mode eq 'strict';
+        return ( 'AND 1=0',                                                [] ) if $mode eq 'strict';
         return ( 'AND r.branch_id IS NULL AND r.library_group_id IS NULL', [] );
     }
 
@@ -2074,7 +2030,7 @@ sub _can_view_roster {
     return 0 if !$branch;
 
     return 1 if !$roster->{branch_id} && !$roster->{library_group_id};
-    return 1 if $roster->{branch_id} && $roster->{branch_id} eq $branch;
+    return 1 if $roster->{branch_id}  && $roster->{branch_id} eq $branch;
     if ( $roster->{library_group_id} ) {
         my %gids = map { $_ => 1 } _user_group_ids($branch);
         return 1 if $gids{ $roster->{library_group_id} };
@@ -2096,7 +2052,7 @@ sub _branchcodes_for_roster {
 
     if ( $roster->{library_group_id} ) {
         my $group = Koha::Library::Groups->find( $roster->{library_group_id} ) or return ();
-        my $libs = $group->libraries;
+        my $libs  = $group->libraries;
         return $libs ? $libs->get_column('branchcode') : ();
     }
 
@@ -2149,11 +2105,11 @@ sub _rrule_from_params {
     my $freq = $p{freq} || 'WEEKLY';
     my @dows = @{ $p{dows} || [] };
     return q{} if !@dows;
-    my @codes = grep { defined } map { $DOW_TO_ICAL{$_} } @dows;
+    my @codes = grep {defined} map { $DOW_TO_ICAL{$_} } @dows;
     return q{} if !@codes;
     if ( $freq eq 'MONTHLY' && defined $p{ordinal} && $p{ordinal} != 0 ) {
         my $ord = int $p{ordinal};
-        @codes = map { "$ord$_" } @codes;
+        @codes = map {"$ord$_"} @codes;
     }
     my @parts = ("FREQ=$freq");
     push @parts, "INTERVAL=$p{interval}" if $p{interval} && $p{interval} > 1;
@@ -2177,9 +2133,9 @@ sub _parsed_rrule {
         until_date  => undef,
     );
     return \%out if !$rrule;
-    if ( $rrule =~ /FREQ=([A-Z]+)/sm )                { $out{freq}     = $1; }
-    if ( $rrule =~ /INTERVAL=(\d+)/sm )               { $out{interval} = $1 + 0; }
-    if ( $rrule =~ /UNTIL=(\d{4})(\d{2})(\d{2})/sm )  { $out{until_date} = "$1-$2-$3"; }
+    if ( $rrule =~ /FREQ=([A-Z]+)/sm )               { $out{freq}       = $1; }
+    if ( $rrule =~ /INTERVAL=(\d+)/sm )              { $out{interval}   = $1 + 0; }
+    if ( $rrule =~ /UNTIL=(\d{4})(\d{2})(\d{2})/sm ) { $out{until_date} = "$1-$2-$3"; }
     if ( $rrule =~ /BYDAY=([^;]+)/sm ) {
         my @dows;
         my @byday_codes;
@@ -2208,15 +2164,15 @@ sub _byday_from_rrule { return _parsed_rrule( $_[0] )->{byday_codes}; }
 # "1st Monday of month (until 2026-08-31)".
 sub _rrule_label {
     my ($rrule) = @_;
-    my $p       = _parsed_rrule($rrule);
+    my $p = _parsed_rrule($rrule);
     return q{} if !@{ $p->{dows} };
     my @day_names    = qw( Sunday Monday Tuesday Wednesday Thursday Friday Saturday );
     my $days         = join q{, }, map { substr $day_names[$_], 0, 3 } @{ $p->{dows} };
     my $until_suffix = $p->{until_date} ? " (until $p->{until_date})" : q{};
     if ( $p->{freq} eq 'MONTHLY' ) {
         my %ord_label = ( 1 => '1st', 2 => '2nd', 3 => '3rd', 4 => '4th', -1 => 'Last' );
-        my $ord       = $p->{ordinal} ? ( $ord_label{ $p->{ordinal} } || $p->{ordinal} ) : 'Each';
-        my $every     = $p->{interval} > 1 ? "Every $p->{interval} months: " : q{};
+        my $ord       = $p->{ordinal}      ? ( $ord_label{ $p->{ordinal} } || $p->{ordinal} ) : 'Each';
+        my $every     = $p->{interval} > 1 ? "Every $p->{interval} months: "                  : q{};
         return "$every$ord $days of month$until_suffix";
     }
     my $every = $p->{interval} > 1 ? "Every $p->{interval} weeks: " : q{};
@@ -2244,19 +2200,16 @@ sub _slot_applies_on {
         return scalar grep { $_ == $wday } @{ $p->{dows} };
     }
 
-    my $anchor = $anchor_iso
+    my $anchor
+        = $anchor_iso
         ? eval { Koha::DateUtils::dt_from_string( $anchor_iso, 'iso' ) }
         : $dt->clone;
     $anchor ||= $dt->clone;
     $anchor->truncate( to => 'day' );
 
-    my $set = eval {
-        DateTime::Format::ICal->parse_recurrence(
-            recurrence => $rrule,
-            dtstart    => $anchor,
-        );
-    };
+    my $set = eval { DateTime::Format::ICal->parse_recurrence( recurrence => $rrule, dtstart => $anchor, ); };
     if ( !$set ) {
+
         # Surface the failure to the plack error log so corrupt RRULEs are
         # noticed rather than silently making slots disappear from every week.
         my $err = $@ || 'unknown';
@@ -2331,8 +2284,7 @@ sub _save_additional_fields {
     return if !$record_id;
     my $fields = _additional_field_defs( $dbh, $tablename );
     return if !@{$fields};
-    my %values_by_id =
-        map { $_->{id} => [ $cgi->multi_param( 'additional_field_' . $_->{id} ) ] } @{$fields};
+    my %values_by_id = map { $_->{id} => [ $cgi->multi_param( 'additional_field_' . $_->{id} ) ] } @{$fields};
     return _store_additional_field_values( $dbh, $tablename, $record_id, \%values_by_id );
 }
 
@@ -2343,7 +2295,7 @@ sub _save_additional_fields_from_map {
     return if !$record_id || !$map;
     my $fields = _additional_field_defs( $dbh, $tablename );
     return if !@{$fields};
-    my %allowed   = map { $_->{id} => 1 } @{$fields};
+    my %allowed = map { $_->{id} => 1 } @{$fields};
     my %values_by_id;
     for my $fid ( keys %{$map} ) {
         next if !$allowed{$fid};
@@ -2355,10 +2307,9 @@ sub _save_additional_fields_from_map {
 
 sub _additional_field_defs {
     my ( $dbh, $tablename ) = @_;
-    return $dbh->selectall_arrayref(
-        q{SELECT id, repeatable FROM additional_fields WHERE tablename = ?},
-        { Slice => {} }, $tablename
-    ) || [];
+    return $dbh->selectall_arrayref( q{SELECT id, repeatable FROM additional_fields WHERE tablename = ?},
+        { Slice => {} }, $tablename )
+        || [];
 }
 
 sub _store_additional_field_values {
@@ -2371,10 +2322,8 @@ sub _store_additional_field_values {
     my $autocommit_was = $dbh->{AutoCommit};
     $dbh->begin_work if $autocommit_was;
     eval {
-        $dbh->do(
-            q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
-            undef, $tablename, $record_id
-        );
+        $dbh->do( q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
+            undef, $tablename, $record_id );
         for my $fid ( keys %{$values_by_id} ) {
             for my $v ( @{ $values_by_id->{$fid} } ) {
                 next if !defined $v || $v eq q{};
@@ -2399,10 +2348,8 @@ sub _store_additional_field_values {
 sub _delete_additional_fields {
     my ( $dbh, $tablename, $record_id ) = @_;
     return if !$record_id;
-    $dbh->do(
-        q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
-        undef, $tablename, $record_id
-    );
+    $dbh->do( q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
+        undef, $tablename, $record_id );
     return;
 }
 

@@ -64,6 +64,7 @@ sub load {
 sub _current_lang {
     require C4::Languages;
     my $lang = C4::Languages::getlanguage() // 'en';
+
     # Koha returns codes like 'de-DE'; we key by the two-letter prefix so
     # 'de-DE' and 'de-AT' share the same de.json.
     $lang =~ s/[-_].*$//;
@@ -73,7 +74,8 @@ sub _current_lang {
 sub translator {
     my ($lang) = @_;
     $lang //= _current_lang();
-    return sub { $_[0] } if $lang eq 'en';
+    return sub { $_[0] }
+        if $lang eq 'en';
     my $dict = load($lang);
     return sub {
         my ($key) = @_;
