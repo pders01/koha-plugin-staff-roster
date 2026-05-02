@@ -104,6 +104,16 @@ Both items below need an external decision before any code lands.
 
 ## Done (recent — older entries pruned 2026-05-02)
 
+- [x] **Cypress coverage for assignment CRUD + Koha integrations**:
+      - `assignment_crud_spec.ts` (5): create with default status,
+        PUT updates status + notes, DELETE drops from week,
+        POST without slot_id → 400, self-overlapping POST → 409.
+      - `integrations_spec.ts` (4): Koha Desks datalist on
+        manage_slots when `use_koha_desks=1`, AV-backed location
+        select when `use_authorised_value_locations=1`, additional
+        fields render on edit_roster, additional_fields metadata
+        surfaces in `get_week` payload for staff_roster_assignments.
+      Cypress count: 22.
 - [x] **Cypress coverage for the self-service flow**:
       `cypress/integration/staffroster/self_service_spec.ts` walks the
       borrower-facing claim/drop loop end to end (7 subtests): claim
