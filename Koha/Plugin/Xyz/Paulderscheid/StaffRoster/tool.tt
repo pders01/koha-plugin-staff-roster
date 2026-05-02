@@ -7,19 +7,19 @@
 [% INCLUDE 'doc-head-open.inc' %]
 <title>
     [% IF op == 'manage_roster' %]
-        Manage Roster &rsaquo;
+        [% tr('Manage Roster') | html %] &rsaquo;
     [% ELSIF op == 'add_roster' || op == 'edit_roster' %]
-        [% IF roster.id %]Edit[% ELSE %]New[% END %] Roster &rsaquo;
+        [% IF roster.id %][% tr('Edit') | html %][% ELSE %][% tr('New') | html %][% END %] [% tr('Roster') | html %] &rsaquo;
     [% ELSIF op == 'manage_slots' %]
-        Manage Slots &rsaquo;
+        [% tr('Manage Slots') | html %] &rsaquo;
     [% ELSIF op == 'view_assignments' %]
-        View Assignments &rsaquo;
+        [% tr('View Assignments') | html %] &rsaquo;
     [% ELSIF op == 'my_shifts' %]
-        My Shifts &rsaquo;
+        [% tr('My Shifts') | html %] &rsaquo;
     [% ELSIF op == 'open_shifts' %]
-        Open Shifts &rsaquo;
+        [% tr('Open Shifts') | html %] &rsaquo;
     [% END %]
-    Staff Roster | Plugins | Koha
+    [% tr('Staff Roster') | html %] | [% tr('Plugins') | html %] | Koha
 </title>
 [% INCLUDE 'doc-head-close.inc' %]
 <link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster-plugin.css" />
@@ -111,24 +111,24 @@
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]
         [% WRAPPER breadcrumb_item %]
-            <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a>
+            <a href="/cgi-bin/koha/plugins/plugins-home.pl">[% tr('Plugins') | html %]</a>
         [% END %]
         [% IF op == 'list' %]
             [% WRAPPER breadcrumb_item bc_active = 1 %]
-                <span>Staff Roster</span>
+                <span>[% tr('Staff Roster') | html %]</span>
             [% END %]
         [% ELSE %]
             [% WRAPPER breadcrumb_item %]
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Staff Roster</a>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Staff Roster') | html %]</a>
             [% END %]
             [% WRAPPER breadcrumb_item bc_active = 1 %]
-                [% IF op == 'add_roster' %]New Roster
-                [% ELSIF op == 'edit_roster' %]Edit Roster
-                [% ELSIF op == 'manage_slots' %]Manage Slots
-                [% ELSIF op == 'view_assignments' %]View Assignments
-                [% ELSIF op == 'my_shifts' %]My Shifts
-                [% ELSIF op == 'open_shifts' %]Open Shifts
-                [% ELSIF op == 'delete_confirm' %]Confirm Deletion
+                [% IF op == 'add_roster' %][% tr('New Roster') | html %]
+                [% ELSIF op == 'edit_roster' %][% tr('Edit Roster') | html %]
+                [% ELSIF op == 'manage_slots' %][% tr('Manage Slots') | html %]
+                [% ELSIF op == 'view_assignments' %][% tr('View Assignments') | html %]
+                [% ELSIF op == 'my_shifts' %][% tr('My Shifts') | html %]
+                [% ELSIF op == 'open_shifts' %][% tr('Open Shifts') | html %]
+                [% ELSIF op == 'delete_confirm' %][% tr('Confirm Deletion') | html %]
                 [% END %]
             [% END %]
         [% END %]
@@ -138,50 +138,50 @@
 [% BLOCK staff_roster_aside %]
 <aside>
     <div class="staff-roster-menu sidebar_menu">
-        <h5>Staff Roster</h5>
+        <h5>[% tr('Staff Roster') | html %]</h5>
         <ul>
             <li[% IF op == 'list' %] class="active"[% END %]>
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Rosters</a>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Rosters') | html %]</a>
             </li>
             <li[% IF op == 'add_roster' %] class="active"[% END %]>
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">New roster</a>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">[% tr('New roster') | html %]</a>
             </li>
             <li[% IF op == 'my_shifts' %] class="active"[% END %]>
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=my_shifts">My shifts</a>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=my_shifts">[% tr('My shifts') | html %]</a>
             </li>
             <li[% IF op == 'open_shifts' %] class="active"[% END %]>
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=open_shifts">Open shifts</a>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=open_shifts">[% tr('Open shifts') | html %]</a>
             </li>
         </ul>
 
         [% IF op == 'manage_slots' || op == 'view_assignments' || op == 'edit_roster' || op == 'delete_confirm' || op == 'manage_exceptions' || op == 'manage_swaps' %]
-            <h5>This roster</h5>
+            <h5>[% tr('This roster') | html %]</h5>
             <ul>
                 <li[% IF op == 'view_assignments' %] class="active"[% END %]>
-                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]">Schedule</a>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]">[% tr('Schedule') | html %]</a>
                 </li>
                 <li[% IF op == 'manage_slots' %] class="active"[% END %]>
-                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">Slots</a>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">[% tr('Slots') | html %]</a>
                 </li>
                 <li[% IF op == 'manage_exceptions' %] class="active"[% END %]>
-                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_exceptions&roster_id=[% roster.id | uri %]">Exceptions</a>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_exceptions&roster_id=[% roster.id | uri %]">[% tr('Exceptions') | html %]</a>
                 </li>
                 <li[% IF op == 'manage_swaps' %] class="active"[% END %]>
-                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_swaps&roster_id=[% roster.id | uri %]">Swap requests</a>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_swaps&roster_id=[% roster.id | uri %]">[% tr('Swap requests') | html %]</a>
                 </li>
                 <li[% IF op == 'edit_roster' %] class="active"[% END %]>
-                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=edit_roster&roster_id=[% roster.id | uri %]">Settings</a>
+                    <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=edit_roster&roster_id=[% roster.id | uri %]">[% tr('Settings') | html %]</a>
                 </li>
             </ul>
         [% END %]
 
-        <h5>Administration</h5>
+        <h5>[% tr('Administration') | html %]</h5>
         <ul>
             <li>
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">Roster types</a>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">[% tr('Roster types') | html %]</a>
             </li>
             <li>
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">Configuration</a>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">[% tr('Configuration') | html %]</a>
             </li>
         </ul>
     </div>
@@ -194,11 +194,11 @@
               method="get" action="/cgi-bin/koha/plugins/run.pl">
             <input type="hidden" name="class" value="[% CLASS | html %]" />
             <input type="hidden" name="method" value="tool" />
-            <h5>Filter rosters</h5>
+            <h5>[% tr('Filter rosters') | html %]</h5>
             <div class="form-group">
-                <label for="filter_branch" class="control-label">Branch</label>
+                <label for="filter_branch" class="control-label">[% tr('Branch') | html %]</label>
                 <select id="filter_branch" name="filter_branch" class="form-control input-sm">
-                    <option value="">All branches</option>
+                    <option value="">[% tr('All branches') | html %]</option>
                     [% FOREACH branch IN branches %]
                         <option value="[% branch.branchcode | html %]" [% IF filter_branch == branch.branchcode %]selected[% END %]>
                             [% branch.branchname | html %]
@@ -207,9 +207,9 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="filter_type" class="control-label">Type</label>
+                <label for="filter_type" class="control-label">[% tr('Type') | html %]</label>
                 <select id="filter_type" name="filter_type" class="form-control input-sm">
-                    <option value="">All types</option>
+                    <option value="">[% tr('All types') | html %]</option>
                     [% FOREACH rt IN roster_types %]
                         <option value="[% rt.id | html %]" [% IF filter_type == rt.id %]selected[% END %]>
                             [% rt.name | html %]
@@ -218,19 +218,19 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="filter_status" class="control-label">Status</label>
+                <label for="filter_status" class="control-label">[% tr('Status') | html %]</label>
                 <select id="filter_status" name="filter_status" class="form-control input-sm">
-                    <option value="">All</option>
-                    <option value="1" [% IF filter_status == '1' %]selected[% END %]>Active</option>
-                    <option value="0" [% IF filter_status == '0' %]selected[% END %]>Inactive</option>
+                    <option value="">[% tr('All') | html %]</option>
+                    <option value="1" [% IF filter_status == '1' %]selected[% END %]>[% tr('Active') | html %]</option>
+                    <option value="0" [% IF filter_status == '0' %]selected[% END %]>[% tr('Inactive') | html %]</option>
                 </select>
             </div>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary btn-sm btn-block">
-                    <i class="fa fa-filter"></i> Apply filters
+                    <i class="fa fa-filter"></i> [% tr('Apply filters') | html %]
                 </button>
                 [% IF filter_branch || filter_type || filter_status %]
-                    <a class="btn btn-link btn-sm btn-block" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Clear</a>
+                    <a class="btn btn-link btn-sm btn-block" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Clear') | html %]</a>
                 [% END %]
             </div>
         </form>
@@ -246,55 +246,55 @@
         <div class="alert alert-[% m.type | html %]">
             [% SWITCH m.code %]
             [% CASE 'success_on_insert' %]
-                <span>Roster created successfully.</span>
+                <span>[% tr('Roster created successfully.') | html %]</span>
             [% CASE 'success_on_update' %]
-                <span>Roster updated successfully.</span>
+                <span>[% tr('Roster updated successfully.') | html %]</span>
             [% CASE 'success_on_delete' %]
-                <span>Roster deleted successfully.</span>
+                <span>[% tr('Roster deleted successfully.') | html %]</span>
             [% CASE 'error_on_insert' %]
-                <span>An error occurred when creating the roster.</span>
+                <span>[% tr('An error occurred when creating the roster.') | html %]</span>
             [% CASE 'error_on_update' %]
-                <span>An error occurred when updating the roster.</span>
+                <span>[% tr('An error occurred when updating the roster.') | html %]</span>
             [% CASE 'error_on_delete' %]
-                <span>An error occurred when deleting the roster.</span>
+                <span>[% tr('An error occurred when deleting the roster.') | html %]</span>
             [% CASE 'slot_saved' %]
-                <span>Time slot saved successfully.</span>
+                <span>[% tr('Time slot saved successfully.') | html %]</span>
             [% CASE 'slot_deleted' %]
-                <span>Time slot deleted successfully.</span>
+                <span>[% tr('Time slot deleted successfully.') | html %]</span>
             [% CASE 'slot_no_days_selected' %]
-                <span>Pick at least one day of the week for the slot.</span>
+                <span>[% tr('Pick at least one day of the week for the slot.') | html %]</span>
             [% CASE 'exception_saved' %]
-                <span>Exception saved.</span>
+                <span>[% tr('Exception saved.') | html %]</span>
             [% CASE 'exception_deleted' %]
-                <span>Exception deleted.</span>
+                <span>[% tr('Exception deleted.') | html %]</span>
             [% CASE 'exception_bad_date' %]
-                <span>Provide a valid date in YYYY-MM-DD format.</span>
+                <span>[% tr('Provide a valid date in YYYY-MM-DD format.') | html %]</span>
             [% CASE 'exception_bad_type' %]
-                <span>Pick one of the supported exception types.</span>
+                <span>[% tr('Pick one of the supported exception types.') | html %]</span>
             [% CASE 'swap_requested' %]
-                <span>Swap request sent.</span>
+                <span>[% tr('Swap request sent.') | html %]</span>
             [% CASE 'swap_approved' %]
-                <span>Swap approved; the assignment has been reassigned.</span>
+                <span>[% tr('Swap approved; the assignment has been reassigned.') | html %]</span>
             [% CASE 'swap_rejected' %]
-                <span>Swap rejected.</span>
+                <span>[% tr('Swap rejected.') | html %]</span>
             [% CASE 'swap_cancelled' %]
-                <span>Swap cancelled.</span>
+                <span>[% tr('Swap cancelled.') | html %]</span>
             [% CASE 'swap_missing_fields' %]
-                <span>Pick a shift and a target staff member.</span>
+                <span>[% tr('Pick a shift and a target staff member.') | html %]</span>
             [% CASE 'swap_assignment_mismatch' %]
-                <span>That shift doesn't belong to this roster.</span>
+                <span>[% tr("That shift doesn't belong to this roster.") | html %]</span>
             [% CASE 'swap_bad_decision' %]
-                <span>Pick approve or reject.</span>
+                <span>[% tr('Pick approve or reject.') | html %]</span>
             [% CASE 'swap_not_pending' %]
-                <span>That swap is no longer pending.</span>
+                <span>[% tr('That swap is no longer pending.') | html %]</span>
             [% CASE 'swap_needs_manager' %]
-                <span>Manager approval is required for this swap.</span>
+                <span>[% tr('Manager approval is required for this swap.') | html %]</span>
             [% CASE 'swap_not_authorised' %]
-                <span>You don't have permission to act on this swap.</span>
+                <span>[% tr("You don't have permission to act on this swap.") | html %]</span>
             [% CASE 'slot_location_not_in_av' %]
-                <span>Location &quot;[% m.value | html %]&quot; is not in authorised value category &quot;[% m.category | html %]&quot;. Pick a value from the list.</span>
+                <span>[% tr('Location "VAL" is not in authorised value category "CAT". Pick a value from the list.') | replace('VAL', m.value) | replace('CAT', m.category) | html %]</span>
             [% CASE 'access_denied' %]
-                <span>You are not authorized to view that roster.</span>
+                <span>[% tr('You are not authorized to view that roster.') | html %]</span>
             [% CASE %]
                 <span>[% m.code | html %]</span>
             [% END %]
@@ -302,18 +302,18 @@
     [% END %]
 
     [% IF op == 'list' %]
-        <h1>Staff rosters</h1>
+        <h1>[% tr('Staff rosters') | html %]</h1>
 
         <div id="toolbar" class="btn-toolbar">
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">
-                <i class="fa fa-plus"></i> New roster
+                <i class="fa fa-plus"></i> [% tr('New roster') | html %]
             </a>
         </div>
 
         [% IF filter_branch || filter_type || filter_status %]
             <div class="alert alert-info">
-                Filters active.
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Clear</a>
+                [% tr('Filters active.') | html %]
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Clear') | html %]</a>
             </div>
         [% END %]
 
@@ -322,13 +322,13 @@
                 <table id="rosters_table">
                     <thead>
                         <tr>
-                            <th scope="col" data-colname="name">Name</th>
-                            <th scope="col" data-colname="type">Type</th>
-                            <th scope="col" data-colname="target">Target</th>
-                            <th scope="col" data-colname="effective">Effective</th>
-                            <th scope="col" data-colname="slots">Slots</th>
-                            <th scope="col" data-colname="status">Status</th>
-                            <th scope="col" class="noExport" data-colname="actions">Actions</th>
+                            <th scope="col" data-colname="name">[% tr('Name') | html %]</th>
+                            <th scope="col" data-colname="type">[% tr('Type') | html %]</th>
+                            <th scope="col" data-colname="target">[% tr('Target') | html %]</th>
+                            <th scope="col" data-colname="effective">[% tr('Effective') | html %]</th>
+                            <th scope="col" data-colname="slots">[% tr('Slots') | html %]</th>
+                            <th scope="col" data-colname="status">[% tr('Status') | html %]</th>
+                            <th scope="col" class="noExport" data-colname="actions">[% tr('Actions') | html %]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -359,7 +359,7 @@
                                     [% ELSIF roster.group_name %]
                                         <i class="fa fa-sitemap" aria-hidden="true"></i> [% roster.group_name | html %]
                                     [% ELSE %]
-                                        <span class="text-muted"><i class="fa fa-globe" aria-hidden="true"></i> All branches</span>
+                                        <span class="text-muted"><i class="fa fa-globe" aria-hidden="true"></i> [% tr('All branches') | html %]</span>
                                     [% END %]
                                 </td>
                                 <td>
@@ -367,29 +367,29 @@
                                     [% IF roster.effective_to %]
                                         – [% roster.effective_to | $KohaDates %]
                                     [% ELSE %]
-                                        – <span class="text-muted">ongoing</span>
+                                        – <span class="text-muted">[% tr('ongoing') | html %]</span>
                                     [% END %]
                                 </td>
                                 <td>[% roster.slot_count || 0 %]</td>
                                 <td>
                                     [% IF roster.is_active %]
-                                        <span class="text-success"><i class="fa fa-circle"></i> Active</span>
+                                        <span class="text-success"><i class="fa fa-circle"></i> [% tr('Active') | html %]</span>
                                     [% ELSE %]
-                                        <span class="text-muted"><i class="fa fa-circle-o"></i> Inactive</span>
+                                        <span class="text-muted"><i class="fa fa-circle-o"></i> [% tr('Inactive') | html %]</span>
                                     [% END %]
                                 </td>
                                 <td class="actions">
                                     <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=view_assignments&roster_id=[% roster.id | uri %]">
-                                        <i class="fa fa-calendar-check"></i> Schedule
+                                        <i class="fa fa-calendar-check"></i> [% tr('Schedule') | html %]
                                     </a>
                                     <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">
-                                        <i class="fa fa-clock"></i> Slots
+                                        <i class="fa fa-clock"></i> [% tr('Slots') | html %]
                                     </a>
                                     <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=edit_roster&roster_id=[% roster.id | uri %]">
-                                        <i class="fa fa-pencil"></i> Edit
+                                        <i class="fa fa-pencil"></i> [% tr('Edit') | html %]
                                     </a>
                                     <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=delete_confirm&roster_id=[% roster.id | uri %]">
-                                        <i class="fa fa-trash"></i> Delete
+                                        <i class="fa fa-trash"></i> [% tr('Delete') | html %]
                                     </a>
                                 </td>
                             </tr>
@@ -398,14 +398,14 @@
                 </table>
             [% ELSE %]
                 <div class="alert alert-info">
-                    No rosters found. <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">Create your first roster</a>.
+                    [% tr('No rosters found.') | html %] <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">[% tr('Create your first roster') | html %]</a>.
                 </div>
             [% END %]
         </div>
     [% END %]
 
     [% IF op == 'add_roster' || op == 'edit_roster' %]
-        <h1>[% IF roster.id %]Edit Roster[% ELSE %]New Roster[% END %]</h1>
+        <h1>[% IF roster.id %][% tr('Edit Roster') | html %][% ELSE %][% tr('New Roster') | html %][% END %]</h1>
 
         <form method="post" action="/cgi-bin/koha/plugins/run.pl" class="validated">
             [% INCLUDE 'csrf-token.inc' %]
@@ -415,34 +415,34 @@
             <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
 
             <fieldset class="rows">
-                <legend>Roster Details</legend>
+                <legend>[% tr('Roster Details') | html %]</legend>
                 <ol>
                     <li>
-                        <label for="roster_type_id" class="required">Roster type:</label>
+                        <label for="roster_type_id" class="required">[% tr('Roster type:') | html %]</label>
                         <select name="roster_type_id" id="roster_type_id" required="required" class="required">
-                            <option value="">-- Select type --</option>
+                            <option value="">[% tr('-- Select type --') | html %]</option>
                             [% FOREACH rt IN roster_types %]
                                 <option value="[% rt.id | html %]" [% IF roster.roster_type_id == rt.id %]selected[% END %]>
                                     [% rt.name | html %]
                                 </option>
                             [% END %]
                         </select>
-                        <span class="required">Required</span>
+                        <span class="required">[% tr('Required') | html %]</span>
                     </li>
                     <li>
-                        <label for="name" class="required">Name:</label>
+                        <label for="name" class="required">[% tr('Name:') | html %]</label>
                         <input type="text" name="name" id="name" value="[% roster.name | html %]"
                                size="50" maxlength="255" required="required" class="required focus" />
-                        <span class="required">Required</span>
+                        <span class="required">[% tr('Required') | html %]</span>
                     </li>
                     <li>
-                        <label for="target">Target:</label>
+                        <label for="target">[% tr('Target:') | html %]</label>
                         <select name="target" id="target">
                             <option value="all" [% UNLESS roster.branch_id || roster.library_group_id %]selected[% END %]>
-                                All branches
+                                [% tr('All branches') | html %]
                             </option>
                             [% IF branches.size %]
-                                <optgroup label="Branches">
+                                <optgroup label="[% tr('Branches') | html %]">
                                     [% FOREACH branch IN branches %]
                                         <option value="branch:[% branch.branchcode | html %]"
                                                 [% IF roster.branch_id == branch.branchcode %]selected[% END %]>
@@ -452,7 +452,7 @@
                                 </optgroup>
                             [% END %]
                             [% IF library_groups.size %]
-                                <optgroup label="Library groups">
+                                <optgroup label="[% tr('Library groups') | html %]">
                                     [% FOREACH g IN library_groups %]
                                         <option value="group:[% g.id | html %]"
                                                 [% IF roster.library_group_id == g.id %]selected[% END %]>
@@ -462,29 +462,29 @@
                                 </optgroup>
                             [% END %]
                         </select>
-                        <span class="hint">Choose all branches, a single branch, or a library group.</span>
+                        <span class="hint">[% tr('Choose all branches, a single branch, or a library group.') | html %]</span>
                     </li>
                     <li>
-                        <label for="description">Description:</label>
+                        <label for="description">[% tr('Description:') | html %]</label>
                         <textarea name="description" id="description" rows="3" cols="50">[% roster.description | html %]</textarea>
                     </li>
                     <li>
-                        <label for="effective_from" class="required">Effective from:</label>
+                        <label for="effective_from" class="required">[% tr('Effective from:') | html %]</label>
                         <input type="text" name="effective_from" id="effective_from"
                                value="[% roster.effective_from | html %]" class="flatpickr required" required="required" />
-                        <span class="required">Required</span>
+                        <span class="required">[% tr('Required') | html %]</span>
                     </li>
                     <li>
-                        <label for="effective_to">Effective to:</label>
+                        <label for="effective_to">[% tr('Effective to:') | html %]</label>
                         <input type="text" name="effective_to" id="effective_to"
                                value="[% roster.effective_to | html %]" class="flatpickr" />
-                        <span class="hint">Leave empty for ongoing roster</span>
+                        <span class="hint">[% tr('Leave empty for ongoing roster') | html %]</span>
                     </li>
                     <li>
-                        <label for="is_active">Active:</label>
+                        <label for="is_active">[% tr('Active:') | html %]</label>
                         <select name="is_active" id="is_active">
-                            <option value="1" [% IF roster.is_active || !roster.id %]selected[% END %]>Yes</option>
-                            <option value="0" [% IF roster.id && !roster.is_active %]selected[% END %]>No</option>
+                            <option value="1" [% IF roster.is_active || !roster.id %]selected[% END %]>[% tr('Yes') | html %]</option>
+                            <option value="0" [% IF roster.id && !roster.is_active %]selected[% END %]>[% tr('No') | html %]</option>
                         </select>
                     </li>
                 </ol>
@@ -496,11 +496,11 @@
                 [% INCLUDE 'additional-fields-entry.inc' %]
             [% ELSE %]
                 <fieldset class="rows">
-                    <legend>Additional fields</legend>
+                    <legend>[% tr('Additional fields') | html %]</legend>
                     <ol>
                         <li>
-                            <span class="hint">No custom fields defined for rosters.
-                                <a href="/cgi-bin/koha/admin/additional-fields.pl?tablename=staff_roster">Configure them in Koha admin</a>.
+                            <span class="hint">[% tr('No custom fields defined for rosters.') | html %]
+                                <a href="/cgi-bin/koha/admin/additional-fields.pl?tablename=staff_roster">[% tr('Configure them in Koha admin') | html %]</a>.
                             </span>
                         </li>
                     </ol>
@@ -508,22 +508,22 @@
             [% END %]
 
             <fieldset class="action">
-                <input type="submit" class="btn btn-primary" value="Save roster" />
-                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Cancel</a>
+                <input type="submit" class="btn btn-primary" value="[% tr('Save roster') | html %]" />
+                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Cancel') | html %]</a>
             </fieldset>
         </form>
     [% END %]
 
     [% IF op == 'delete_confirm' %]
-        <h1>Delete roster '[% roster.name | html %]'?</h1>
-        <p class="text-muted">This will also delete all associated time slots and assignments.</p>
+        <h1>[% tr("Delete roster 'NAME'?") | replace('NAME', roster.name) | html %]</h1>
+        <p class="text-muted">[% tr('This will also delete all associated time slots and assignments.') | html %]</p>
 
         <div class="page-section">
             <table>
-                <tr><th scope="row">Name:</th><td>[% roster.name | html %]</td></tr>
-                <tr><th scope="row">Type:</th><td>[% roster.type_name | html %]</td></tr>
-                <tr><th scope="row">Branch:</th><td>[% roster.branch_name || 'All branches' | html %]</td></tr>
-                <tr><th scope="row">Time slots:</th><td>[% roster.slot_count || 0 | html %]</td></tr>
+                <tr><th scope="row">[% tr('Name:') | html %]</th><td>[% roster.name | html %]</td></tr>
+                <tr><th scope="row">[% tr('Type:') | html %]</th><td>[% roster.type_name | html %]</td></tr>
+                <tr><th scope="row">[% tr('Branch:') | html %]</th><td>[% roster.branch_name || tr('All branches') | html %]</td></tr>
+                <tr><th scope="row">[% tr('Time slots:') | html %]</th><td>[% roster.slot_count || 0 | html %]</td></tr>
             </table>
         </div>
 
@@ -534,8 +534,8 @@
             <input type="hidden" name="op" value="cud-delete_roster" />
             <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
             <fieldset class="action">
-                <input type="submit" class="btn btn-primary" value="Yes, delete this roster" />
-                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">No, do not delete</a>
+                <input type="submit" class="btn btn-primary" value="[% tr('Yes, delete this roster') | html %]" />
+                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('No, do not delete') | html %]</a>
             </fieldset>
         </form>
     [% END %]
@@ -543,17 +543,17 @@
     [% IF op == 'manage_slots' %]
         <div id="toolbar" class="btn-toolbar">
             <a class="btn btn-default" href="#" id="add_slot_btn">
-                <i class="fa fa-plus"></i> Add time slot
+                <i class="fa fa-plus"></i> [% tr('Add time slot') | html %]
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
-                <i class="fa fa-arrow-left"></i> Back to rosters
+                <i class="fa fa-arrow-left"></i> [% tr('Back to rosters') | html %]
             </a>
         </div>
 
-        <h1>Manage Time Slots - [% roster.name | html %]</h1>
+        <h1>[% tr('Manage Time Slots') | html %] - [% roster.name | html %]</h1>
         <p>
             <span class="staff-roster-type-swatch" style="background-color: [% roster.type_color | html %];" aria-hidden="true"></span>[% roster.type_name | html %]
-            [% IF roster.branch_name %][% roster.branch_name | html %][% ELSE %]All branches[% END %]
+            [% IF roster.branch_name %][% roster.branch_name | html %][% ELSE %][% tr('All branches') | html %][% END %]
         </p>
 
         <!-- Slot form (hidden by default) -->
@@ -567,36 +567,36 @@
                 <input type="hidden" name="slot_id" id="slot_id" value="" />
 
                 <fieldset class="rows">
-                    <legend id="slot_form_legend">Add Time Slot</legend>
+                    <legend id="slot_form_legend">[% tr('Add Time Slot') | html %]</legend>
                     <ol>
                         <li>
-                            <label for="freq">Frequency:</label>
+                            <label for="freq">[% tr('Frequency:') | html %]</label>
                             <select name="freq" id="freq">
-                                <option value="WEEKLY">Weekly</option>
-                                <option value="MONTHLY">Monthly</option>
+                                <option value="WEEKLY">[% tr('Weekly') | html %]</option>
+                                <option value="MONTHLY">[% tr('Monthly') | html %]</option>
                             </select>
-                            <span class="hint">Weekly = each picked weekday. Monthly = nth weekday of month.</span>
+                            <span class="hint">[% tr('Weekly = each picked weekday. Monthly = nth weekday of month.') | html %]</span>
                         </li>
                         <li>
-                            <label for="interval">Repeat every:</label>
+                            <label for="interval">[% tr('Repeat every:') | html %]</label>
                             <input type="number" name="interval" id="interval" value="1" min="1" max="52" />
-                            <span class="hint" id="interval_hint">week(s)</span>
+                            <span class="hint" id="interval_hint">[% tr('week(s)') | html %]</span>
                         </li>
                         <li id="ordinal_row" style="display: none;">
-                            <label for="ordinal">Which occurrence:</label>
+                            <label for="ordinal">[% tr('Which occurrence:') | html %]</label>
                             <select name="ordinal" id="ordinal">
-                                <option value="1">1st</option>
-                                <option value="2">2nd</option>
-                                <option value="3">3rd</option>
-                                <option value="4">4th</option>
-                                <option value="-1">Last</option>
+                                <option value="1">[% tr('1st') | html %]</option>
+                                <option value="2">[% tr('2nd') | html %]</option>
+                                <option value="3">[% tr('3rd') | html %]</option>
+                                <option value="4">[% tr('4th') | html %]</option>
+                                <option value="-1">[% tr('Last') | html %]</option>
                             </select>
-                            <span class="hint">Applies to all picked weekdays (e.g. 1st Mon + 1st Wed).</span>
+                            <span class="hint">[% tr('Applies to all picked weekdays (e.g. 1st Mon + 1st Wed).') | html %]</span>
                         </li>
                         <li class="day-picker">
-                            <label class="required">Days of week:</label>
+                            <label class="required">[% tr('Days of week:') | html %]</label>
                             <div class="staff-roster-day-picker-wrap">
-                                <div class="staff-roster-day-picker" role="group" aria-label="Days of week">
+                                <div class="staff-roster-day-picker" role="group" aria-label="[% tr('Days of week') | html %]">
                                     [% FOREACH d IN [
                                         { v => 1, n => 'Mon' }
                                         { v => 2, n => 'Tue' }
@@ -608,44 +608,44 @@
                                     ] %]
                                         <label class="staff-roster-day-checkbox">
                                             <input type="checkbox" name="day_of_week" value="[% d.v %]" class="day-of-week-input" />
-                                            <span>[% d.n %]</span>
+                                            <span>[% tr(d.n) | html %]</span>
                                         </label>
                                     [% END %]
                                 </div>
-                                <span class="hint">Pick one or more days. Combined with frequency above.</span>
+                                <span class="hint">[% tr('Pick one or more days. Combined with frequency above.') | html %]</span>
                             </div>
                         </li>
                         <li>
-                            <label for="until_date">Until (optional):</label>
+                            <label for="until_date">[% tr('Until (optional):') | html %]</label>
                             <input type="date" name="until_date" id="until_date" />
-                            <span class="hint">No more occurrences after this date.</span>
+                            <span class="hint">[% tr('No more occurrences after this date.') | html %]</span>
                         </li>
                         <li>
-                            <label for="start_time" class="required">Start time:</label>
+                            <label for="start_time" class="required">[% tr('Start time:') | html %]</label>
                             <input type="time" name="start_time" id="start_time" required="required" />
                         </li>
                         <li>
-                            <label for="end_time" class="required">End time:</label>
+                            <label for="end_time" class="required">[% tr('End time:') | html %]</label>
                             <input type="time" name="end_time" id="end_time" required="required" />
                         </li>
                         <li>
-                            <label for="min_staff">Minimum staff:</label>
+                            <label for="min_staff">[% tr('Minimum staff:') | html %]</label>
                             <input type="number" name="min_staff" id="min_staff" value="1" min="1" max="20" />
                         </li>
                         <li>
-                            <label for="max_staff">Maximum staff:</label>
+                            <label for="max_staff">[% tr('Maximum staff:') | html %]</label>
                             <input type="number" name="max_staff" id="max_staff" value="1" min="1" max="20" />
                         </li>
                         <li>
-                            <label for="location">Location:</label>
+                            <label for="location">[% tr('Location:') | html %]</label>
                             [% IF av_locations.size %]
                                 <select name="location" id="location">
-                                    <option value="">— None —</option>
+                                    <option value="">[% tr('— None —') | html %]</option>
                                     [% FOREACH av IN av_locations %]
                                         <option value="[% av.value | html %]">[% av.lib || av.value | html %]</option>
                                     [% END %]
                                 </select>
-                                <span class="hint">Pick from the configured authorised value category. Submitting other values is rejected.</span>
+                                <span class="hint">[% tr('Pick from the configured authorised value category. Submitting other values is rejected.') | html %]</span>
                             [% ELSE %]
                                 <input type="text" name="location" id="location" size="30" maxlength="255"
                                        [% IF desks.size %]list="koha-desks-list"[% END %] />
@@ -655,22 +655,22 @@
                                             <option value="[% d.desk_name | html %]"></option>
                                         [% END %]
                                     </datalist>
-                                    <span class="hint">Suggestions are this branch's Koha desks; you can also type a custom value.</span>
+                                    <span class="hint">[% tr("Suggestions are this branch's Koha desks; you can also type a custom value.") | html %]</span>
                                 [% ELSE %]
-                                    <span class="hint">Specific desk or area within the branch.</span>
+                                    <span class="hint">[% tr('Specific desk or area within the branch.') | html %]</span>
                                 [% END %]
                             [% END %]
                         </li>
                         <li>
-                            <label for="slot_notes">Notes:</label>
+                            <label for="slot_notes">[% tr('Notes:') | html %]</label>
                             <textarea name="slot_notes" id="slot_notes" rows="2" cols="40"></textarea>
                         </li>
                     </ol>
                 </fieldset>
 
                 <fieldset class="action">
-                    <input type="submit" class="btn btn-primary" value="Save slot" />
-                    <button type="button" class="btn btn-default" id="cancel_slot">Cancel</button>
+                    <input type="submit" class="btn btn-primary" value="[% tr('Save slot') | html %]" />
+                    <button type="button" class="btn btn-default" id="cancel_slot">[% tr('Cancel') | html %]</button>
                 </fieldset>
             </form>
         </div>
@@ -680,11 +680,11 @@
                     <table id="slots_table">
                         <thead>
                             <tr>
-                                <th scope="col" data-colname="time">Time</th>
-                                <th scope="col" data-colname="days">Days</th>
-                                <th scope="col" data-colname="location">Location</th>
-                                <th scope="col" data-colname="staff">Staff</th>
-                                <th scope="col" class="noExport" data-colname="actions">Actions</th>
+                                <th scope="col" data-colname="time">[% tr('Time') | html %]</th>
+                                <th scope="col" data-colname="days">[% tr('Days') | html %]</th>
+                                <th scope="col" data-colname="location">[% tr('Location') | html %]</th>
+                                <th scope="col" data-colname="staff">[% tr('Staff') | html %]</th>
+                                <th scope="col" class="noExport" data-colname="actions">[% tr('Actions') | html %]</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -713,14 +713,14 @@
                                            data-interval="[% slot.rrule_interval | html %]"
                                            data-ordinal="[% slot.rrule_ordinal | html %]"
                                            data-until="[% slot.rrule_until | html %]">
-                                            <i class="fa fa-pencil"></i> Edit
+                                            <i class="fa fa-pencil"></i> [% tr('Edit') | html %]
                                         </a>
                                         <button type="button" class="btn btn-default btn-xs slot-delete-trigger"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#delete-slot-modal"
                                                 data-slot-id="[% slot.id | html %]"
                                                 data-slot-info="[% slot.days_label | html %], [% slot.start_time.substr(0,5) | html %]–[% slot.end_time.substr(0,5) | html %]">
-                                            <i class="fa fa-trash"></i> Delete
+                                            <i class="fa fa-trash"></i> [% tr('Delete') | html %]
                                         </button>
                                     </td>
                                 </tr>
@@ -729,7 +729,7 @@
                     </table>
                 [% ELSE %]
                     <div class="alert alert-info">
-                        No time slots defined yet. Use <em>Add time slot</em> to create one.
+                        [% tr('No time slots defined yet. Use Add time slot to create one.') | html %]
                     </div>
                 [% END %]
         </div>
@@ -746,16 +746,16 @@
                         <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
                         <input type="hidden" name="slot_id" id="delete-slot-id" value="" />
                         <div class="modal-header">
-                            <h1 class="modal-title" id="delete-slot-modal-label">Delete time slot?</h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <h1 class="modal-title" id="delete-slot-modal-label">[% tr('Delete time slot?') | html %]</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="[% tr('Close') | html %]"></button>
                         </div>
                         <div class="modal-body">
-                            <p>Are you sure you want to delete the slot <strong id="delete-slot-info"></strong>?</p>
-                            <p class="text-muted">Existing assignments on this slot will be removed too.</p>
+                            <p>[% tr('Are you sure you want to delete the slot') | html %] <strong id="delete-slot-info"></strong>?</p>
+                            <p class="text-muted">[% tr('Existing assignments on this slot will be removed too.') | html %]</p>
                         </div>
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-danger"><i class="fa fa-trash"></i> Delete slot</button>
-                            <button type="button" class="btn btn-default" data-bs-dismiss="modal"><i class="fa fa-times"></i> Cancel</button>
+                            <button type="submit" class="btn btn-danger"><i class="fa fa-trash"></i> [% tr('Delete slot') | html %]</button>
+                            <button type="button" class="btn btn-default" data-bs-dismiss="modal"><i class="fa fa-times"></i> [% tr('Cancel') | html %]</button>
                         </div>
                     </form>
                 </div>
@@ -766,18 +766,16 @@
     [% IF op == 'manage_exceptions' %]
         <div id="toolbar" class="btn-toolbar">
             <a class="btn btn-default" href="#" id="add_exception_btn">
-                <i class="fa fa-plus"></i> Add exception
+                <i class="fa fa-plus"></i> [% tr('Add exception') | html %]
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
-                <i class="fa fa-arrow-left"></i> Back to rosters
+                <i class="fa fa-arrow-left"></i> [% tr('Back to rosters') | html %]
             </a>
         </div>
 
-        <h1>Exceptions - [% roster.name | html %]</h1>
+        <h1>[% tr('Exceptions') | html %] - [% roster.name | html %]</h1>
         <p class="text-muted">
-            One-off date overrides for this roster (closures, holidays, special events). Koha calendar
-            closures merge in automatically when "Use Koha calendar" is on; rows here are non-calendar
-            additions.
+            [% tr('One-off date overrides for this roster (closures, holidays, special events). Koha calendar closures merge in automatically when "Use Koha calendar" is on; rows here are non-calendar additions.') | html %]
         </p>
 
         <div id="exception_form_container" style="display: none; margin: 16px 0;">
@@ -790,32 +788,32 @@
                 <input type="hidden" name="exception_id" id="exception_id" value="" />
 
                 <fieldset class="rows">
-                    <legend id="exception_form_legend">Add exception</legend>
+                    <legend id="exception_form_legend">[% tr('Add exception') | html %]</legend>
                     <ol>
                         <li>
-                            <label for="exception_date" class="required">Date:</label>
+                            <label for="exception_date" class="required">[% tr('Date:') | html %]</label>
                             <input type="text" name="exception_date" id="exception_date" class="flatpickr required" required="required" />
-                            <span class="required">Required</span>
+                            <span class="required">[% tr('Required') | html %]</span>
                         </li>
                         <li>
-                            <label for="exception_type" class="required">Type:</label>
+                            <label for="exception_type" class="required">[% tr('Type:') | html %]</label>
                             <select name="exception_type" id="exception_type" required="required">
                                 [% FOREACH t IN exception_types %]
-                                    <option value="[% t.code | html %]">[% t.label | html %]</option>
+                                    <option value="[% t.code | html %]">[% tr(t.label) | html %]</option>
                                 [% END %]
                             </select>
                         </li>
                         <li>
-                            <label for="reason">Reason:</label>
+                            <label for="reason">[% tr('Reason:') | html %]</label>
                             <input type="text" name="reason" id="reason" size="40" maxlength="255" />
-                            <span class="hint">Optional note shown alongside the exception in the schedule.</span>
+                            <span class="hint">[% tr('Optional note shown alongside the exception in the schedule.') | html %]</span>
                         </li>
                     </ol>
                 </fieldset>
 
                 <fieldset class="action">
-                    <input type="submit" class="btn btn-primary" value="Save exception" />
-                    <button type="button" class="btn btn-default" id="cancel_exception">Cancel</button>
+                    <input type="submit" class="btn btn-primary" value="[% tr('Save exception') | html %]" />
+                    <button type="button" class="btn btn-default" id="cancel_exception">[% tr('Cancel') | html %]</button>
                 </fieldset>
             </form>
         </div>
@@ -825,10 +823,10 @@
                 <table id="exceptions_table">
                     <thead>
                         <tr>
-                            <th scope="col">Date</th>
-                            <th scope="col">Type</th>
-                            <th scope="col">Reason</th>
-                            <th scope="col" class="noExport">Actions</th>
+                            <th scope="col">[% tr('Date') | html %]</th>
+                            <th scope="col">[% tr('Type') | html %]</th>
+                            <th scope="col">[% tr('Reason') | html %]</th>
+                            <th scope="col" class="noExport">[% tr('Actions') | html %]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -843,7 +841,7 @@
                                        data-date="[% ex.exception_date | html %]"
                                        data-type="[% ex.exception_type | html %]"
                                        data-reason="[% ex.reason | html %]">
-                                        <i class="fa fa-pencil"></i> Edit
+                                        <i class="fa fa-pencil"></i> [% tr('Edit') | html %]
                                     </a>
                                     <form method="post" action="/cgi-bin/koha/plugins/run.pl" style="display:inline;">
                                         [% INCLUDE 'csrf-token.inc' %]
@@ -864,7 +862,7 @@
                 </table>
             [% ELSE %]
                 <div class="alert alert-info">
-                    No exceptions defined. Use <em>Add exception</em> to create one.
+                    [% tr('No exceptions defined. Use Add exception to create one.') | html %]
                 </div>
             [% END %]
         </div>
@@ -874,19 +872,16 @@
     [% IF op == 'manage_swaps' %]
         <div id="toolbar" class="btn-toolbar">
             <a class="btn btn-default" href="#" id="add_swap_btn">
-                <i class="fa fa-exchange"></i> Request swap
+                <i class="fa fa-exchange"></i> [% tr('Request swap') | html %]
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
-                <i class="fa fa-arrow-left"></i> Back to rosters
+                <i class="fa fa-arrow-left"></i> [% tr('Back to rosters') | html %]
             </a>
         </div>
 
-        <h1>Swap requests - [% roster.name | html %]</h1>
+        <h1>[% tr('Swap requests') | html %] - [% roster.name | html %]</h1>
         <p class="text-muted">
-            Request a shift swap, then the targeted staff member (and a manager,
-            when manager approval is enabled) can approve or reject it. On
-            approval the assignment is reassigned automatically; if a return
-            assignment was named, both shifts swap borrowers in one transaction.
+            [% tr('Request a shift swap, then the targeted staff member (and a manager, when manager approval is enabled) can approve or reject it. On approval the assignment is reassigned automatically; if a return assignment was named, both shifts swap borrowers in one transaction.') | html %]
         </p>
 
         <div id="swap_form_container" style="display: none; margin: 16px 0;">
@@ -898,12 +893,12 @@
                 <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
 
                 <fieldset class="rows">
-                    <legend>Request shift swap</legend>
+                    <legend>[% tr('Request shift swap') | html %]</legend>
                     <ol>
                         <li>
-                            <label for="from_assignment_id" class="required">Give up shift:</label>
+                            <label for="from_assignment_id" class="required">[% tr('Give up shift:') | html %]</label>
                             <select name="from_assignment_id" id="from_assignment_id" required="required">
-                                <option value="">— Pick an upcoming assignment —</option>
+                                <option value="">[% tr('— Pick an upcoming assignment —') | html %]</option>
                                 [% FOREACH a IN own_assignments %]
                                     <option value="[% a.id | html %]">
                                         [% a.assignment_date | html %] · [% a.start_time.substr(0,5) | html %]–[% a.end_time.substr(0,5) | html %]
@@ -911,22 +906,22 @@
                                 [% END %]
                             </select>
                             [% IF !own_assignments.size %]
-                                <span class="hint">You have no upcoming shifts on this roster to swap.</span>
+                                <span class="hint">[% tr('You have no upcoming shifts on this roster to swap.') | html %]</span>
                             [% END %]
                         </li>
                         <li>
-                            <label for="to_borrowernumber" class="required">Hand off to:</label>
+                            <label for="to_borrowernumber" class="required">[% tr('Hand off to:') | html %]</label>
                             <select name="to_borrowernumber" id="to_borrowernumber" required="required">
-                                <option value="">— Pick a staff member —</option>
+                                <option value="">[% tr('— Pick a staff member —') | html %]</option>
                                 [% FOREACH s IN candidate_staff %]
                                     <option value="[% s.borrowernumber | html %]">[% s.surname | html %], [% s.firstname | html %] ([% s.cardnumber | html %])</option>
                                 [% END %]
                             </select>
                         </li>
                         <li>
-                            <label for="to_assignment_id">In exchange for (optional):</label>
+                            <label for="to_assignment_id">[% tr('In exchange for (optional):') | html %]</label>
                             <select name="to_assignment_id" id="to_assignment_id">
-                                <option value="">— No return shift, one-way handoff —</option>
+                                <option value="">[% tr('— No return shift, one-way handoff —') | html %]</option>
                                 [% FOREACH a IN roster_assignments %]
                                     [% NEXT IF a.borrowernumber == current_borrowernumber %]
                                     <option value="[% a.id | html %]" data-borrowernumber="[% a.borrowernumber | html %]">
@@ -934,18 +929,18 @@
                                     </option>
                                 [% END %]
                             </select>
-                            <span class="hint">Filtered to the staffer selected above. Empty = one-way reassignment.</span>
+                            <span class="hint">[% tr('Filtered to the staffer selected above. Empty = one-way reassignment.') | html %]</span>
                         </li>
                         <li>
-                            <label for="request_message">Message:</label>
+                            <label for="request_message">[% tr('Message:') | html %]</label>
                             <textarea name="request_message" id="request_message" rows="2" cols="50"></textarea>
                         </li>
                     </ol>
                 </fieldset>
 
                 <fieldset class="action">
-                    <input type="submit" class="btn btn-primary" value="Send request" />
-                    <button type="button" class="btn btn-default" id="cancel_swap">Cancel</button>
+                    <input type="submit" class="btn btn-primary" value="[% tr('Send request') | html %]" />
+                    <button type="button" class="btn btn-default" id="cancel_swap">[% tr('Cancel') | html %]</button>
                 </fieldset>
             </form>
         </div>
@@ -955,13 +950,13 @@
                 <table id="swaps_table">
                     <thead>
                         <tr>
-                            <th scope="col">Status</th>
-                            <th scope="col">Shift</th>
-                            <th scope="col">Requester</th>
-                            <th scope="col">Target</th>
-                            <th scope="col">Requested</th>
-                            <th scope="col">Message</th>
-                            <th scope="col" class="noExport">Actions</th>
+                            <th scope="col">[% tr('Status') | html %]</th>
+                            <th scope="col">[% tr('Shift') | html %]</th>
+                            <th scope="col">[% tr('Requester') | html %]</th>
+                            <th scope="col">[% tr('Target') | html %]</th>
+                            <th scope="col">[% tr('Requested') | html %]</th>
+                            <th scope="col">[% tr('Message') | html %]</th>
+                            <th scope="col" class="noExport">[% tr('Actions') | html %]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -970,13 +965,13 @@
                             <tr>
                                 <td>
                                     [% IF s.status == 'pending' %]
-                                        <span class="label label-warning">Pending</span>
+                                        <span class="label label-warning">[% tr('Pending') | html %]</span>
                                     [% ELSIF s.status == 'approved' %]
-                                        <span class="label label-success">Approved</span>
+                                        <span class="label label-success">[% tr('Approved') | html %]</span>
                                     [% ELSIF s.status == 'rejected' %]
-                                        <span class="label label-danger">Rejected</span>
+                                        <span class="label label-danger">[% tr('Rejected') | html %]</span>
                                     [% ELSE %]
-                                        <span class="label label-default">Cancelled</span>
+                                        <span class="label label-default">[% tr('Cancelled') | html %]</span>
                                     [% END %]
                                 </td>
                                 <td>
@@ -1003,7 +998,7 @@
                                                 <input type="hidden" name="swap_id" value="[% s.id | html %]" />
                                                 <input type="hidden" name="decision" value="approve" />
                                                 <button type="submit" class="btn btn-success btn-xs">
-                                                    <i class="fa fa-check"></i> Approve
+                                                    <i class="fa fa-check"></i> [% tr('Approve') | html %]
                                                 </button>
                                             </form>
                                         [% END %]
@@ -1017,7 +1012,7 @@
                                                 <input type="hidden" name="swap_id" value="[% s.id | html %]" />
                                                 <input type="hidden" name="decision" value="reject" />
                                                 <button type="submit" class="btn btn-default btn-xs">
-                                                    <i class="fa fa-times"></i> Reject
+                                                    <i class="fa fa-times"></i> [% tr('Reject') | html %]
                                                 </button>
                                             </form>
                                         [% END %]
@@ -1030,8 +1025,8 @@
                                                 <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
                                                 <input type="hidden" name="swap_id" value="[% s.id | html %]" />
                                                 <button type="submit" class="btn btn-default btn-xs"
-                                                        onclick="return confirm('Cancel this swap request?');">
-                                                    <i class="fa fa-ban"></i> Cancel
+                                                        onclick="return confirm('[% tr('Cancel this swap request?') | html %]');">
+                                                    <i class="fa fa-ban"></i> [% tr('Cancel') | html %]
                                                 </button>
                                             </form>
                                         [% END %]
@@ -1045,7 +1040,7 @@
                 </table>
             [% ELSE %]
                 <div class="alert alert-info">
-                    No swap requests on this roster yet.
+                    [% tr('No swap requests on this roster yet.') | html %]
                 </div>
             [% END %]
         </div>
@@ -1054,23 +1049,23 @@
     [% IF op == 'view_assignments' %]
         <div id="toolbar" class="btn-toolbar">
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_slots&roster_id=[% roster.id | uri %]">
-                <i class="fa fa-clock"></i> Manage slots
+                <i class="fa fa-clock"></i> [% tr('Manage slots') | html %]
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_exceptions&roster_id=[% roster.id | uri %]">
-                <i class="fa fa-calendar-times"></i> Exceptions
+                <i class="fa fa-calendar-times"></i> [% tr('Exceptions') | html %]
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=manage_swaps&roster_id=[% roster.id | uri %]">
-                <i class="fa fa-exchange"></i> Swap requests
+                <i class="fa fa-exchange"></i> [% tr('Swap requests') | html %]
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
-                <i class="fa fa-arrow-left"></i> Back to rosters
+                <i class="fa fa-arrow-left"></i> [% tr('Back to rosters') | html %]
             </a>
         </div>
 
-        <h1>Schedule - [% roster.name | html %]</h1>
+        <h1>[% tr('Schedule') | html %] - [% roster.name | html %]</h1>
         <p>
             <span class="staff-roster-type-swatch" style="background-color: [% roster.type_color | html %];" aria-hidden="true"></span>[% roster.type_name | html %]
-            [% IF roster.branch_name %][% roster.branch_name | html %][% ELSE %]All branches[% END %]
+            [% IF roster.branch_name %][% roster.branch_name | html %][% ELSE %][% tr('All branches') | html %][% END %]
         </p>
 
         <script type="module" src="/api/v1/contrib/staffroster/static/staff-roster.js"></script>
@@ -1078,9 +1073,9 @@
     [% END %]
 
     [% IF op == 'my_shifts' %]
-        <h1>My Shifts</h1>
+        <h1>[% tr('My Shifts') | html %]</h1>
         <p class="text-muted">
-            Your scheduled shifts across all rosters you can see.
+            [% tr('Your scheduled shifts across all rosters you can see.') | html %]
         </p>
 
         <script type="module" src="/api/v1/contrib/staffroster/static/staff-roster.js"></script>
@@ -1088,23 +1083,19 @@
     [% END %]
 
     [% IF op == 'open_shifts' %]
-        <h1>Open Shifts</h1>
+        <h1>[% tr('Open Shifts') | html %]</h1>
         [% IF !staff_can_self_assign %]
             <div class="alert alert-warning">
-                Self-service is disabled in plugin configuration.
-                Ask an administrator to enable
-                <em>Staff can self-assign to open slots</em> on the
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">Configuration</a>
-                page.
+                [% tr('Self-service is disabled in plugin configuration. Ask an administrator to enable Staff can self-assign to open slots on the Configuration page.') | html %]
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">[% tr('Configuration') | html %]</a>
             </div>
         [% ELSIF !has_self_assign_perm %]
             <div class="alert alert-warning">
-                You do not have the <code>staffroster_self_assign</code>
-                permission. Ask a manager to grant it on your patron record.
+                [% tr('You do not have the staffroster_self_assign permission. Ask a manager to grant it on your patron record.') | html %]
             </div>
         [% ELSE %]
             <p class="text-muted">
-                Slots with capacity remaining that you are eligible to claim.
+                [% tr('Slots with capacity remaining that you are eligible to claim.') | html %]
             </p>
             <script type="module" src="/api/v1/contrib/staffroster/static/staff-roster.js"></script>
             <open-shifts-list week-start="[% week_start | html %]"></open-shifts-list>

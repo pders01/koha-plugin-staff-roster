@@ -13,14 +13,15 @@ import { renderToasts } from "./shared/toasts.js";
 import { renderModalShell } from "./shared/modal.js";
 import { groupByDate, renderDayGroups } from "./shared/day-groups.js";
 import { EscapeController } from "./shared/escape-controller.js";
+import { __ } from "../i18n/index.js";
 
-const STATUS_LABELS: Record<MyShift["status"], string> = {
-  scheduled: "Scheduled",
-  confirmed: "Confirmed",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  no_show: "No-show",
-};
+const STATUS_LABELS = (): Record<MyShift["status"], string> => ({
+  scheduled: __("Scheduled"),
+  confirmed: __("Confirmed"),
+  completed: __("Completed"),
+  cancelled: __("Cancelled"),
+  no_show: __("No-show"),
+});
 
 @customElement("my-shifts-list")
 export class MyShiftsList extends LitElement {
@@ -89,7 +90,7 @@ export class MyShiftsList extends LitElement {
     this.error = "";
     try {
       await selfUnclaim(s.assignment_id);
-      this.successMsg = `Shift dropped.`;
+      this.successMsg = __("Shift dropped.");
       setTimeout(() => (this.successMsg = ""), 4000);
       await this.refresh();
     } catch (e) {
@@ -101,7 +102,7 @@ export class MyShiftsList extends LitElement {
 
   override render() {
     if (this.loading && !this.week) {
-      return html`<div class="text-center text-muted py-4">Loading…</div>`;
+      return html`<div class="text-center text-muted py-4">${__("Loading…")}</div>`;
     }
 
     const groups = groupByDate(
@@ -124,7 +125,7 @@ export class MyShiftsList extends LitElement {
 
       ${renderDayGroups({
         groups,
-        emptyText: "No shifts scheduled this week.",
+        emptyText: __("No shifts scheduled this week."),
         renderItem: (s) => this.renderShift(s),
       })}
 
@@ -149,7 +150,7 @@ export class MyShiftsList extends LitElement {
           <a
             href="?class=${getClass()}&method=tool&op=view_assignments&roster_id=${s.roster_id}&week_start=${this.weekStart}"
           >
-            ${r?.name ?? "Roster #" + s.roster_id}
+            ${r?.name ?? __("Roster #") + s.roster_id}
           </a>
           ${r?.branch_name ? html`<small class="text-muted"> · ${r.branch_name}</small>` : nothing}
         </span>
@@ -158,23 +159,23 @@ export class MyShiftsList extends LitElement {
               <i class="fa fa-map-marker" aria-hidden="true"></i> ${s.location}
             </span>`
           : nothing}
-        <span class="srg-my-shift-status badge">${STATUS_LABELS[s.status] ?? s.status}</span>
+        <span class="srg-my-shift-status badge">${STATUS_LABELS()[s.status] ?? s.status}</span>
         <a
           class="btn btn-default btn-xs"
           href="?class=${getClass()}&method=tool&op=manage_swaps&roster_id=${s.roster_id}"
-          title="Request swap on this roster"
+          title="${__("Request swap on this roster")}"
         >
-          <i class="fa fa-exchange" aria-hidden="true"></i> Swap
+          <i class="fa fa-exchange" aria-hidden="true"></i> ${__("Swap")}
         </a>
         <button
           type="button"
           class="btn btn-default btn-xs"
           ?disabled=${this.dropping === s.assignment_id}
           @click=${() => this.requestDrop(s)}
-          title="Drop this shift"
+          title="${__("Drop this shift")}"
         >
           <i class="fa fa-times" aria-hidden="true"></i>
-          ${this.dropping === s.assignment_id ? "Dropping…" : "Drop"}
+          ${this.dropping === s.assignment_id ? __("Dropping…") : __("Drop")}
         </button>
       </li>
     `;
@@ -183,26 +184,25 @@ export class MyShiftsList extends LitElement {
   private renderDropModal(s: MyShift) {
     const r = this.rosterById(s.roster_id);
     return renderModalShell({
-      title: "Drop this shift?",
+      title: __("Drop this shift?"),
       onCancel: () => this.cancelDrop(),
       body: html`
         <p>
-          Drop your shift on
+          ${__("Drop your shift on")}
           <strong>${formatLongDate(s.assignment_date)}</strong>,
           <strong>${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}</strong>
-          (${r?.name ?? "Roster #" + s.roster_id})?
+          (${r?.name ?? __("Roster #") + s.roster_id})?
         </p>
         <p class="text-muted">
-          The slot will be re-opened for someone else to claim. If you need a
-          one-for-one trade instead, use Swap.
+          ${__("The slot will be re-opened for someone else to claim. If you need a one-for-one trade instead, use Swap.")}
         </p>
       `,
       footer: html`
         <button type="button" class="btn btn-danger" @click=${() => void this.confirmDrop()}>
-          <i class="fa fa-times"></i> Drop shift
+          <i class="fa fa-times"></i> ${__("Drop shift")}
         </button>
         <button type="button" class="btn btn-default" @click=${() => this.cancelDrop()}>
-          Cancel
+          ${__("Cancel")}
         </button>
       `,
     });

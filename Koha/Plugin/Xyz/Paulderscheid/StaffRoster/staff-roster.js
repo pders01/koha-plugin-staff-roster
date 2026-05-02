@@ -25,7 +25,7 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return a(t);
-})(e) : e, { is: c, defineProperty: l, getOwnPropertyDescriptor: u, getOwnPropertyNames: d, getOwnPropertySymbols: f, getPrototypeOf: p } = Object, m = globalThis, ee = m.trustedTypes, te = ee ? ee.emptyScript : "", ne = m.reactiveElementPolyfillSupport, re = (e, t) => e, ie = {
+})(e) : e, { is: c, defineProperty: l, getOwnPropertyDescriptor: u, getOwnPropertyNames: d, getOwnPropertySymbols: f, getPrototypeOf: p } = Object, m = globalThis, ee = m.trustedTypes, te = ee ? ee.emptyScript : "", ne = m.reactiveElementPolyfillSupport, h = (e, t) => e, re = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
@@ -54,23 +54,23 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, ae = (e, t) => !c(e, t), oe = {
+}, ie = (e, t) => !c(e, t), ae = {
 	attribute: !0,
 	type: String,
-	converter: ie,
+	converter: re,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: ae
+	hasChanged: ie
 };
 Symbol.metadata ??= Symbol("metadata"), m.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var h = class extends HTMLElement {
+var g = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = oe) {
+	static createProperty(e, t = ae) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && l(this.prototype, e, r);
@@ -96,16 +96,16 @@ var h = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? oe;
+		return this.elementProperties.get(e) ?? ae;
 	}
 	static _$Ei() {
-		if (this.hasOwnProperty(re("elementProperties"))) return;
+		if (this.hasOwnProperty(h("elementProperties"))) return;
 		let e = p(this);
 		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
 	}
 	static finalize() {
-		if (this.hasOwnProperty(re("finalized"))) return;
-		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(re("properties"))) {
+		if (this.hasOwnProperty(h("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(h("properties"))) {
 			let e = this.properties, t = [...d(e), ...f(e)];
 			for (let n of t) this.createProperty(n, e[n]);
 		}
@@ -167,14 +167,14 @@ var h = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? ie : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? re : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? ie : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? re : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -183,7 +183,7 @@ var h = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ae)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ie)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -247,87 +247,87 @@ var h = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-h.elementStyles = [], h.shadowRootOptions = { mode: "open" }, h[re("elementProperties")] = /* @__PURE__ */ new Map(), h[re("finalized")] = /* @__PURE__ */ new Map(), ne?.({ ReactiveElement: h }), (m.reactiveElementVersions ??= []).push("2.1.2");
+g.elementStyles = [], g.shadowRootOptions = { mode: "open" }, g[h("elementProperties")] = /* @__PURE__ */ new Map(), g[h("finalized")] = /* @__PURE__ */ new Map(), ne?.({ ReactiveElement: g }), (m.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var se = globalThis, ce = (e) => e, le = se.trustedTypes, ue = le ? le.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, de = "$lit$", g = `lit$${Math.random().toFixed(9).slice(2)}$`, fe = "?" + g, pe = `<${fe}>`, _ = document, v = () => _.createComment(""), y = (e) => e === null || typeof e != "object" && typeof e != "function", me = Array.isArray, he = (e) => me(e) || typeof e?.[Symbol.iterator] == "function", ge = "[ 	\n\f\r]", b = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, _e = /-->/g, ve = />/g, x = RegExp(`>|${ge}(?:([^\\s"'>=/]+)(${ge}*=${ge}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ye = /'/g, be = /"/g, xe = /^(?:script|style|textarea|title)$/i, S = ((e) => (t, ...n) => ({
+var oe = globalThis, se = (e) => e, ce = oe.trustedTypes, le = ce ? ce.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ue = "$lit$", _ = `lit$${Math.random().toFixed(9).slice(2)}$`, de = "?" + _, fe = `<${de}>`, v = document, y = () => v.createComment(""), pe = (e) => e === null || typeof e != "object" && typeof e != "function", me = Array.isArray, he = (e) => me(e) || typeof e?.[Symbol.iterator] == "function", ge = "[ 	\n\f\r]", _e = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ve = /-->/g, ye = />/g, b = RegExp(`>|${ge}(?:([^\\s"'>=/]+)(${ge}*=${ge}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), be = /'/g, xe = /"/g, Se = /^(?:script|style|textarea|title)$/i, x = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}))(1), C = Symbol.for("lit-noChange"), w = Symbol.for("lit-nothing"), Se = /* @__PURE__ */ new WeakMap(), T = _.createTreeWalker(_, 129);
-function Ce(e, t) {
+}))(1), S = Symbol.for("lit-noChange"), C = Symbol.for("lit-nothing"), Ce = /* @__PURE__ */ new WeakMap(), w = v.createTreeWalker(v, 129);
+function we(e, t) {
 	if (!me(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return ue === void 0 ? t : ue.createHTML(t);
+	return le === void 0 ? t : le.createHTML(t);
 }
-var we = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = b;
+var Te = (e, t) => {
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = _e;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === b ? c[1] === "!--" ? o = _e : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = x) : (xe.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = x) : o = ve : o === x ? c[0] === ">" ? (o = i ?? b, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? x : c[3] === "\"" ? be : ye) : o === be || o === ye ? o = x : o === _e || o === ve ? o = b : (o = x, i = void 0);
-		let d = o === x && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === b ? n + pe : l >= 0 ? (r.push(s), n.slice(0, l) + de + n.slice(l) + g + d) : n + g + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === _e ? c[1] === "!--" ? o = ve : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = b) : (Se.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = b) : o = ye : o === b ? c[0] === ">" ? (o = i ?? _e, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? b : c[3] === "\"" ? xe : be) : o === xe || o === be ? o = b : o === ve || o === ye ? o = _e : (o = b, i = void 0);
+		let d = o === b && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === _e ? n + fe : l >= 0 ? (r.push(s), n.slice(0, l) + ue + n.slice(l) + _ + d) : n + _ + (l === -2 ? t : d);
 	}
-	return [Ce(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, Te = class e {
+	return [we(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, Ee = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = we(t, n);
-		if (this.el = e.createElement(l, r), T.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = Te(t, n);
+		if (this.el = e.createElement(l, r), w.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = T.nextNode()) !== null && c.length < s;) {
+		for (; (i = w.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(de)) {
-					let t = u[o++], n = i.getAttribute(e).split(g), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(ue)) {
+					let t = u[o++], n = i.getAttribute(e).split(_), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? ke : r[1] === "?" ? Ae : r[1] === "@" ? je : Oe
+						ctor: r[1] === "." ? ke : r[1] === "?" ? Ae : r[1] === "@" ? je : E
 					}), i.removeAttribute(e);
-				} else e.startsWith(g) && (c.push({
+				} else e.startsWith(_) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (xe.test(i.tagName)) {
-					let e = i.textContent.split(g), t = e.length - 1;
+				if (Se.test(i.tagName)) {
+					let e = i.textContent.split(_), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = le ? le.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], v()), T.nextNode(), c.push({
+						i.textContent = ce ? ce.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], y()), w.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
-						i.append(e[t], v());
+						i.append(e[t], y());
 					}
 				}
-			} else if (i.nodeType === 8) if (i.data === fe) c.push({
+			} else if (i.nodeType === 8) if (i.data === de) c.push({
 				type: 2,
 				index: a
 			});
 			else {
 				let e = -1;
-				for (; (e = i.data.indexOf(g, e + 1)) !== -1;) c.push({
+				for (; (e = i.data.indexOf(_, e + 1)) !== -1;) c.push({
 					type: 7,
 					index: a
-				}), e += g.length - 1;
+				}), e += _.length - 1;
 			}
 			a++;
 		}
 	}
 	static createElement(e, t) {
-		let n = _.createElement("template");
+		let n = v.createElement("template");
 		return n.innerHTML = e, n;
 	}
 };
-function E(e, t, n = e, r) {
-	if (t === C) return t;
-	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = y(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = E(e, i._$AS(e, t.values), i, r)), t;
+function T(e, t, n = e, r) {
+	if (t === S) return t;
+	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = pe(t) ? void 0 : t._$litDirective$;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = T(e, i._$AS(e, t.values), i, r)), t;
 }
-var Ee = class {
+var De = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -338,28 +338,28 @@ var Ee = class {
 		return this._$AM._$AU;
 	}
 	u(e) {
-		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? _).importNode(t, !0);
-		T.currentNode = r;
-		let i = T.nextNode(), a = 0, o = 0, s = n[0];
+		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? v).importNode(t, !0);
+		w.currentNode = r;
+		let i = w.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new De(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new Me(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new Oe(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new Me(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = T.nextNode(), a++);
+			a !== s?.index && (i = w.nextNode(), a++);
 		}
-		return T.currentNode = _, r;
+		return w.currentNode = v, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, De = class e {
+}, Oe = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = w, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = C, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -372,7 +372,7 @@ var Ee = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = E(this, e, t), y(e) ? e === w || e == null || e === "" ? (this._$AH !== w && this._$AR(), this._$AH = w) : e !== this._$AH && e !== C && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? he(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = T(this, e, t), pe(e) ? e === C || e == null || e === "" ? (this._$AH !== C && this._$AR(), this._$AH = C) : e !== this._$AH && e !== S && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? he(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -381,36 +381,36 @@ var Ee = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== w && y(this._$AH) ? this._$AA.nextSibling.data = e : this.T(_.createTextNode(e)), this._$AH = e;
+		this._$AH !== C && pe(this._$AH) ? this._$AA.nextSibling.data = e : this.T(v.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = Te.createElement(Ce(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = Ee.createElement(we(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new Ee(r, this), n = e.u(this.options);
+			let e = new De(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = Se.get(e.strings);
-		return t === void 0 && Se.set(e.strings, t = new Te(e)), t;
+		let t = Ce.get(e.strings);
+		return t === void 0 && Ce.set(e.strings, t = new Ee(e)), t;
 	}
 	k(t) {
 		me(this._$AH) || (this._$AH = [], this._$AR());
 		let n = this._$AH, r, i = 0;
-		for (let a of t) i === n.length ? n.push(r = new e(this.O(v()), this.O(v()), this, this.options)) : r = n[i], r._$AI(a), i++;
+		for (let a of t) i === n.length ? n.push(r = new e(this.O(y()), this.O(y()), this, this.options)) : r = n[i], r._$AI(a), i++;
 		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = ce(e).nextSibling;
-			ce(e).remove(), e = t;
+			let t = se(e).nextSibling;
+			se(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, Oe = class {
+}, E = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -418,41 +418,41 @@ var Ee = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = w, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = w;
+		this.type = 1, this._$AH = C, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = C;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = E(this, e, t, 0), a = !y(e) || e !== this._$AH && e !== C, a && (this._$AH = e);
+		if (i === void 0) e = T(this, e, t, 0), a = !pe(e) || e !== this._$AH && e !== S, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = E(this, r[n + o], t, o), s === C && (s = this._$AH[o]), a ||= !y(s) || s !== this._$AH[o], s === w ? e = w : e !== w && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = T(this, r[n + o], t, o), s === S && (s = this._$AH[o]), a ||= !pe(s) || s !== this._$AH[o], s === C ? e = C : e !== C && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === w ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === C ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, ke = class extends Oe {
+}, ke = class extends E {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === w ? void 0 : e;
+		this.element[this.name] = e === C ? void 0 : e;
 	}
-}, Ae = class extends Oe {
+}, Ae = class extends E {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== w);
+		this.element.toggleAttribute(this.name, !!e && e !== C);
 	}
-}, je = class extends Oe {
+}, je = class extends E {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = E(this, e, t, 0) ?? w) === C) return;
-		let n = this._$AH, r = e === w && n !== w || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== w && (n === w || r);
+		if ((e = T(this, e, t, 0) ?? C) === S) return;
+		let n = this._$AH, r = e === C && n !== C || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== C && (n === C || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
@@ -466,33 +466,33 @@ var Ee = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		E(this, e);
+		T(this, e);
 	}
 }, Ne = {
-	M: de,
-	P: g,
-	A: fe,
+	M: ue,
+	P: _,
+	A: de,
 	C: 1,
-	L: we,
-	R: Ee,
+	L: Te,
+	R: De,
 	D: he,
-	V: E,
-	I: De,
-	H: Oe,
+	V: T,
+	I: Oe,
+	H: E,
 	N: Ae,
 	U: je,
 	B: ke,
 	F: Me
-}, Pe = se.litHtmlPolyfillSupport;
-Pe?.(Te, De), (se.litHtmlVersions ??= []).push("3.3.2");
+}, Pe = oe.litHtmlPolyfillSupport;
+Pe?.(Ee, Oe), (oe.litHtmlVersions ??= []).push("3.3.2");
 var Fe = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new De(t.insertBefore(v(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new Oe(t.insertBefore(y(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, Ie = globalThis, D = class extends h {
+}, Ie = globalThis, D = class extends g {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -511,7 +511,7 @@ var Fe = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return C;
+		return S;
 	}
 };
 D._$litElement$ = !0, D.finalized = !0, Ie.litElementHydrateSupport?.({ LitElement: D });
@@ -526,9 +526,9 @@ var Re = (e) => (t, n) => {
 }, ze = {
 	attribute: !0,
 	type: String,
-	converter: ie,
+	converter: re,
 	reflect: !1,
-	hasChanged: ae
+	hasChanged: ie
 }, Be = (e = ze, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
@@ -661,7 +661,7 @@ var Ve = {
 			let e = i[d++];
 			e !== null && Xe(e);
 		}
-		return this.ut = o, Je(e, c), C;
+		return this.ut = o, Je(e, c), S;
 	}
 });
 //#endregion
@@ -1347,24 +1347,383 @@ function Lt(e) {
 	})}`;
 }
 //#endregion
+//#region src/i18n/index.ts
+var Rt = { de: {
+	"Staff Roster": "Dienstplan",
+	Plugins: "Plugins",
+	Configuration: "Konfiguration",
+	Administration: "Verwaltung",
+	Cancel: "Abbrechen",
+	Save: "Speichern",
+	Yes: "Ja",
+	No: "Nein",
+	Edit: "Bearbeiten",
+	Delete: "Löschen",
+	ID: "ID",
+	"ID:": "ID:",
+	Code: "Kürzel",
+	"Code:": "Kürzel:",
+	Name: "Name",
+	"Name:": "Name:",
+	Description: "Beschreibung",
+	"Description:": "Beschreibung:",
+	Color: "Farbe",
+	"Color:": "Farbe:",
+	Status: "Status",
+	Actions: "Aktionen",
+	Active: "Aktiv",
+	"Active:": "Aktiv:",
+	Inactive: "Inaktiv",
+	Required: "Pflichtfeld",
+	"Loading…": "Wird geladen…",
+	Close: "Schließen",
+	Dismiss: "Schließen",
+	Refresh: "Aktualisieren",
+	Previous: "Zurück",
+	Next: "Weiter",
+	"Week of": "Woche vom",
+	All: "Alle",
+	"All branches": "Alle Bibliotheken",
+	ongoing: "laufend",
+	Type: "Typ",
+	"Type:": "Typ:",
+	Branch: "Bibliothek",
+	"Branch:": "Bibliothek:",
+	Branches: "Bibliotheken",
+	"Library groups": "Bibliotheksgruppen",
+	Target: "Geltungsbereich",
+	"Target:": "Geltungsbereich:",
+	Effective: "Gültig",
+	"Effective from:": "Gültig ab:",
+	"Effective to:": "Gültig bis:",
+	"Leave empty for ongoing roster": "Leer lassen für unbefristeten Dienstplan",
+	Slots: "Zeitfenster",
+	Slot: "Zeitfenster",
+	Time: "Zeit",
+	Days: "Tage",
+	Staff: "Personal",
+	Schedule: "Plan",
+	Settings: "Einstellungen",
+	Rosters: "Dienstpläne",
+	"New roster": "Neuer Dienstplan",
+	New: "Neu",
+	"New Roster": "Neuer Dienstplan",
+	"Edit Roster": "Dienstplan bearbeiten",
+	Roster: "Dienstplan",
+	"Manage Roster": "Dienstplan verwalten",
+	"Manage Slots": "Zeitfenster verwalten",
+	"Manage slots": "Zeitfenster verwalten",
+	"View Assignments": "Zuweisungen anzeigen",
+	"My Shifts": "Meine Schichten",
+	"My shifts": "Meine Schichten",
+	"Open Shifts": "Offene Schichten",
+	"Open shifts": "Offene Schichten",
+	"Confirm Deletion": "Löschen bestätigen",
+	"Confirm deletion": "Löschen bestätigen",
+	"This roster": "Dieser Dienstplan",
+	Exceptions: "Ausnahmen",
+	"Swap requests": "Tauschanfragen",
+	"Roster types": "Dienstplantypen",
+	"Roster Types": "Dienstplantypen",
+	"Roster type:": "Dienstplantyp:",
+	"Roster Details": "Dienstplandetails",
+	"Configuration saved successfully.": "Konfiguration erfolgreich gespeichert.",
+	"You don't have the staffroster_configure permission. Changes were not saved.": "Sie haben nicht die Berechtigung staffroster_configure. Die Änderungen wurden nicht gespeichert.",
+	"Notification Settings": "Benachrichtigungseinstellungen",
+	"Enable email reminders:": "E-Mail-Erinnerungen aktivieren:",
+	"Send reminders (days before):": "Erinnerungen senden (Tage vorher):",
+	"Number of days before a shift to send reminder": "Anzahl der Tage vor einer Schicht, an denen die Erinnerung gesendet wird",
+	"Enable swap request notifications:": "Benachrichtigungen für Tauschanfragen aktivieren:",
+	"Library scope & staff selection": "Bibliotheksbereich & Personalauswahl",
+	"Group enforcement:": "Gruppenerzwingung:",
+	"Off — groups ignored": "Aus — Gruppen werden ignoriert",
+	"Filter — non-members don't see group rosters": "Filter — Nicht-Mitglieder sehen keine Gruppendienstpläne",
+	"Strict — non-members get 403 on read and write": "Streng — Nicht-Mitglieder erhalten 403 beim Lesen und Schreiben",
+	"Superlibrarians always see all rosters regardless of mode.": "Super-Bibliothekare sehen unabhängig vom Modus immer alle Dienstpläne.",
+	"Default group:": "Standardgruppe:",
+	None: "Keine",
+	"Pre-selected for new rosters.": "Voreinstellung für neue Dienstpläne.",
+	"Staff patron categories:": "Personalkategorien:",
+	"Categories whose patrons can be assigned to slots. Hold Ctrl/Cmd to multi-select. Empty = fall back to all category_type='S' patrons.": "Kategorien, deren Benutzer Zeitfenstern zugewiesen werden können. Strg/Cmd halten für Mehrfachauswahl. Leer = Rückfall auf alle category_type='S' Benutzer.",
+	"Calendar integration": "Kalenderintegration",
+	"Use Koha calendar:": "Koha-Kalender verwenden:",
+	"Merge Koha calendar closures into roster exceptions.": "Koha-Kalenderschließungen in Dienstplanausnahmen einbeziehen.",
+	"Calendar source:": "Kalenderquelle:",
+	"Roster's branch (or all branches in its group)": "Bibliothek des Dienstplans (oder alle Bibliotheken seiner Gruppe)",
+	"For multi-branch rosters, a date is closed only if every branch in the group is closed.": "Bei dienstplanübergreifenden Bibliotheken gilt ein Datum nur dann als geschlossen, wenn alle Bibliotheken der Gruppe geschlossen sind.",
+	"Closure handling:": "Schließungsbehandlung:",
+	"Hard — block assignment on closed dates": "Hart — Zuweisung an geschlossenen Tagen blockieren",
+	"Soft — show closure but allow assignment": "Weich — Schließung anzeigen, aber Zuweisung erlauben",
+	"Slot location source": "Zeitfenster-Standortquelle",
+	"Koha desks:": "Koha-Desks:",
+	"For single-branch rosters, suggest the branch's Koha desks in the location field. Free text otherwise.": "Bei Einzel-Bibliotheks-Dienstplänen die Koha-Desks der Bibliothek im Standortfeld vorschlagen. Andernfalls Freitext.",
+	"Authorised values:": "Normierte Werte:",
+	"Replace the location input with a dropdown from a Koha AV category. Takes precedence over Koha desks. Submitted values must match the category.": "Ersetzt das Standorteingabefeld durch eine Dropdown-Liste einer Koha-AV-Kategorie. Hat Vorrang vor Koha-Desks. Übermittelte Werte müssen der Kategorie entsprechen.",
+	"AV category:": "AV-Kategorie:",
+	"Category code (default STAFFROSTER_LOCATION). Create the category in Koha admin first.": "Kategoriekürzel (Standard STAFFROSTER_LOCATION). Erstellen Sie die Kategorie zuerst in der Koha-Administration.",
+	"Custom fields": "Benutzerdefinierte Felder",
+	"Roster custom fields:": "Benutzerdefinierte Dienstplanfelder:",
+	"Manage in Koha admin": "In Koha-Administration verwalten",
+	"Define optional per-roster fields (text or authorised value). Shown on the roster edit form. Empty values aren't stored.": "Definieren Sie optionale Felder pro Dienstplan (Text oder normierte Werte). Sie werden im Dienstplan-Bearbeitungsformular angezeigt. Leere Werte werden nicht gespeichert.",
+	"Permission Settings": "Berechtigungseinstellungen",
+	"Staff can self-assign to open slots:": "Personal kann sich selbst offenen Zeitfenstern zuweisen:",
+	"Self-unclaim lockout (hours before shift):": "Sperrfrist für Selbst-Aufgabe (Stunden vor Schicht):",
+	"0 = no lockout. Set e.g. 24 to block self-drops within 24 hours of the shift start.": "0 = keine Sperrfrist. z. B. 24 setzen, um Selbst-Aufgabe innerhalb von 24 Stunden vor Schichtbeginn zu blockieren.",
+	"Require manager approval for swaps:": "Manager-Genehmigung für Tausche erforderlich:",
+	"Save configuration": "Konfiguration speichern",
+	"Modify roster type": "Dienstplantyp ändern",
+	"New roster type": "Neuer Dienstplantyp",
+	"An error occurred when updating this roster type.": "Beim Aktualisieren dieses Dienstplantyps ist ein Fehler aufgetreten.",
+	"An error occurred when adding this roster type. The code might already exist.": "Beim Hinzufügen dieses Dienstplantyps ist ein Fehler aufgetreten. Das Kürzel existiert möglicherweise bereits.",
+	"An error occurred when deleting this roster type. It may be in use by existing rosters.": "Beim Löschen dieses Dienstplantyps ist ein Fehler aufgetreten. Er wird möglicherweise von bestehenden Dienstplänen verwendet.",
+	"Roster type updated successfully.": "Dienstplantyp erfolgreich aktualisiert.",
+	"Roster type added successfully.": "Dienstplantyp erfolgreich hinzugefügt.",
+	"Roster type deleted successfully.": "Dienstplantyp erfolgreich gelöscht.",
+	"Cannot delete this roster type because it is in use by N roster(s).": "Dieser Dienstplantyp kann nicht gelöscht werden, da er von N Dienstplan/Dienstplänen verwendet wird.",
+	"Uppercase letters, numbers, and underscores only": "Nur Großbuchstaben, Zahlen und Unterstriche",
+	"Short identifier (e.g., CIRC, REF). Uppercase letters, numbers, underscores only.": "Kurze Kennung (z. B. CIRC, REF). Nur Großbuchstaben, Zahlen, Unterstriche.",
+	"Color used to display this roster type in the calendar": "Farbe zur Anzeige dieses Dienstplantyps im Kalender",
+	"Inactive types cannot be used for new rosters": "Inaktive Typen können nicht für neue Dienstpläne verwendet werden",
+	"Save roster type": "Dienstplantyp speichern",
+	"Delete roster type 'NAME'?": "Dienstplantyp 'NAME' löschen?",
+	"Yes, delete this roster type": "Ja, diesen Dienstplantyp löschen",
+	"No, do not delete": "Nein, nicht löschen",
+	"Back to Roster": "Zurück zum Dienstplan",
+	"Roster types define the categories of duties staff can be assigned to (e.g., Circulation Desk, Reference Desk).": "Dienstplantypen definieren die Aufgabenkategorien, denen Personal zugewiesen werden kann (z. B. Ausleihtheke, Auskunft).",
+	"No roster types defined.": "Keine Dienstplantypen definiert.",
+	"Create a new roster type": "Einen neuen Dienstplantyp erstellen",
+	Report: "Bericht",
+	"Reports are not yet implemented.": "Berichte sind noch nicht implementiert.",
+	"Filter rosters": "Dienstpläne filtern",
+	"All types": "Alle Typen",
+	"Apply filters": "Filter anwenden",
+	Clear: "Zurücksetzen",
+	"Filters active.": "Filter aktiv.",
+	"Roster created successfully.": "Dienstplan erfolgreich erstellt.",
+	"Roster updated successfully.": "Dienstplan erfolgreich aktualisiert.",
+	"Roster deleted successfully.": "Dienstplan erfolgreich gelöscht.",
+	"An error occurred when creating the roster.": "Beim Erstellen des Dienstplans ist ein Fehler aufgetreten.",
+	"An error occurred when updating the roster.": "Beim Aktualisieren des Dienstplans ist ein Fehler aufgetreten.",
+	"An error occurred when deleting the roster.": "Beim Löschen des Dienstplans ist ein Fehler aufgetreten.",
+	"Time slot saved successfully.": "Zeitfenster erfolgreich gespeichert.",
+	"Time slot deleted successfully.": "Zeitfenster erfolgreich gelöscht.",
+	"Pick at least one day of the week for the slot.": "Wählen Sie mindestens einen Wochentag für das Zeitfenster aus.",
+	"Exception saved.": "Ausnahme gespeichert.",
+	"Exception deleted.": "Ausnahme gelöscht.",
+	"Provide a valid date in YYYY-MM-DD format.": "Geben Sie ein gültiges Datum im Format JJJJ-MM-TT an.",
+	"Pick one of the supported exception types.": "Wählen Sie einen der unterstützten Ausnahmetypen aus.",
+	"Swap request sent.": "Tauschanfrage gesendet.",
+	"Swap approved; the assignment has been reassigned.": "Tausch genehmigt; die Zuweisung wurde umverteilt.",
+	"Swap rejected.": "Tausch abgelehnt.",
+	"Swap cancelled.": "Tausch abgebrochen.",
+	"Pick a shift and a target staff member.": "Wählen Sie eine Schicht und einen Ziel-Mitarbeiter aus.",
+	"That shift doesn't belong to this roster.": "Diese Schicht gehört nicht zu diesem Dienstplan.",
+	"Pick approve or reject.": "Wählen Sie genehmigen oder ablehnen.",
+	"That swap is no longer pending.": "Dieser Tausch ist nicht mehr ausstehend.",
+	"Manager approval is required for this swap.": "Für diesen Tausch ist eine Manager-Genehmigung erforderlich.",
+	"You don't have permission to act on this swap.": "Sie sind nicht berechtigt, auf diesen Tausch zu reagieren.",
+	"Location \"VAL\" is not in authorised value category \"CAT\". Pick a value from the list.": "Standort \"VAL\" ist nicht in der normierten Wertekategorie \"CAT\". Wählen Sie einen Wert aus der Liste.",
+	"You are not authorized to view that roster.": "Sie sind nicht berechtigt, diesen Dienstplan anzusehen.",
+	"Staff rosters": "Dienstpläne",
+	"No rosters found.": "Keine Dienstpläne gefunden.",
+	"Create your first roster": "Erstellen Sie Ihren ersten Dienstplan",
+	"-- Select type --": "-- Typ wählen --",
+	"Choose all branches, a single branch, or a library group.": "Wählen Sie alle Bibliotheken, eine einzelne Bibliothek oder eine Bibliotheksgruppe.",
+	"Additional fields": "Zusätzliche Felder",
+	"No custom fields defined for rosters.": "Keine benutzerdefinierten Felder für Dienstpläne definiert.",
+	"Configure them in Koha admin": "In der Koha-Administration konfigurieren",
+	"Save roster": "Dienstplan speichern",
+	"Delete roster 'NAME'?": "Dienstplan 'NAME' löschen?",
+	"This will also delete all associated time slots and assignments.": "Damit werden auch alle zugehörigen Zeitfenster und Zuweisungen gelöscht.",
+	"Time slots:": "Zeitfenster:",
+	"Yes, delete this roster": "Ja, diesen Dienstplan löschen",
+	"Add time slot": "Zeitfenster hinzufügen",
+	"Back to rosters": "Zurück zu den Dienstplänen",
+	"Manage Time Slots": "Zeitfenster verwalten",
+	"Add Time Slot": "Zeitfenster hinzufügen",
+	"Edit Time Slot": "Zeitfenster bearbeiten",
+	"Frequency:": "Häufigkeit:",
+	Weekly: "Wöchentlich",
+	Monthly: "Monatlich",
+	"Weekly = each picked weekday. Monthly = nth weekday of month.": "Wöchentlich = jeder gewählte Wochentag. Monatlich = n-ter Wochentag des Monats.",
+	"Repeat every:": "Wiederholen alle:",
+	"week(s)": "Woche(n)",
+	"month(s)": "Monat(e)",
+	"Which occurrence:": "Welches Vorkommen:",
+	"1st": "1.",
+	"2nd": "2.",
+	"3rd": "3.",
+	"4th": "4.",
+	Last: "Letzte",
+	"Applies to all picked weekdays (e.g. 1st Mon + 1st Wed).": "Gilt für alle gewählten Wochentage (z. B. 1. Mo + 1. Mi).",
+	"Days of week:": "Wochentage:",
+	"Days of week": "Wochentage",
+	Mon: "Mo",
+	Tue: "Di",
+	Wed: "Mi",
+	Thu: "Do",
+	Fri: "Fr",
+	Sat: "Sa",
+	Sun: "So",
+	Monday: "Montag",
+	Tuesday: "Dienstag",
+	Wednesday: "Mittwoch",
+	Thursday: "Donnerstag",
+	Friday: "Freitag",
+	Saturday: "Samstag",
+	Sunday: "Sonntag",
+	"Pick one or more days. Combined with frequency above.": "Wählen Sie einen oder mehrere Tage. In Kombination mit der Häufigkeit oben.",
+	"Until (optional):": "Bis (optional):",
+	"No more occurrences after this date.": "Keine weiteren Vorkommen nach diesem Datum.",
+	"Start time:": "Anfangszeit:",
+	"End time:": "Endzeit:",
+	"Minimum staff:": "Minimales Personal:",
+	"Maximum staff:": "Maximales Personal:",
+	"Location:": "Standort:",
+	Location: "Standort",
+	"— None —": "— Keine —",
+	"Pick from the configured authorised value category. Submitting other values is rejected.": "Wählen Sie aus der konfigurierten normierten Wertekategorie. Andere Werte werden abgelehnt.",
+	"Suggestions are this branch's Koha desks; you can also type a custom value.": "Die Vorschläge sind die Koha-Desks dieser Bibliothek; Sie können auch einen benutzerdefinierten Wert eingeben.",
+	"Specific desk or area within the branch.": "Spezifischer Desk oder Bereich innerhalb der Bibliothek.",
+	"Notes:": "Notizen:",
+	Notes: "Notizen",
+	"Save slot": "Zeitfenster speichern",
+	"No time slots defined yet. Use Add time slot to create one.": "Noch keine Zeitfenster definiert. Verwenden Sie 'Zeitfenster hinzufügen', um eines zu erstellen.",
+	"Delete time slot?": "Zeitfenster löschen?",
+	"Are you sure you want to delete the slot": "Möchten Sie das Zeitfenster wirklich löschen?",
+	"Existing assignments on this slot will be removed too.": "Bestehende Zuweisungen für dieses Zeitfenster werden ebenfalls entfernt.",
+	"Delete slot": "Zeitfenster löschen",
+	"Add exception": "Ausnahme hinzufügen",
+	"One-off date overrides for this roster (closures, holidays, special events). Koha calendar closures merge in automatically when \"Use Koha calendar\" is on; rows here are non-calendar additions.": "Einmalige Datumsüberschreibungen für diesen Dienstplan (Schließungen, Feiertage, Sonderveranstaltungen). Koha-Kalenderschließungen werden automatisch übernommen, wenn \"Koha-Kalender verwenden\" aktiv ist; Einträge hier sind ergänzende Nicht-Kalender-Daten.",
+	"Date:": "Datum:",
+	Date: "Datum",
+	"Reason:": "Grund:",
+	Reason: "Grund",
+	"Optional note shown alongside the exception in the schedule.": "Optionale Notiz, die neben der Ausnahme im Plan angezeigt wird.",
+	"Save exception": "Ausnahme speichern",
+	"Edit exception": "Ausnahme bearbeiten",
+	"No exceptions defined. Use Add exception to create one.": "Keine Ausnahmen definiert. Verwenden Sie 'Ausnahme hinzufügen', um eine zu erstellen.",
+	"Request swap": "Tausch anfragen",
+	"Request a shift swap, then the targeted staff member (and a manager, when manager approval is enabled) can approve or reject it. On approval the assignment is reassigned automatically; if a return assignment was named, both shifts swap borrowers in one transaction.": "Fragen Sie einen Schichttausch an, dann kann das angefragte Personal (und ein Manager, wenn die Manager-Genehmigung aktiviert ist) ihn genehmigen oder ablehnen. Bei Genehmigung wird die Zuweisung automatisch übertragen; wenn eine Rück-Zuweisung benannt wurde, tauschen beide Schichten in einer Transaktion ihre Personen.",
+	"Request shift swap": "Schichttausch anfragen",
+	"Give up shift:": "Schicht abgeben:",
+	"— Pick an upcoming assignment —": "— Eine bevorstehende Zuweisung wählen —",
+	"You have no upcoming shifts on this roster to swap.": "Sie haben keine bevorstehenden Schichten in diesem Dienstplan zum Tauschen.",
+	"Hand off to:": "Übergeben an:",
+	"— Pick a staff member —": "— Eine Personalkraft wählen —",
+	"In exchange for (optional):": "Im Austausch für (optional):",
+	"— No return shift, one-way handoff —": "— Keine Gegenschicht, einseitige Übergabe —",
+	"Filtered to the staffer selected above. Empty = one-way reassignment.": "Gefiltert nach der oben gewählten Personalkraft. Leer = einseitige Umverteilung.",
+	"Message:": "Nachricht:",
+	Message: "Nachricht",
+	"Send request": "Anfrage senden",
+	Shift: "Schicht",
+	Requester: "Anfragender",
+	Requested: "Angefragt",
+	Pending: "Ausstehend",
+	Approved: "Genehmigt",
+	Rejected: "Abgelehnt",
+	Cancelled: "Abgebrochen",
+	Approve: "Genehmigen",
+	Reject: "Ablehnen",
+	"Cancel this swap request?": "Diese Tauschanfrage abbrechen?",
+	"No swap requests on this roster yet.": "Noch keine Tauschanfragen für diesen Dienstplan.",
+	"Self-service is disabled in plugin configuration. Ask an administrator to enable Staff can self-assign to open slots on the Configuration page.": "Selbstbedienung ist in der Plugin-Konfiguration deaktiviert. Bitten Sie einen Administrator, 'Personal kann sich selbst offenen Zeitfenstern zuweisen' auf der Konfigurationsseite zu aktivieren.",
+	"You do not have the staffroster_self_assign permission. Ask a manager to grant it on your patron record.": "Sie haben nicht die Berechtigung staffroster_self_assign. Bitten Sie einen Manager, sie in Ihrem Benutzerdatensatz zu vergeben.",
+	"Slots with capacity remaining that you are eligible to claim.": "Zeitfenster mit verbleibender Kapazität, für die Sie sich anmelden können.",
+	"Your scheduled shifts across all rosters you can see.": "Ihre geplanten Schichten in allen Dienstplänen, die Sie sehen können.",
+	"Cancelled.": "Abgebrochen.",
+	"category type S (any patron flagged staff)": "Kategorietyp S (alle als Personal markierten Benutzer)",
+	"library group": "Bibliotheksgruppe",
+	"(unnamed)": "(unbenannt)",
+	branch: "Bibliothek",
+	"all branches": "alle Bibliotheken",
+	"Free at": "Frei um",
+	on: "am",
+	"Free on": "Frei am",
+	of: "von",
+	eligible: "berechtigt",
+	"capped at": "begrenzt auf",
+	"Showing all category-type-S patrons (incl. service accounts). Set staff_categorycodes in plugin configuration to narrow.": "Es werden alle category_type=S-Benutzer angezeigt (inkl. Service-Konten). Setzen Sie staff_categorycodes in der Plugin-Konfiguration, um einzugrenzen.",
+	configuration: "Konfiguration",
+	Removed: "Entfernt",
+	from: "aus",
+	"Picked up": "Aufgenommen",
+	"Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.": "Verwenden Sie die Pfeiltasten, um eine Zielzelle zu wählen. Drücken Sie Eingabe zum Ablegen, Esc zum Abbrechen.",
+	"Use arrow keys to move. Press Enter to drop, Esc to cancel.": "Verwenden Sie die Pfeiltasten zum Bewegen. Drücken Sie Eingabe zum Ablegen, Esc zum Abbrechen.",
+	"Cannot drop here.": "Hier kann nicht abgelegt werden.",
+	Moved: "Verschoben",
+	to: "nach",
+	"slot.": "Zeitfenster.",
+	slot: "Zeitfenster",
+	"slot, closed.": "Zeitfenster, geschlossen.",
+	"staff assigned": "Personal zugewiesen",
+	"Press Enter to pick up.": "Drücken Sie Eingabe zum Aufnehmen.",
+	Undo: "Rückgängig",
+	"Available staff": "Verfügbares Personal",
+	"Search staff…": "Personal suchen…",
+	"No matches": "Keine Treffer",
+	"Staff roster schedule": "Dienstplan-Übersicht",
+	"No time slots defined for this roster yet.": "Für diesen Dienstplan sind noch keine Zeitfenster definiert.",
+	closed: "geschlossen",
+	"Edit assignment": "Zuweisung bearbeiten",
+	"Optional notes shown on the chip and in handoffs": "Optionale Notizen, die am Chip und bei Übergaben angezeigt werden",
+	Remove: "Entfernen",
+	"comma-separated values": "kommagetrennte Werte",
+	"Remove assignment?": "Zuweisung entfernen?",
+	"from this slot on": "aus diesem Zeitfenster am",
+	"You can undo with Cmd-Z (or the Undo button) if this was a mistake.": "Sie können mit Cmd-Z (oder dem Rückgängig-Knopf) widerrufen, falls dies ein Fehler war.",
+	Scheduled: "Geplant",
+	Confirmed: "Bestätigt",
+	Completed: "Abgeschlossen",
+	"No-show": "Nicht erschienen",
+	"Shift dropped.": "Schicht aufgegeben.",
+	"No shifts scheduled this week.": "Keine Schichten in dieser Woche geplant.",
+	"Roster #": "Dienstplan Nr. ",
+	"Request swap on this roster": "Tausch in diesem Dienstplan anfragen",
+	Swap: "Tausch",
+	"Drop this shift": "Diese Schicht aufgeben",
+	"Drop this shift?": "Diese Schicht aufgeben?",
+	"Dropping…": "Wird aufgegeben…",
+	Drop: "Aufgeben",
+	"Drop your shift on": "Schicht aufgeben am",
+	"The slot will be re-opened for someone else to claim. If you need a one-for-one trade instead, use Swap.": "Das Zeitfenster wird für eine andere Person zur Übernahme wieder freigegeben. Für einen Eins-zu-Eins-Tausch verwenden Sie 'Tausch'.",
+	"Drop shift": "Schicht aufgeben",
+	Claimed: "Übernommen",
+	"No open shifts available this week.": "Keine offenen Schichten in dieser Woche verfügbar.",
+	"Claim this shift?": "Diese Schicht übernehmen?",
+	Claim: "Übernehmen",
+	"You'll be added to the roster immediately. Drop the shift later from My shifts if plans change.": "Sie werden sofort zum Dienstplan hinzugefügt. Geben Sie die Schicht später unter 'Meine Schichten' auf, wenn sich Ihre Pläne ändern.",
+	"Claim shift": "Schicht übernehmen",
+	open: "offen",
+	"Claiming…": "Wird übernommen…"
+} };
+function zt() {
+	return (typeof document < "u" && document.documentElement.lang || "en").toLowerCase().split(/[-_]/)[0] ?? "en";
+}
+var Bt = Rt[zt()] ?? {};
+function Y(e) {
+	return Bt[e] ?? e;
+}
+//#endregion
 //#region src/components/shared/toolbar.ts
-function Rt(e) {
+function Vt(e) {
 	let { weekStart: t, onShift: n, onRefresh: r, extras: i } = e;
-	return S`
+	return x`
     <div class="btn-toolbar srg-toolbar" role="toolbar">
       <div class="btn-group" role="group">
         <button class="btn btn-default btn-sm" @click=${() => n(-7)}>
-          <i class="fa fa-arrow-left" aria-hidden="true"></i> Previous
+          <i class="fa fa-arrow-left" aria-hidden="true"></i> ${Y("Previous")}
         </button>
         <button class="btn btn-default btn-sm" @click=${() => n(7)}>
-          Next <i class="fa fa-arrow-right" aria-hidden="true"></i>
+          ${Y("Next")} <i class="fa fa-arrow-right" aria-hidden="true"></i>
         </button>
       </div>
-      <span class="srg-week-label">Week of ${t}</span>
-      ${i ?? w}
+      <span class="srg-week-label">${Y("Week of")} ${t}</span>
+      ${i ?? C}
       <div class="btn-group" role="group">
         <button class="btn btn-default btn-sm" @click=${() => r()}>
-          <i class="fa fa-refresh" aria-hidden="true"></i> Refresh
+          <i class="fa fa-refresh" aria-hidden="true"></i> ${Y("Refresh")}
         </button>
       </div>
     </div>
@@ -1372,34 +1731,34 @@ function Rt(e) {
 }
 //#endregion
 //#region src/components/shared/toasts.ts
-function zt(e) {
+function Ht(e) {
 	let { successMsg: t, error: n, onDismissError: r } = e;
-	return !t && !n ? w : S`
-    ${t ? S`
+	return !t && !n ? C : x`
+    ${t ? x`
           <div class="srg-toast alert alert-success" role="status" aria-live="polite">
             <i class="fa fa-check" aria-hidden="true"></i>
             <span>${t}</span>
           </div>
-        ` : w}
-    ${n ? S`
+        ` : C}
+    ${n ? x`
           <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
             <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
             <span>${n}</span>
-            ${r ? S`<button
+            ${r ? x`<button
                   type="button"
                   class="btn-close"
-                  aria-label="Dismiss"
+                  aria-label="${Y("Dismiss")}"
                   @click=${r}
-                ></button>` : w}
+                ></button>` : C}
           </div>
-        ` : w}
+        ` : C}
   `;
 }
 //#endregion
 //#region src/components/shared/modal.ts
-function Bt(e) {
+function Ut(e) {
 	let { title: t, body: n, footer: r, onCancel: i, dialogClass: a } = e;
-	return S`
+	return x`
     <div
       class="modal show staff-roster-modal-open"
       tabindex="-1"
@@ -1431,7 +1790,7 @@ function Bt(e) {
 }
 //#endregion
 //#region src/components/shared/escape-controller.ts
-var Y = class {
+var Wt = class {
 	constructor(e, t, n) {
 		this.host = e, this.isActive = t, this.onEscape = n, this.onKey = (e) => {
 			e.key === "Escape" && this.isActive() && (e.preventDefault(), e.stopPropagation(), this.onEscape());
@@ -1454,23 +1813,23 @@ function X(e, t, n, r) {
 }
 //#endregion
 //#region src/components/staff-roster-grid.ts
-var Vt = 5e3, Ht = 10, Ut = [
-	"Mon",
-	"Tue",
-	"Wed",
-	"Thu",
-	"Fri",
-	"Sat",
-	"Sun"
-], Wt = [
-	"Monday",
-	"Tuesday",
-	"Wednesday",
-	"Thursday",
-	"Friday",
-	"Saturday",
-	"Sunday"
-], Gt = [
+var Gt = 5e3, Kt = 10, qt = () => [
+	Y("Mon"),
+	Y("Tue"),
+	Y("Wed"),
+	Y("Thu"),
+	Y("Fri"),
+	Y("Sat"),
+	Y("Sun")
+], Jt = () => [
+	Y("Monday"),
+	Y("Tuesday"),
+	Y("Wednesday"),
+	Y("Thursday"),
+	Y("Friday"),
+	Y("Saturday"),
+	Y("Sunday")
+], Yt = [
 	"MO",
 	"TU",
 	"WE",
@@ -1486,7 +1845,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 			fields: {}
 		}, this.editOriginEl = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.recentlyChanged = /* @__PURE__ */ new Set(), this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
 			(e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey && (e.preventDefault(), this.undo());
-		}, new Y(this, () => this.editing !== null, () => this.cancelEdit()), new Y(this, () => this.pendingDelete !== null, () => this.cancelDelete()), new Y(this, () => this.pickedUp !== null, () => this.cancelPickup());
+		}, new Wt(this, () => this.editing !== null, () => this.cancelEdit()), new Wt(this, () => this.pendingDelete !== null, () => this.cancelDelete()), new Wt(this, () => this.pickedUp !== null, () => this.cancelPickup());
 	}
 	setError(e) {
 		this.error = e, this.errorDismissTimer && clearTimeout(this.errorDismissTimer), e && (this.errorDismissTimer = setTimeout(() => this.error = "", 5e3));
@@ -1495,7 +1854,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 		return this;
 	}
 	connectedCallback() {
-		super.connectedCallback(), this.weekStart ||= Nt(/* @__PURE__ */ new Date()), this.refresh(), this.loadAvailable(), this.pollTimer = setInterval(() => void this.refresh(), Vt), document.addEventListener("keydown", this.onKeyDown);
+		super.connectedCallback(), this.weekStart ||= Nt(/* @__PURE__ */ new Date()), this.refresh(), this.loadAvailable(), this.pollTimer = setInterval(() => void this.refresh(), Gt), document.addEventListener("keydown", this.onKeyDown);
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this.pollTimer && clearInterval(this.pollTimer), this.recentlyChangedTimer && clearTimeout(this.recentlyChangedTimer), document.removeEventListener("keydown", this.onKeyDown);
@@ -1525,9 +1884,9 @@ var Vt = 5e3, Ht = 10, Ut = [
 	}
 	renderAvailableFilterHeader() {
 		let e = this.availableMeta;
-		if (!e) return w;
-		let t = e.filter, n = t.mode === "codes" ? t.codes.join(", ") : "category type S (any patron flagged staff)", r = t.branch_scope.mode === "group" ? `library group: ${t.branch_scope.label ?? "(unnamed)"}` : t.branch_scope.mode === "branch" ? `branch: ${t.branch_scope.label}` : "all branches", i = this.availableContextDay === null ? null : Wt[this.availableContextDay], a = t.slot, o = a ? `Free at ${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} on ${i ?? a.date}` : `Free on ${t.date}`, s = e.count >= e.limit, c = t.mode === "category_type_s";
-		return S`
+		if (!e) return C;
+		let t = e.filter, n = t.mode === "codes" ? t.codes.join(", ") : Y("category type S (any patron flagged staff)"), r = t.branch_scope.mode === "group" ? `${Y("library group")}: ${t.branch_scope.label ?? Y("(unnamed)")}` : t.branch_scope.mode === "branch" ? `${Y("branch")}: ${t.branch_scope.label}` : Y("all branches"), i = this.availableContextDay === null ? null : Jt()[this.availableContextDay], a = t.slot, o = a ? `${Y("Free at")} ${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} ${Y("on")} ${i ?? a.date}` : `${Y("Free on")} ${t.date}`, s = e.count >= e.limit, c = t.mode === "category_type_s";
+		return x`
       <div class="srg-avail-meta">
         <div class="srg-avail-context">${o}</div>
         <div class="srg-avail-filter" title="${n} · ${r}">
@@ -1536,18 +1895,16 @@ var Vt = 5e3, Ht = 10, Ut = [
           <span class="text-muted"> · ${r}</span>
         </div>
         <div class="srg-avail-counter">
-          <strong>${e.count}</strong> of ${e.pool} eligible
-          ${s ? S`<span class="text-muted"> · capped at ${e.limit}</span>` : w}
+          <strong>${e.count}</strong> ${Y("of")} ${e.pool} ${Y("eligible")}
+          ${s ? x`<span class="text-muted"> · ${Y("capped at")} ${e.limit}</span>` : C}
         </div>
-        ${c ? S`
+        ${c ? x`
               <div class="srg-avail-warn text-muted">
                 <i class="fa fa-info-circle" aria-hidden="true"></i>
-                Showing all category-type-S patrons (incl. service accounts).
-                Set <em>staff_categorycodes</em> in plugin
-                <a href="?class=${Pt()}&method=configure">configuration</a>
-                to narrow.
+                ${Y("Showing all category-type-S patrons (incl. service accounts). Set staff_categorycodes in plugin configuration to narrow.")}
+                <a href="?class=${Pt()}&method=configure">${Y("configuration")}</a>
               </div>
-            ` : w}
+            ` : C}
       </div>
     `;
 	}
@@ -1583,7 +1940,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 		return (this.week?.exceptions ?? []).some((t) => t.exception_date === e);
 	}
 	async pushUndo(e) {
-		this.undoStack.push(e), this.undoStack.length > Ht && this.undoStack.shift();
+		this.undoStack.push(e), this.undoStack.length > Kt && this.undoStack.shift();
 	}
 	async undo() {
 		let e = this.undoStack.pop();
@@ -1690,7 +2047,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 					status: e.status,
 					notes: e.notes ?? void 0
 				}
-			}), this.liveMessage = `Removed ${e.firstname} ${e.surname} from ${Wt[t]} ${e.assignment_date}.`, await this.refresh();
+			}), this.liveMessage = `${Y("Removed")} ${e.firstname} ${e.surname} ${Y("from")} ${Jt()[t]} ${e.assignment_date}.`, await this.refresh();
 		} catch (e) {
 			this.setError(e.message);
 		}
@@ -1703,7 +2060,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 		return [...this.week?.slots ?? []].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.id - t.id);
 	}
 	cellApplies(e, t) {
-		return e.applies_on_dates ? e.applies_on_dates.includes(this.cellDate(t)) : e.days_of_week.includes(Gt[t]);
+		return e.applies_on_dates ? e.applies_on_dates.includes(this.cellDate(t)) : e.days_of_week.includes(Yt[t]);
 	}
 	firstApplicableCellKey() {
 		let e = this.sortedSlots();
@@ -1714,16 +2071,16 @@ var Vt = 5e3, Ht = 10, Ut = [
 		return e.kind === "staff" ? `${e.staff.firstname} ${e.staff.surname}` : `${e.assignment.firstname} ${e.assignment.surname}`;
 	}
 	cellAriaLabel(e, t, n, r, i) {
-		let a = Wt[n], o = `${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}`;
-		if (r) return `${a} ${t}, ${o} slot, closed.`;
-		let s = i.length, c = `${a} ${t}, ${o} slot, ${s} of ${e.max_staff} staff assigned`;
+		let a = Jt()[n], o = `${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}`;
+		if (r) return `${a} ${t}, ${o} ${Y("slot, closed.")}`;
+		let s = i.length, c = `${a} ${t}, ${o} ${Y("slot")}, ${s} ${Y("of")} ${e.max_staff} ${Y("staff assigned")}`;
 		return s === 0 ? `${c}.` : `${c}: ${i.map((e) => `${e.firstname} ${e.surname}`).join(", ")}.`;
 	}
 	pickUpStaff(e, t) {
 		this.pickedUp = {
 			kind: "staff",
 			staff: e
-		}, this.pickupOriginEl = t, this.liveMessage = `Picked up ${e.firstname} ${e.surname}. Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.`;
+		}, this.pickupOriginEl = t, this.liveMessage = `${Y("Picked up")} ${e.firstname} ${e.surname}. ${Y("Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.")}`;
 		let n = this.firstApplicableCellKey();
 		n && (this.focusedCellKey = n, this.pendingFocusCellKey = n);
 	}
@@ -1731,12 +2088,12 @@ var Vt = 5e3, Ht = 10, Ut = [
 		this.pickedUp = {
 			kind: "assignment",
 			assignment: e
-		}, this.pickupOriginEl = t, this.liveMessage = `Picked up ${e.firstname} ${e.surname}. Use arrow keys to move. Press Enter to drop, Esc to cancel.`;
+		}, this.pickupOriginEl = t, this.liveMessage = `${Y("Picked up")} ${e.firstname} ${e.surname}. ${Y("Use arrow keys to move. Press Enter to drop, Esc to cancel.")}`;
 		let n = this.firstApplicableCellKey();
 		n && (this.focusedCellKey = n, this.pendingFocusCellKey = n);
 	}
 	cancelPickup() {
-		this.pickedUp = null, this.liveMessage = "Cancelled.";
+		this.pickedUp = null, this.liveMessage = Y("Cancelled.");
 		let e = this.pickupOriginEl;
 		this.pickupOriginEl = null, e && requestAnimationFrame(() => e.focus());
 	}
@@ -1745,7 +2102,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 		let n = this.pickedUp, r = this.cargoName(n), i = e.start_time.slice(0, 5);
 		this.dragging = n, this.pickedUp = null, this.pickupOriginEl = null;
 		let a = this.error;
-		await this.dropOnCell(e, t), this.error && this.error !== a ? this.liveMessage = `Cannot drop here. ${this.error}` : this.liveMessage = `Moved ${r} to ${Wt[this.dayIdxForDate(t)]} ${t}, ${i} slot.`;
+		await this.dropOnCell(e, t), this.error && this.error !== a ? this.liveMessage = `${Y("Cannot drop here.")} ${this.error}` : this.liveMessage = `${Y("Moved")} ${r} ${Y("to")} ${Jt()[this.dayIdxForDate(t)]} ${t}, ${i} ${Y("slot.")}`;
 		let o = `${e.id}-${this.dayIdxForDate(t)}`;
 		this.focusedCellKey = o, this.pendingFocusCellKey = o;
 	}
@@ -1857,28 +2214,28 @@ var Vt = 5e3, Ht = 10, Ut = [
 		}
 	}
 	render() {
-		if (!this.week) return S`<div class="text-center text-muted py-4">Loading…</div>`;
+		if (!this.week) return x`<div class="text-center text-muted py-4">Loading…</div>`;
 		let e = this.week.roster.type_color, t = this.sortedSlots(), n = this.pickedUp !== null;
-		return S`
+		return x`
       <div class="srg-sr-only" aria-live="polite" aria-atomic="true">${this.liveMessage}</div>
 
-      ${zt({
+      ${Ht({
 			error: this.error,
 			onDismissError: () => this.error = ""
 		})}
 
-      ${Rt({
+      ${Vt({
 			weekStart: this.weekStart,
 			onShift: (e) => this.shiftWeek(e),
 			onRefresh: () => void this.refresh(),
-			extras: S`
+			extras: x`
           <div class="btn-group" role="group">
             <button
               class="btn btn-default btn-sm"
               @click=${() => void this.undo()}
               ?disabled=${this.undoStack.length === 0}
             >
-              <i class="fa fa-undo" aria-hidden="true"></i> Undo (${this.undoStack.length})
+              <i class="fa fa-undo" aria-hidden="true"></i> ${Y("Undo")} (${this.undoStack.length})
             </button>
           </div>
         `
@@ -1886,12 +2243,12 @@ var Vt = 5e3, Ht = 10, Ut = [
 
       <div class="srg-layout" style=${`--srg-type-color: ${e}`}>
         <section class="page-section srg-staff-panel">
-          <h3 class="srg-panel-title" id="srg-staff-list-label">Available staff</h3>
+          <h3 class="srg-panel-title" id="srg-staff-list-label">${Y("Available staff")}</h3>
           ${this.renderAvailableFilterHeader()}
           <input
             type="search"
             class="form-control input-sm"
-            placeholder="Search staff…"
+            placeholder="${Y("Search staff…")}"
             .value=${this.staffQuery}
             @input=${this.onStaffSearch}
             @focus=${() => void this.loadAvailable()}
@@ -1903,14 +2260,14 @@ var Vt = 5e3, Ht = 10, Ut = [
           >
             ${Qe(this.available, (e) => e.patron_id, (e, t) => {
 			let n = this.pickedUp?.kind === "staff" && this.pickedUp.staff.patron_id === e.patron_id;
-			return S`
+			return x`
                   <li
                     class="list-group-item srg-staff-pill ${n ? "srg-picked-up" : ""}"
                     role="option"
                     tabindex="0"
                     data-pill-idx=${t}
                     aria-selected=${n ? "true" : "false"}
-                    aria-label="${e.surname}, ${e.firstname}. Press Enter to pick up."
+                    aria-label="${e.surname}, ${e.firstname}. ${Y("Press Enter to pick up.")}"
                     draggable="true"
                     @dragstart=${(t) => {
 				this.dragging = {
@@ -1927,7 +2284,7 @@ var Vt = 5e3, Ht = 10, Ut = [
                   </li>
                 `;
 		})}
-            ${this.available.length === 0 && this.staffQuery ? S`<li class="list-group-item text-muted">No matches</li>` : w}
+            ${this.available.length === 0 && this.staffQuery ? x`<li class="list-group-item text-muted">${Y("No matches")}</li>` : C}
           </ul>
         </section>
 
@@ -1935,14 +2292,14 @@ var Vt = 5e3, Ht = 10, Ut = [
           <table
             class="table srg-grid ${n ? "srg-pickup-active" : ""}"
             role="grid"
-            aria-label="Staff roster schedule"
+            aria-label="${Y("Staff roster schedule")}"
             aria-rowcount=${t.length + 1}
             aria-colcount="8"
           >
             <thead>
               <tr role="row" aria-rowindex="1">
-                <th class="srg-slot-col" role="columnheader" aria-colindex="1">Slot</th>
-                ${Ut.map((e, t) => S`
+                <th class="srg-slot-col" role="columnheader" aria-colindex="1">${Y("Slot")}</th>
+                ${qt().map((e, t) => x`
                     <th role="columnheader" aria-colindex=${t + 2}>
                       <span class="srg-day">${e}</span>
                       <small class="text-muted">${this.cellDate(t).slice(5)}</small>
@@ -1951,17 +2308,17 @@ var Vt = 5e3, Ht = 10, Ut = [
               </tr>
             </thead>
             <tbody>
-              ${t.length === 0 ? S`
+              ${t.length === 0 ? x`
                     <tr role="row">
                       <td colspan="8" class="srg-empty" role="gridcell">
-                        <p>No time slots defined for this roster yet.</p>
+                        <p>${Y("No time slots defined for this roster yet.")}</p>
                         <a class="btn btn-default btn-sm" href="?class=${Pt()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
-                          <i class="fa fa-clock" aria-hidden="true"></i> Manage slots
+                          <i class="fa fa-clock" aria-hidden="true"></i> ${Y("Manage slots")}
                         </a>
                       </td>
                     </tr>
-                  ` : w}
-              ${t.map((e, t) => S`
+                  ` : C}
+              ${t.map((e, t) => x`
                   <tr role="row" aria-rowindex=${t + 2}>
                     <th
                       scope="row"
@@ -1970,18 +2327,18 @@ var Vt = 5e3, Ht = 10, Ut = [
                       aria-colindex="1"
                     >
                       <span class="srg-slot-time">${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</span>
-                      ${e.location ? S`<small class="text-muted d-block">${e.location}</small>` : w}
+                      ${e.location ? x`<small class="text-muted d-block">${e.location}</small>` : C}
                     </th>
-                    ${Ut.map((r, i) => {
+                    ${qt().map((r, i) => {
 			let a = this.cellDate(i), o = this.cellApplies(e, i), s = this.exceptionFor(a), c = i + 2;
-			if (!o) return S`<td
+			if (!o) return x`<td
                           class="srg-cell-empty"
                           role="gridcell"
                           aria-colindex=${c}
                           aria-disabled="true"
                         ></td>`;
 			let l = `${e.id}-${i}`;
-			if (s) return S`<td
+			if (s) return x`<td
                           class="srg-cell-exception"
                           role="gridcell"
                           aria-colindex=${c}
@@ -1991,10 +2348,10 @@ var Vt = 5e3, Ht = 10, Ut = [
                           @keydown=${(n) => this.onCellKeyDown(n, e, a, t, i)}
                           @focus=${() => this.focusedCellKey = l}
                         >
-                          <small>closed</small>
+                          <small>${Y("closed")}</small>
                         </td>`;
 			let u = this.assignmentsFor(e.id, a), d = u.length;
-			return S`
+			return x`
                         <td
                           class="srg-cell ${n ? "srg-drop-target" : ""}"
                           role="gridcell"
@@ -2022,7 +2379,7 @@ var Vt = 5e3, Ht = 10, Ut = [
                         >
                           ${Qe(u, (e) => e.id, (e) => {
 				let t = this.pickedUp?.kind === "assignment" && this.pickedUp.assignment.id === e.id, n = this.recentlyChanged.has(e.id);
-				return S`
+				return x`
                                 <div
                                   class="srg-assignment srg-status-${e.status} ${t ? "srg-picked-up" : ""} ${n ? "srg-recent-update" : ""}"
                                   role="button"
@@ -2054,8 +2411,8 @@ var Vt = 5e3, Ht = 10, Ut = [
         </section>
       </div>
 
-      ${this.editing ? this.renderEditModal(this.editing) : w}
-      ${this.pendingDelete ? this.renderDeleteModal(this.pendingDelete) : w}
+      ${this.editing ? this.renderEditModal(this.editing) : C}
+      ${this.pendingDelete ? this.renderDeleteModal(this.pendingDelete) : C}
     `;
 	}
 	renderEditModal(e) {
@@ -2066,13 +2423,13 @@ var Vt = 5e3, Ht = 10, Ut = [
 			"cancelled",
 			"no_show"
 		], r = {
-			scheduled: "Scheduled",
-			confirmed: "Confirmed",
-			completed: "Completed",
-			cancelled: "Cancelled",
-			no_show: "No-show"
+			scheduled: Y("Scheduled"),
+			confirmed: Y("Confirmed"),
+			completed: Y("Completed"),
+			cancelled: Y("Cancelled"),
+			no_show: Y("No-show")
 		};
-		return S`
+		return x`
       <div
         class="modal show staff-roster-modal-open"
         tabindex="-1"
@@ -2086,17 +2443,17 @@ var Vt = 5e3, Ht = 10, Ut = [
         <div class="modal-dialog modal-lg srg-edit-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header">
-              <h1 class="modal-title">Edit assignment</h1>
-              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelEdit()}></button>
+              <h1 class="modal-title">${Y("Edit assignment")}</h1>
+              <button type="button" class="btn-close" aria-label="${Y("Close")}" @click=${() => this.cancelEdit()}></button>
             </div>
             <div class="modal-body srg-edit-body">
               <p class="srg-edit-subject">
                 <strong>${e.surname}, ${e.firstname}</strong>
-                <span class="text-muted"> · ${Wt[this.dayIdxForDate(e.assignment_date)]} ${e.assignment_date}</span>
+                <span class="text-muted"> · ${Jt()[this.dayIdxForDate(e.assignment_date)]} ${e.assignment_date}</span>
               </p>
               <div class="srg-edit-grid">
                 <div class="srg-edit-row">
-                  <label for="srg-edit-status">Status</label>
+                  <label for="srg-edit-status">${Y("Status")}</label>
                   <select
                     id="srg-edit-status"
                     class="form-select"
@@ -2106,16 +2463,16 @@ var Vt = 5e3, Ht = 10, Ut = [
 			status: e.target.value
 		}}
                   >
-                    ${n.map((e) => S`<option value=${e} ?selected=${e === this.editForm.status}>${r[e]}</option>`)}
+                    ${n.map((e) => x`<option value=${e} ?selected=${e === this.editForm.status}>${r[e]}</option>`)}
                   </select>
                 </div>
                 <div class="srg-edit-row">
-                  <label for="srg-edit-notes">Notes</label>
+                  <label for="srg-edit-notes">${Y("Notes")}</label>
                   <textarea
                     id="srg-edit-notes"
                     class="form-control"
                     rows="3"
-                    placeholder="Optional notes shown on the chip and in handoffs"
+                    placeholder="${Y("Optional notes shown on the chip and in handoffs")}"
                     .value=${this.editForm.notes}
                     @input=${(e) => this.editForm = {
 			...this.editForm,
@@ -2128,11 +2485,11 @@ var Vt = 5e3, Ht = 10, Ut = [
             </div>
             <div class="modal-footer srg-edit-footer">
               <button type="button" class="btn btn-danger me-auto" @click=${() => this.deleteFromEdit()}>
-                <i class="fa fa-trash"></i> Remove
+                <i class="fa fa-trash"></i> ${Y("Remove")}
               </button>
-              <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>Cancel</button>
+              <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>${Y("Cancel")}</button>
               <button type="button" class="btn btn-primary" @click=${() => void this.saveEdit()}>
-                <i class="fa fa-save"></i> Save
+                <i class="fa fa-save"></i> ${Y("Save")}
               </button>
             </div>
           </div>
@@ -2153,7 +2510,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 		};
 		if (e.av_options && e.av_options.length) {
 			let i = n[0] ?? "";
-			return S`
+			return x`
         <div class="srg-edit-row">
           <label for=${t}>${e.name}</label>
           <select
@@ -2165,21 +2522,21 @@ var Vt = 5e3, Ht = 10, Ut = [
 				r(t === "" ? [] : [t]);
 			}}
           >
-            <option value="">— None —</option>
-            ${e.av_options.map((e) => S`<option value=${e.value} ?selected=${e.value === i}>${e.lib || e.value}</option>`)}
+            <option value="">${Y("— None —")}</option>
+            ${e.av_options.map((e) => x`<option value=${e.value} ?selected=${e.value === i}>${e.lib || e.value}</option>`)}
           </select>
         </div>
       `;
 		}
 		let i = n.join(", ");
-		return S`
+		return x`
       <div class="srg-edit-row">
         <label for=${t}>${e.name}</label>
         <input
           id=${t}
           type="text"
           class="form-control"
-          placeholder=${e.repeatable ? "comma-separated values" : ""}
+          placeholder=${e.repeatable ? Y("comma-separated values") : ""}
           .value=${i}
           @input=${(t) => {
 			let n = t.target.value;
@@ -2190,19 +2547,19 @@ var Vt = 5e3, Ht = 10, Ut = [
     `;
 	}
 	renderDeleteModal(e) {
-		return Bt({
-			title: "Remove assignment?",
+		return Ut({
+			title: Y("Remove assignment?"),
 			onCancel: () => this.cancelDelete(),
-			body: S`
-        <p>Remove <strong>${e.surname}, ${e.firstname}</strong> from this slot on ${e.assignment_date}?</p>
-        <p class="text-muted">You can undo with Cmd-Z (or the Undo button) if this was a mistake.</p>
+			body: x`
+        <p>${Y("Remove")} <strong>${e.surname}, ${e.firstname}</strong> ${Y("from this slot on")} ${e.assignment_date}?</p>
+        <p class="text-muted">${Y("You can undo with Cmd-Z (or the Undo button) if this was a mistake.")}</p>
       `,
-			footer: S`
+			footer: x`
         <button type="button" class="btn btn-danger" @click=${() => void this.confirmDelete()}>
-          <i class="fa fa-trash"></i> Remove
+          <i class="fa fa-trash"></i> ${Y("Remove")}
         </button>
         <button type="button" class="btn btn-default" @click=${() => this.cancelDelete()}>
-          <i class="fa fa-times"></i> Cancel
+          <i class="fa fa-times"></i> ${Y("Cancel")}
         </button>
       `
 		});
@@ -2217,7 +2574,7 @@ X([O({
 })], Z.prototype, "weekStart", void 0), X([k()], Z.prototype, "week", void 0), X([k()], Z.prototype, "available", void 0), X([k()], Z.prototype, "availableMeta", void 0), X([k()], Z.prototype, "availableContextDay", void 0), X([k()], Z.prototype, "staffQuery", void 0), X([k()], Z.prototype, "error", void 0), X([k()], Z.prototype, "dragging", void 0), X([k()], Z.prototype, "pickedUp", void 0), X([k()], Z.prototype, "pendingDelete", void 0), X([k()], Z.prototype, "editing", void 0), X([k()], Z.prototype, "editForm", void 0), X([k()], Z.prototype, "liveMessage", void 0), X([k()], Z.prototype, "focusedCellKey", void 0), X([k()], Z.prototype, "focusedPillIdx", void 0), X([k()], Z.prototype, "recentlyChanged", void 0), Z = X([Re("staff-roster-grid")], Z);
 //#endregion
 //#region src/components/shared/day-groups.ts
-function Kt(e, t) {
+function Xt(e, t) {
 	let n = /* @__PURE__ */ new Map();
 	for (let r of e) {
 		let e = t(r), i = n.get(e);
@@ -2228,13 +2585,13 @@ function Kt(e, t) {
 		items: t
 	}));
 }
-function qt(e) {
+function Zt(e) {
 	let { groups: t, emptyText: n, renderItem: r } = e;
-	return S`
+	return x`
     <section class="page-section">
-      ${t.length === 0 ? S`<p class="text-muted">${n}</p>` : S`
+      ${t.length === 0 ? x`<p class="text-muted">${n}</p>` : x`
             <ul class="list-group">
-              ${Qe(t, (e) => e.date, (e) => S`
+              ${Qe(t, (e) => e.date, (e) => x`
                   <li class="list-group-item">
                     <h4 class="srg-day-heading">${Lt(e.date)}</h4>
                     <ul class="list-unstyled">
@@ -2249,15 +2606,15 @@ function qt(e) {
 }
 //#endregion
 //#region src/components/my-shifts-list.ts
-var Jt = {
-	scheduled: "Scheduled",
-	confirmed: "Confirmed",
-	completed: "Completed",
-	cancelled: "Cancelled",
-	no_show: "No-show"
-}, Q = class extends D {
+var Qt = () => ({
+	scheduled: Y("Scheduled"),
+	confirmed: Y("Confirmed"),
+	completed: Y("Completed"),
+	cancelled: Y("Cancelled"),
+	no_show: Y("No-show")
+}), Q = class extends D {
 	constructor() {
-		super(), this.weekStart = "", this.week = null, this.error = "", this.loading = !1, this.dropping = null, this.successMsg = "", this.pendingDrop = null, new Y(this, () => this.pendingDrop !== null, () => this.cancelDrop());
+		super(), this.weekStart = "", this.week = null, this.error = "", this.loading = !1, this.dropping = null, this.successMsg = "", this.pendingDrop = null, new Wt(this, () => this.pendingDrop !== null, () => this.cancelDrop());
 	}
 	createRenderRoot() {
 		return this;
@@ -2292,7 +2649,7 @@ var Jt = {
 		if (e) {
 			this.pendingDrop = null, this.dropping = e.assignment_id, this.error = "";
 			try {
-				await jt(e.assignment_id), this.successMsg = "Shift dropped.", setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
+				await jt(e.assignment_id), this.successMsg = Y("Shift dropped."), setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
 			} catch (e) {
 				this.error = e instanceof Error ? e.message : String(e);
 			} finally {
@@ -2301,33 +2658,33 @@ var Jt = {
 		}
 	}
 	render() {
-		if (this.loading && !this.week) return S`<div class="text-center text-muted py-4">Loading…</div>`;
-		let e = Kt(this.week?.shifts ?? [], (e) => e.assignment_date);
-		return S`
-      ${zt({
+		if (this.loading && !this.week) return x`<div class="text-center text-muted py-4">${Y("Loading…")}</div>`;
+		let e = Xt(this.week?.shifts ?? [], (e) => e.assignment_date);
+		return x`
+      ${Ht({
 			successMsg: this.successMsg,
 			error: this.error,
 			onDismissError: () => this.error = ""
 		})}
 
-      ${Rt({
+      ${Vt({
 			weekStart: this.weekStart,
 			onShift: (e) => this.shiftWeek(e),
 			onRefresh: () => void this.refresh()
 		})}
 
-      ${qt({
+      ${Zt({
 			groups: e,
-			emptyText: "No shifts scheduled this week.",
+			emptyText: Y("No shifts scheduled this week."),
 			renderItem: (e) => this.renderShift(e)
 		})}
 
-      ${this.pendingDrop ? this.renderDropModal(this.pendingDrop) : w}
+      ${this.pendingDrop ? this.renderDropModal(this.pendingDrop) : C}
     `;
 	}
 	renderShift(e) {
 		let t = this.rosterById(e.roster_id);
-		return S`
+		return x`
       <li class="srg-my-shift">
         <span
           class="staff-roster-type-swatch"
@@ -2341,57 +2698,56 @@ var Jt = {
           <a
             href="?class=${Pt()}&method=tool&op=view_assignments&roster_id=${e.roster_id}&week_start=${this.weekStart}"
           >
-            ${t?.name ?? "Roster #" + e.roster_id}
+            ${t?.name ?? Y("Roster #") + e.roster_id}
           </a>
-          ${t?.branch_name ? S`<small class="text-muted"> · ${t.branch_name}</small>` : w}
+          ${t?.branch_name ? x`<small class="text-muted"> · ${t.branch_name}</small>` : C}
         </span>
-        ${e.location ? S`<span class="srg-my-shift-location text-muted">
+        ${e.location ? x`<span class="srg-my-shift-location text-muted">
               <i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}
-            </span>` : w}
-        <span class="srg-my-shift-status badge">${Jt[e.status] ?? e.status}</span>
+            </span>` : C}
+        <span class="srg-my-shift-status badge">${Qt()[e.status] ?? e.status}</span>
         <a
           class="btn btn-default btn-xs"
           href="?class=${Pt()}&method=tool&op=manage_swaps&roster_id=${e.roster_id}"
-          title="Request swap on this roster"
+          title="${Y("Request swap on this roster")}"
         >
-          <i class="fa fa-exchange" aria-hidden="true"></i> Swap
+          <i class="fa fa-exchange" aria-hidden="true"></i> ${Y("Swap")}
         </a>
         <button
           type="button"
           class="btn btn-default btn-xs"
           ?disabled=${this.dropping === e.assignment_id}
           @click=${() => this.requestDrop(e)}
-          title="Drop this shift"
+          title="${Y("Drop this shift")}"
         >
           <i class="fa fa-times" aria-hidden="true"></i>
-          ${this.dropping === e.assignment_id ? "Dropping…" : "Drop"}
+          ${this.dropping === e.assignment_id ? Y("Dropping…") : Y("Drop")}
         </button>
       </li>
     `;
 	}
 	renderDropModal(e) {
 		let t = this.rosterById(e.roster_id);
-		return Bt({
-			title: "Drop this shift?",
+		return Ut({
+			title: Y("Drop this shift?"),
 			onCancel: () => this.cancelDrop(),
-			body: S`
+			body: x`
         <p>
-          Drop your shift on
+          ${Y("Drop your shift on")}
           <strong>${Lt(e.assignment_date)}</strong>,
           <strong>${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</strong>
-          (${t?.name ?? "Roster #" + e.roster_id})?
+          (${t?.name ?? Y("Roster #") + e.roster_id})?
         </p>
         <p class="text-muted">
-          The slot will be re-opened for someone else to claim. If you need a
-          one-for-one trade instead, use Swap.
+          ${Y("The slot will be re-opened for someone else to claim. If you need a one-for-one trade instead, use Swap.")}
         </p>
       `,
-			footer: S`
+			footer: x`
         <button type="button" class="btn btn-danger" @click=${() => void this.confirmDrop()}>
-          <i class="fa fa-times"></i> Drop shift
+          <i class="fa fa-times"></i> ${Y("Drop shift")}
         </button>
         <button type="button" class="btn btn-default" @click=${() => this.cancelDrop()}>
-          Cancel
+          ${Y("Cancel")}
         </button>
       `
 		});
@@ -2405,7 +2761,7 @@ X([O({
 //#region src/components/open-shifts-list.ts
 var $ = class extends D {
 	constructor() {
-		super(), this.weekStart = "", this.data = null, this.error = "", this.loading = !1, this.claiming = null, this.successMsg = "", this.pendingClaim = null, new Y(this, () => this.pendingClaim !== null, () => this.cancelClaim());
+		super(), this.weekStart = "", this.data = null, this.error = "", this.loading = !1, this.claiming = null, this.successMsg = "", this.pendingClaim = null, new Wt(this, () => this.pendingClaim !== null, () => this.cancelClaim());
 	}
 	createRenderRoot() {
 		return this;
@@ -2442,7 +2798,7 @@ var $ = class extends D {
 			await At({
 				slot_id: e.slot_id,
 				assignment_date: e.assignment_date
-			}), this.successMsg = `Claimed ${e.roster_name} on ${e.assignment_date}.`, setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
+			}), this.successMsg = `${Y("Claimed")} ${e.roster_name} ${Y("on")} ${e.assignment_date}.`, setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -2456,60 +2812,59 @@ var $ = class extends D {
 		return Number(e.replaceAll("-", ""));
 	}
 	render() {
-		if (this.loading && !this.data) return S`<div class="text-center text-muted py-4">Loading…</div>`;
-		let e = Kt(this.data?.openings ?? [], (e) => e.assignment_date);
-		return S`
-      ${zt({
+		if (this.loading && !this.data) return x`<div class="text-center text-muted py-4">${Y("Loading…")}</div>`;
+		let e = Xt(this.data?.openings ?? [], (e) => e.assignment_date);
+		return x`
+      ${Ht({
 			successMsg: this.successMsg,
 			error: this.error,
 			onDismissError: () => this.error = ""
 		})}
 
-      ${Rt({
+      ${Vt({
 			weekStart: this.weekStart,
 			onShift: (e) => this.shiftWeek(e),
 			onRefresh: () => void this.refresh()
 		})}
 
-      ${qt({
+      ${Zt({
 			groups: e,
-			emptyText: "No open shifts available this week.",
+			emptyText: Y("No open shifts available this week."),
 			renderItem: (e) => this.renderOpening(e)
 		})}
 
-      ${this.pendingClaim ? this.renderClaimModal(this.pendingClaim) : w}
+      ${this.pendingClaim ? this.renderClaimModal(this.pendingClaim) : C}
     `;
 	}
 	renderClaimModal(e) {
-		return Bt({
-			title: "Claim this shift?",
+		return Ut({
+			title: Y("Claim this shift?"),
 			onCancel: () => this.cancelClaim(),
-			body: S`
+			body: x`
         <p>
-          Claim
+          ${Y("Claim")}
           <strong>${Lt(e.assignment_date)}</strong>,
           <strong>${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</strong>
-          on <strong>${e.roster_name}</strong>?
+          ${Y("on")} <strong>${e.roster_name}</strong>?
         </p>
-        ${e.location ? S`<p class="text-muted"><i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}</p>` : w}
+        ${e.location ? x`<p class="text-muted"><i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}</p>` : C}
         <p class="text-muted">
-          You'll be added to the roster immediately. Drop the shift later from
-          "My shifts" if plans change.
+          ${Y("You'll be added to the roster immediately. Drop the shift later from My shifts if plans change.")}
         </p>
       `,
-			footer: S`
+			footer: x`
         <button type="button" class="btn btn-primary" @click=${() => void this.confirmClaim()}>
-          <i class="fa fa-hand-paper-o"></i> Claim shift
+          <i class="fa fa-hand-paper-o"></i> ${Y("Claim shift")}
         </button>
         <button type="button" class="btn btn-default" @click=${() => this.cancelClaim()}>
-          Cancel
+          ${Y("Cancel")}
         </button>
       `
 		});
 	}
 	renderOpening(e) {
 		let t = this.openingKey(e), n = this.claiming === t;
-		return S`
+		return x`
       <li class="srg-my-shift">
         <span
           class="staff-roster-type-swatch"
@@ -2521,12 +2876,12 @@ var $ = class extends D {
         </span>
         <span class="srg-my-shift-roster">
           ${e.roster_name}
-          ${e.branch_name ? S`<small class="text-muted"> · ${e.branch_name}</small>` : w}
+          ${e.branch_name ? x`<small class="text-muted"> · ${e.branch_name}</small>` : C}
         </span>
-        ${e.location ? S`<span class="srg-my-shift-location text-muted">
+        ${e.location ? x`<span class="srg-my-shift-location text-muted">
               <i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}
-            </span>` : w}
-        <span class="srg-my-shift-status badge">${e.capacity_remaining} open</span>
+            </span>` : C}
+        <span class="srg-my-shift-status badge">${e.capacity_remaining} ${Y("open")}</span>
         <button
           type="button"
           class="btn btn-primary btn-xs"
@@ -2534,7 +2889,7 @@ var $ = class extends D {
           @click=${() => this.requestClaim(e)}
         >
           <i class="fa fa-hand-paper-o" aria-hidden="true"></i>
-          ${n ? "Claiming…" : "Claim"}
+          ${Y(n ? "Claiming…" : "Claim")}
         </button>
       </li>
     `;

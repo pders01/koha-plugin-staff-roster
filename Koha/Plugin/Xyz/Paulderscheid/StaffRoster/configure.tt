@@ -4,7 +4,7 @@
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>Staff Roster - Configuration | Plugins | Koha</title>
+<title>[% tr('Staff Roster') | html %] - [% tr('Configuration') | html %] | [% tr('Plugins') | html %] | Koha</title>
 [% INCLUDE 'doc-head-close.inc' %]
 <link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster-plugin.css" />
 </head>
@@ -17,13 +17,13 @@
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]
         [% WRAPPER breadcrumb_item %]
-            <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a>
+            <a href="/cgi-bin/koha/plugins/plugins-home.pl">[% tr('Plugins') | html %]</a>
         [% END %]
         [% WRAPPER breadcrumb_item %]
-            <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Staff Roster</a>
+            <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Staff Roster') | html %]</a>
         [% END %]
         [% WRAPPER breadcrumb_item bc_active = 1 %]
-            <span>Configuration</span>
+            <span>[% tr('Configuration') | html %]</span>
         [% END %]
     [% END %]
 [% END %]
@@ -36,13 +36,13 @@
     <div class="row">
         <div class="col-md-10 order-sm-1 order-md-2">
             <main>
-    <h1>Staff Roster - Configuration</h1>
+    <h1>[% tr('Staff Roster') | html %] - [% tr('Configuration') | html %]</h1>
 
     [% IF saved %]
-        <div class="alert alert-success">Configuration saved successfully.</div>
+        <div class="alert alert-success">[% tr('Configuration saved successfully.') | html %]</div>
     [% END %]
     [% IF denied %]
-        <div class="alert alert-danger">You don't have the <code>staffroster_configure</code> permission. Changes were not saved.</div>
+        <div class="alert alert-danger">[% tr("You don't have the staffroster_configure permission. Changes were not saved.") | html %]</div>
     [% END %]
 
     <form method="post" action="/cgi-bin/koha/plugins/run.pl" class="validated">
@@ -52,56 +52,56 @@
         <input type="hidden" name="op" value="cud-save" />
 
         <fieldset class="rows">
-            <legend>Notification Settings</legend>
+            <legend>[% tr('Notification Settings') | html %]</legend>
             <ol>
                 <li>
-                    <label for="enable_email_reminders">Enable email reminders:</label>
+                    <label for="enable_email_reminders">[% tr('Enable email reminders:') | html %]</label>
                     <select name="enable_email_reminders" id="enable_email_reminders">
-                        <option value="1" [% IF enable_email_reminders == '1' %]selected[% END %]>Yes</option>
-                        <option value="0" [% IF enable_email_reminders == '0' %]selected[% END %]>No</option>
+                        <option value="1" [% IF enable_email_reminders == '1' %]selected[% END %]>[% tr('Yes') | html %]</option>
+                        <option value="0" [% IF enable_email_reminders == '0' %]selected[% END %]>[% tr('No') | html %]</option>
                     </select>
                 </li>
                 <li>
-                    <label for="reminder_days_before">Send reminders (days before):</label>
+                    <label for="reminder_days_before">[% tr('Send reminders (days before):') | html %]</label>
                     <input type="number" name="reminder_days_before" id="reminder_days_before" value="[% reminder_days_before || 1 | html %]" min="0" max="7" />
-                    <span class="hint">Number of days before a shift to send reminder</span>
+                    <span class="hint">[% tr('Number of days before a shift to send reminder') | html %]</span>
                 </li>
                 <li>
-                    <label for="enable_swap_notifications">Enable swap request notifications:</label>
+                    <label for="enable_swap_notifications">[% tr('Enable swap request notifications:') | html %]</label>
                     <select name="enable_swap_notifications" id="enable_swap_notifications">
-                        <option value="1" [% IF enable_swap_notifications == '1' %]selected[% END %]>Yes</option>
-                        <option value="0" [% IF enable_swap_notifications == '0' %]selected[% END %]>No</option>
+                        <option value="1" [% IF enable_swap_notifications == '1' %]selected[% END %]>[% tr('Yes') | html %]</option>
+                        <option value="0" [% IF enable_swap_notifications == '0' %]selected[% END %]>[% tr('No') | html %]</option>
                     </select>
                 </li>
             </ol>
         </fieldset>
 
         <fieldset class="rows">
-            <legend>Library scope &amp; staff selection</legend>
+            <legend>[% tr('Library scope & staff selection') | html %]</legend>
             <ol>
                 <li>
-                    <label for="library_group_mode">Group enforcement:</label>
+                    <label for="library_group_mode">[% tr('Group enforcement:') | html %]</label>
                     <select name="library_group_mode" id="library_group_mode">
-                        <option value="off"    [% IF library_group_mode == 'off'    %]selected[% END %]>Off — groups ignored</option>
-                        <option value="filter" [% IF library_group_mode == 'filter' %]selected[% END %]>Filter — non-members don't see group rosters</option>
-                        <option value="strict" [% IF library_group_mode == 'strict' %]selected[% END %]>Strict — non-members get 403 on read and write</option>
+                        <option value="off"    [% IF library_group_mode == 'off'    %]selected[% END %]>[% tr('Off — groups ignored') | html %]</option>
+                        <option value="filter" [% IF library_group_mode == 'filter' %]selected[% END %]>[% tr("Filter — non-members don't see group rosters") | html %]</option>
+                        <option value="strict" [% IF library_group_mode == 'strict' %]selected[% END %]>[% tr('Strict — non-members get 403 on read and write') | html %]</option>
                     </select>
-                    <span class="hint">Superlibrarians always see all rosters regardless of mode.</span>
+                    <span class="hint">[% tr('Superlibrarians always see all rosters regardless of mode.') | html %]</span>
                 </li>
                 <li>
-                    <label for="default_library_group_id">Default group:</label>
+                    <label for="default_library_group_id">[% tr('Default group:') | html %]</label>
                     <select name="default_library_group_id" id="default_library_group_id">
-                        <option value="">None</option>
+                        <option value="">[% tr('None') | html %]</option>
                         [% FOREACH g IN library_groups %]
                             <option value="[% g.id | html %]" [% IF default_library_group_id == g.id %]selected[% END %]>
                                 [% g.indent | $raw %][% g.title | html %]
                             </option>
                         [% END %]
                     </select>
-                    <span class="hint">Pre-selected for new rosters.</span>
+                    <span class="hint">[% tr('Pre-selected for new rosters.') | html %]</span>
                 </li>
                 <li>
-                    <label for="staff_categories">Staff patron categories:</label>
+                    <label for="staff_categories">[% tr('Staff patron categories:') | html %]</label>
                     <select name="staff_categories" id="staff_categories" multiple size="6">
                         [% FOREACH cat IN patron_categories %]
                             <option value="[% cat.code | html %]" [% IF cat.selected %]selected[% END %]>
@@ -109,117 +109,117 @@
                             </option>
                         [% END %]
                     </select>
-                    <span class="hint">Categories whose patrons can be assigned to slots. Hold Ctrl/Cmd to multi-select. Empty = fall back to all <code>category_type='S'</code> patrons.</span>
+                    <span class="hint">[% tr("Categories whose patrons can be assigned to slots. Hold Ctrl/Cmd to multi-select. Empty = fall back to all category_type='S' patrons.") | html %]</span>
                 </li>
             </ol>
         </fieldset>
 
         <fieldset class="rows">
-            <legend>Calendar integration</legend>
+            <legend>[% tr('Calendar integration') | html %]</legend>
             <ol>
                 <li>
-                    <label for="use_koha_calendar">Use Koha calendar:</label>
+                    <label for="use_koha_calendar">[% tr('Use Koha calendar:') | html %]</label>
                     <select name="use_koha_calendar" id="use_koha_calendar">
-                        <option value="1" [% IF use_koha_calendar == '1' %]selected[% END %]>Yes</option>
-                        <option value="0" [% IF use_koha_calendar == '0' %]selected[% END %]>No</option>
+                        <option value="1" [% IF use_koha_calendar == '1' %]selected[% END %]>[% tr('Yes') | html %]</option>
+                        <option value="0" [% IF use_koha_calendar == '0' %]selected[% END %]>[% tr('No') | html %]</option>
                     </select>
-                    <span class="hint">Merge Koha calendar closures into roster exceptions.</span>
+                    <span class="hint">[% tr('Merge Koha calendar closures into roster exceptions.') | html %]</span>
                 </li>
                 <li>
-                    <label for="koha_calendar_branch">Calendar source:</label>
+                    <label for="koha_calendar_branch">[% tr('Calendar source:') | html %]</label>
                     <select name="koha_calendar_branch" id="koha_calendar_branch">
-                        <option value="">Roster's branch (or all branches in its group)</option>
+                        <option value="">[% tr("Roster's branch (or all branches in its group)") | html %]</option>
                         [% FOREACH b IN all_libraries %]
                             <option value="[% b.branchcode | html %]" [% IF koha_calendar_branch == b.branchcode %]selected[% END %]>
                                 [% b.branchname | html %]
                             </option>
                         [% END %]
                     </select>
-                    <span class="hint">For multi-branch rosters, a date is closed only if every branch in the group is closed.</span>
+                    <span class="hint">[% tr('For multi-branch rosters, a date is closed only if every branch in the group is closed.') | html %]</span>
                 </li>
                 <li>
-                    <label for="koha_calendar_strict">Closure handling:</label>
+                    <label for="koha_calendar_strict">[% tr('Closure handling:') | html %]</label>
                     <select name="koha_calendar_strict" id="koha_calendar_strict">
-                        <option value="1" [% IF koha_calendar_strict == '1' %]selected[% END %]>Hard — block assignment on closed dates</option>
-                        <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>Soft — show closure but allow assignment</option>
+                        <option value="1" [% IF koha_calendar_strict == '1' %]selected[% END %]>[% tr('Hard — block assignment on closed dates') | html %]</option>
+                        <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>[% tr('Soft — show closure but allow assignment') | html %]</option>
                     </select>
                 </li>
             </ol>
         </fieldset>
 
         <fieldset class="rows">
-            <legend>Slot location source</legend>
+            <legend>[% tr('Slot location source') | html %]</legend>
             <ol>
                 <li>
-                    <label for="use_koha_desks">Koha desks:</label>
+                    <label for="use_koha_desks">[% tr('Koha desks:') | html %]</label>
                     <select name="use_koha_desks" id="use_koha_desks">
-                        <option value="1" [% IF use_koha_desks == '1' %]selected[% END %]>Yes</option>
-                        <option value="0" [% IF use_koha_desks == '0' %]selected[% END %]>No</option>
+                        <option value="1" [% IF use_koha_desks == '1' %]selected[% END %]>[% tr('Yes') | html %]</option>
+                        <option value="0" [% IF use_koha_desks == '0' %]selected[% END %]>[% tr('No') | html %]</option>
                     </select>
-                    <span class="hint">For single-branch rosters, suggest the branch's Koha desks in the location field. Free text otherwise.</span>
+                    <span class="hint">[% tr("For single-branch rosters, suggest the branch's Koha desks in the location field. Free text otherwise.") | html %]</span>
                 </li>
                 <li>
-                    <label for="use_authorised_value_locations">Authorised values:</label>
+                    <label for="use_authorised_value_locations">[% tr('Authorised values:') | html %]</label>
                     <select name="use_authorised_value_locations" id="use_authorised_value_locations">
-                        <option value="1" [% IF use_authorised_value_locations == '1' %]selected[% END %]>Yes</option>
-                        <option value="0" [% IF use_authorised_value_locations == '0' %]selected[% END %]>No</option>
+                        <option value="1" [% IF use_authorised_value_locations == '1' %]selected[% END %]>[% tr('Yes') | html %]</option>
+                        <option value="0" [% IF use_authorised_value_locations == '0' %]selected[% END %]>[% tr('No') | html %]</option>
                     </select>
-                    <span class="hint">Replace the location input with a dropdown from a Koha AV category. Takes precedence over Koha desks. Submitted values must match the category.</span>
+                    <span class="hint">[% tr('Replace the location input with a dropdown from a Koha AV category. Takes precedence over Koha desks. Submitted values must match the category.') | html %]</span>
                 </li>
                 <li>
-                    <label for="authorised_value_location_category">AV category:</label>
+                    <label for="authorised_value_location_category">[% tr('AV category:') | html %]</label>
                     <input type="text" name="authorised_value_location_category" id="authorised_value_location_category"
                            size="32" maxlength="32"
                            value="[% authorised_value_location_category | html %]" />
-                    <span class="hint">Category code (default <code>STAFFROSTER_LOCATION</code>). Create the category in <a href="/cgi-bin/koha/admin/authorised_values.pl">Koha admin</a> first.</span>
+                    <span class="hint">[% tr('Category code (default STAFFROSTER_LOCATION). Create the category in Koha admin first.') | html %]</span>
                 </li>
             </ol>
         </fieldset>
 
         <fieldset class="rows">
-            <legend>Custom fields</legend>
+            <legend>[% tr('Custom fields') | html %]</legend>
             <ol>
                 <li>
-                    <label>Roster custom fields:</label>
+                    <label>[% tr('Roster custom fields:') | html %]</label>
                     <span>
-                        <a href="/cgi-bin/koha/admin/additional-fields.pl?tablename=staff_roster">Manage in Koha admin</a>
+                        <a href="/cgi-bin/koha/admin/additional-fields.pl?tablename=staff_roster">[% tr('Manage in Koha admin') | html %]</a>
                     </span>
-                    <span class="hint">Define optional per-roster fields (text or authorised value). Shown on the roster edit form. Empty values aren't stored.</span>
+                    <span class="hint">[% tr("Define optional per-roster fields (text or authorised value). Shown on the roster edit form. Empty values aren't stored.") | html %]</span>
                 </li>
             </ol>
         </fieldset>
 
         <fieldset class="rows">
-            <legend>Permission Settings</legend>
+            <legend>[% tr('Permission Settings') | html %]</legend>
             <ol>
                 <li>
-                    <label for="staff_can_self_assign">Staff can self-assign to open slots:</label>
+                    <label for="staff_can_self_assign">[% tr('Staff can self-assign to open slots:') | html %]</label>
                     <select name="staff_can_self_assign" id="staff_can_self_assign">
-                        <option value="1" [% IF staff_can_self_assign == '1' %]selected[% END %]>Yes</option>
-                        <option value="0" [% IF staff_can_self_assign == '0' %]selected[% END %]>No</option>
+                        <option value="1" [% IF staff_can_self_assign == '1' %]selected[% END %]>[% tr('Yes') | html %]</option>
+                        <option value="0" [% IF staff_can_self_assign == '0' %]selected[% END %]>[% tr('No') | html %]</option>
                     </select>
                 </li>
                 <li>
-                    <label for="self_unclaim_lockout_hours">Self-unclaim lockout (hours before shift):</label>
+                    <label for="self_unclaim_lockout_hours">[% tr('Self-unclaim lockout (hours before shift):') | html %]</label>
                     <input type="number" min="0" step="1"
                            name="self_unclaim_lockout_hours"
                            id="self_unclaim_lockout_hours"
                            value="[% self_unclaim_lockout_hours | html %]" />
-                    <span class="hint">0 = no lockout. Set e.g. 24 to block self-drops within 24 hours of the shift start.</span>
+                    <span class="hint">[% tr('0 = no lockout. Set e.g. 24 to block self-drops within 24 hours of the shift start.') | html %]</span>
                 </li>
                 <li>
-                    <label for="require_swap_approval">Require manager approval for swaps:</label>
+                    <label for="require_swap_approval">[% tr('Require manager approval for swaps:') | html %]</label>
                     <select name="require_swap_approval" id="require_swap_approval">
-                        <option value="1" [% IF require_swap_approval == '1' %]selected[% END %]>Yes</option>
-                        <option value="0" [% IF require_swap_approval == '0' %]selected[% END %]>No</option>
+                        <option value="1" [% IF require_swap_approval == '1' %]selected[% END %]>[% tr('Yes') | html %]</option>
+                        <option value="0" [% IF require_swap_approval == '0' %]selected[% END %]>[% tr('No') | html %]</option>
                     </select>
                 </li>
             </ol>
         </fieldset>
 
         <fieldset class="action">
-            <input type="submit" class="btn btn-primary" value="Save configuration" />
-            <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Cancel</a>
+            <input type="submit" class="btn btn-primary" value="[% tr('Save configuration') | html %]" />
+            <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Cancel') | html %]</a>
         </fieldset>
     </form>
 

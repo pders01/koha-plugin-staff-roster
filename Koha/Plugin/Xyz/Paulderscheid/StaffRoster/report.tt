@@ -3,7 +3,7 @@
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>Staff Roster - Report | Plugins | Koha</title>
+<title>[% tr('Staff Roster') | html %] - [% tr('Report') | html %] | [% tr('Plugins') | html %] | Koha</title>
 [% INCLUDE 'doc-head-close.inc' %]
 <link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster-plugin.css" />
 </head>
@@ -16,13 +16,13 @@
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]
         [% WRAPPER breadcrumb_item %]
-            <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a>
+            <a href="/cgi-bin/koha/plugins/plugins-home.pl">[% tr('Plugins') | html %]</a>
         [% END %]
         [% WRAPPER breadcrumb_item %]
-            <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Staff Roster</a>
+            <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Staff Roster') | html %]</a>
         [% END %]
         [% WRAPPER breadcrumb_item bc_active = 1 %]
-            <span>Report</span>
+            <span>[% tr('Report') | html %]</span>
         [% END %]
     [% END %]
 [% END %]
@@ -35,9 +35,9 @@
     <div class="row">
         <div class="col-md-10 order-sm-1 order-md-2">
             <main>
-                <h1>Staff Roster - Report</h1>
+                <h1>[% tr('Staff Roster') | html %] - [% tr('Report') | html %]</h1>
                 <div class="page-section">
-                    <p class="text-muted">Reports are not yet implemented.</p>
+                    <p class="text-muted">[% tr('Reports are not yet implemented.') | html %]</p>
                 </div>
             </main>
         </div>

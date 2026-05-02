@@ -12,6 +12,7 @@ import { renderToasts } from "./shared/toasts.js";
 import { renderModalShell } from "./shared/modal.js";
 import { groupByDate, renderDayGroups } from "./shared/day-groups.js";
 import { EscapeController } from "./shared/escape-controller.js";
+import { __ } from "../i18n/index.js";
 
 @customElement("open-shifts-list")
 export class OpenShiftsList extends LitElement {
@@ -77,7 +78,7 @@ export class OpenShiftsList extends LitElement {
     this.error = "";
     try {
       await selfClaim({ slot_id: o.slot_id, assignment_date: o.assignment_date });
-      this.successMsg = `Claimed ${o.roster_name} on ${o.assignment_date}.`;
+      this.successMsg = `${__("Claimed")} ${o.roster_name} ${__("on")} ${o.assignment_date}.`;
       setTimeout(() => (this.successMsg = ""), 4000);
       await this.refresh();
     } catch (e) {
@@ -97,7 +98,7 @@ export class OpenShiftsList extends LitElement {
 
   override render() {
     if (this.loading && !this.data) {
-      return html`<div class="text-center text-muted py-4">Loading…</div>`;
+      return html`<div class="text-center text-muted py-4">${__("Loading…")}</div>`;
     }
 
     const groups = groupByDate(
@@ -120,7 +121,7 @@ export class OpenShiftsList extends LitElement {
 
       ${renderDayGroups({
         groups,
-        emptyText: "No open shifts available this week.",
+        emptyText: __("No open shifts available this week."),
         renderItem: (o) => this.renderOpening(o),
       })}
 
@@ -130,29 +131,28 @@ export class OpenShiftsList extends LitElement {
 
   private renderClaimModal(o: Opening) {
     return renderModalShell({
-      title: "Claim this shift?",
+      title: __("Claim this shift?"),
       onCancel: () => this.cancelClaim(),
       body: html`
         <p>
-          Claim
+          ${__("Claim")}
           <strong>${formatLongDate(o.assignment_date)}</strong>,
           <strong>${o.start_time.slice(0, 5)}–${o.end_time.slice(0, 5)}</strong>
-          on <strong>${o.roster_name}</strong>?
+          ${__("on")} <strong>${o.roster_name}</strong>?
         </p>
         ${o.location
           ? html`<p class="text-muted"><i class="fa fa-map-marker" aria-hidden="true"></i> ${o.location}</p>`
           : nothing}
         <p class="text-muted">
-          You'll be added to the roster immediately. Drop the shift later from
-          "My shifts" if plans change.
+          ${__("You'll be added to the roster immediately. Drop the shift later from My shifts if plans change.")}
         </p>
       `,
       footer: html`
         <button type="button" class="btn btn-primary" @click=${() => void this.confirmClaim()}>
-          <i class="fa fa-hand-paper-o"></i> Claim shift
+          <i class="fa fa-hand-paper-o"></i> ${__("Claim shift")}
         </button>
         <button type="button" class="btn btn-default" @click=${() => this.cancelClaim()}>
-          Cancel
+          ${__("Cancel")}
         </button>
       `,
     });
@@ -180,7 +180,7 @@ export class OpenShiftsList extends LitElement {
               <i class="fa fa-map-marker" aria-hidden="true"></i> ${o.location}
             </span>`
           : nothing}
-        <span class="srg-my-shift-status badge">${o.capacity_remaining} open</span>
+        <span class="srg-my-shift-status badge">${o.capacity_remaining} ${__("open")}</span>
         <button
           type="button"
           class="btn btn-primary btn-xs"
@@ -188,7 +188,7 @@ export class OpenShiftsList extends LitElement {
           @click=${() => this.requestClaim(o)}
         >
           <i class="fa fa-hand-paper-o" aria-hidden="true"></i>
-          ${busy ? "Claiming…" : "Claim"}
+          ${busy ? __("Claiming…") : __("Claim")}
         </button>
       </li>
     `;

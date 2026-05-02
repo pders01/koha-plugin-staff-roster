@@ -18,12 +18,15 @@ import { renderWeekToolbar } from "./shared/toolbar.js";
 import { renderToasts } from "./shared/toasts.js";
 import { renderModalShell } from "./shared/modal.js";
 import { EscapeController } from "./shared/escape-controller.js";
+import { __ } from "../i18n/index.js";
 
 const POLL_MS = 5000;
 const UNDO_LIMIT = 10;
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const FULL_DAYS = [
-  "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+const DAYS = () =>
+  [__("Mon"), __("Tue"), __("Wed"), __("Thu"), __("Fri"), __("Sat"), __("Sun")];
+const FULL_DAYS = () => [
+  __("Monday"), __("Tuesday"), __("Wednesday"), __("Thursday"),
+  __("Friday"), __("Saturday"), __("Sunday"),
 ];
 
 // iCal BYDAY codes per Monday-anchored column index.
@@ -175,19 +178,19 @@ export class StaffRosterGrid extends LitElement {
     const codesLabel =
       f.mode === "codes"
         ? f.codes.join(", ")
-        : "category type S (any patron flagged staff)";
+        : __("category type S (any patron flagged staff)");
     const branchLabel =
       f.branch_scope.mode === "group"
-        ? `library group: ${f.branch_scope.label ?? "(unnamed)"}`
+        ? `${__("library group")}: ${f.branch_scope.label ?? __("(unnamed)")}`
         : f.branch_scope.mode === "branch"
-          ? `branch: ${f.branch_scope.label}`
-          : "all branches";
+          ? `${__("branch")}: ${f.branch_scope.label}`
+          : __("all branches");
 
-    const dayName = this.availableContextDay !== null ? FULL_DAYS[this.availableContextDay] : null;
+    const dayName = this.availableContextDay !== null ? FULL_DAYS()[this.availableContextDay] : null;
     const slot = f.slot;
     const contextLine = slot
-      ? `Free at ${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)} on ${dayName ?? slot.date}`
-      : `Free on ${f.date}`;
+      ? `${__("Free at")} ${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)} ${__("on")} ${dayName ?? slot.date}`
+      : `${__("Free on")} ${f.date}`;
 
     const truncated = meta.count >= meta.limit;
     const fallbackWarn = f.mode === "category_type_s";
@@ -201,17 +204,15 @@ export class StaffRosterGrid extends LitElement {
           <span class="text-muted"> · ${branchLabel}</span>
         </div>
         <div class="srg-avail-counter">
-          <strong>${meta.count}</strong> of ${meta.pool} eligible
-          ${truncated ? html`<span class="text-muted"> · capped at ${meta.limit}</span>` : nothing}
+          <strong>${meta.count}</strong> ${__("of")} ${meta.pool} ${__("eligible")}
+          ${truncated ? html`<span class="text-muted"> · ${__("capped at")} ${meta.limit}</span>` : nothing}
         </div>
         ${fallbackWarn
           ? html`
               <div class="srg-avail-warn text-muted">
                 <i class="fa fa-info-circle" aria-hidden="true"></i>
-                Showing all category-type-S patrons (incl. service accounts).
-                Set <em>staff_categorycodes</em> in plugin
-                <a href="?class=${getClass()}&method=configure">configuration</a>
-                to narrow.
+                ${__("Showing all category-type-S patrons (incl. service accounts). Set staff_categorycodes in plugin configuration to narrow.")}
+                <a href="?class=${getClass()}&method=configure">${__("configuration")}</a>
               </div>
             `
           : nothing}
@@ -407,7 +408,7 @@ export class StaffRosterGrid extends LitElement {
           notes: a.notes ?? undefined,
         },
       });
-      this.liveMessage = `Removed ${a.firstname} ${a.surname} from ${FULL_DAYS[dayIdx]} ${a.assignment_date}.`;
+      this.liveMessage = `${__("Removed")} ${a.firstname} ${a.surname} ${__("from")} ${FULL_DAYS()[dayIdx]} ${a.assignment_date}.`;
       await this.refresh();
     } catch (err) {
       this.setError((err as Error).message);
@@ -459,11 +460,11 @@ export class StaffRosterGrid extends LitElement {
     isException: boolean,
     assignments: Assignment[],
   ): string {
-    const day = FULL_DAYS[dayIdx];
+    const day = FULL_DAYS()[dayIdx];
     const time = `${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}`;
-    if (isException) return `${day} ${date}, ${time} slot, closed.`;
+    if (isException) return `${day} ${date}, ${time} ${__("slot, closed.")}`;
     const filled = assignments.length;
-    const base = `${day} ${date}, ${time} slot, ${filled} of ${slot.max_staff} staff assigned`;
+    const base = `${day} ${date}, ${time} ${__("slot")}, ${filled} ${__("of")} ${slot.max_staff} ${__("staff assigned")}`;
     if (filled === 0) return `${base}.`;
     const names = assignments.map((a) => `${a.firstname} ${a.surname}`).join(", ");
     return `${base}: ${names}.`;
@@ -472,7 +473,7 @@ export class StaffRosterGrid extends LitElement {
   private pickUpStaff(staff: Staff, origin: HTMLElement): void {
     this.pickedUp = { kind: "staff", staff };
     this.pickupOriginEl = origin;
-    this.liveMessage = `Picked up ${staff.firstname} ${staff.surname}. Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.`;
+    this.liveMessage = `${__("Picked up")} ${staff.firstname} ${staff.surname}. ${__("Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.")}`;
     const target = this.firstApplicableCellKey();
     if (target) {
       this.focusedCellKey = target;
@@ -483,7 +484,7 @@ export class StaffRosterGrid extends LitElement {
   private pickUpAssignment(a: Assignment, origin: HTMLElement): void {
     this.pickedUp = { kind: "assignment", assignment: a };
     this.pickupOriginEl = origin;
-    this.liveMessage = `Picked up ${a.firstname} ${a.surname}. Use arrow keys to move. Press Enter to drop, Esc to cancel.`;
+    this.liveMessage = `${__("Picked up")} ${a.firstname} ${a.surname}. ${__("Use arrow keys to move. Press Enter to drop, Esc to cancel.")}`;
     const target = this.firstApplicableCellKey();
     if (target) {
       this.focusedCellKey = target;
@@ -493,7 +494,7 @@ export class StaffRosterGrid extends LitElement {
 
   private cancelPickup(): void {
     this.pickedUp = null;
-    this.liveMessage = "Cancelled.";
+    this.liveMessage = __("Cancelled.");
     const origin = this.pickupOriginEl;
     this.pickupOriginEl = null;
     if (origin) requestAnimationFrame(() => origin.focus());
@@ -510,9 +511,9 @@ export class StaffRosterGrid extends LitElement {
     const errBefore = this.error;
     await this.dropOnCell(slot, date);
     if (this.error && this.error !== errBefore) {
-      this.liveMessage = `Cannot drop here. ${this.error}`;
+      this.liveMessage = `${__("Cannot drop here.")} ${this.error}`;
     } else {
-      this.liveMessage = `Moved ${name} to ${FULL_DAYS[this.dayIdxForDate(date)]} ${date}, ${time} slot.`;
+      this.liveMessage = `${__("Moved")} ${name} ${__("to")} ${FULL_DAYS()[this.dayIdxForDate(date)]} ${date}, ${time} ${__("slot.")}`;
     }
     const cellKey = `${slot.id}-${this.dayIdxForDate(date)}`;
     this.focusedCellKey = cellKey;
@@ -696,7 +697,7 @@ export class StaffRosterGrid extends LitElement {
               @click=${() => void this.undo()}
               ?disabled=${this.undoStack.length === 0}
             >
-              <i class="fa fa-undo" aria-hidden="true"></i> Undo (${this.undoStack.length})
+              <i class="fa fa-undo" aria-hidden="true"></i> ${__("Undo")} (${this.undoStack.length})
             </button>
           </div>
         `,
@@ -704,12 +705,12 @@ export class StaffRosterGrid extends LitElement {
 
       <div class="srg-layout" style=${`--srg-type-color: ${color}`}>
         <section class="page-section srg-staff-panel">
-          <h3 class="srg-panel-title" id="srg-staff-list-label">Available staff</h3>
+          <h3 class="srg-panel-title" id="srg-staff-list-label">${__("Available staff")}</h3>
           ${this.renderAvailableFilterHeader()}
           <input
             type="search"
             class="form-control input-sm"
-            placeholder="Search staff…"
+            placeholder="${__("Search staff…")}"
             .value=${this.staffQuery}
             @input=${this.onStaffSearch}
             @focus=${() => void this.loadAvailable()}
@@ -733,7 +734,7 @@ export class StaffRosterGrid extends LitElement {
                     tabindex="0"
                     data-pill-idx=${i}
                     aria-selected=${isPicked ? "true" : "false"}
-                    aria-label="${s.surname}, ${s.firstname}. Press Enter to pick up."
+                    aria-label="${s.surname}, ${s.firstname}. ${__("Press Enter to pick up.")}"
                     draggable="true"
                     @dragstart=${(e: DragEvent) => {
                       this.dragging = { kind: "staff", staff: s };
@@ -750,7 +751,7 @@ export class StaffRosterGrid extends LitElement {
               },
             )}
             ${this.available.length === 0 && this.staffQuery
-              ? html`<li class="list-group-item text-muted">No matches</li>`
+              ? html`<li class="list-group-item text-muted">${__("No matches")}</li>`
               : nothing}
           </ul>
         </section>
@@ -759,14 +760,14 @@ export class StaffRosterGrid extends LitElement {
           <table
             class="table srg-grid ${pickupActive ? "srg-pickup-active" : ""}"
             role="grid"
-            aria-label="Staff roster schedule"
+            aria-label="${__('Staff roster schedule')}"
             aria-rowcount=${slotsByTime.length + 1}
             aria-colcount="8"
           >
             <thead>
               <tr role="row" aria-rowindex="1">
-                <th class="srg-slot-col" role="columnheader" aria-colindex="1">Slot</th>
-                ${DAYS.map(
+                <th class="srg-slot-col" role="columnheader" aria-colindex="1">${__("Slot")}</th>
+                ${DAYS().map(
                   (d, i) => html`
                     <th role="columnheader" aria-colindex=${i + 2}>
                       <span class="srg-day">${d}</span>
@@ -781,9 +782,9 @@ export class StaffRosterGrid extends LitElement {
                 ? html`
                     <tr role="row">
                       <td colspan="8" class="srg-empty" role="gridcell">
-                        <p>No time slots defined for this roster yet.</p>
+                        <p>${__("No time slots defined for this roster yet.")}</p>
                         <a class="btn btn-default btn-sm" href="?class=${getClass()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
-                          <i class="fa fa-clock" aria-hidden="true"></i> Manage slots
+                          <i class="fa fa-clock" aria-hidden="true"></i> ${__("Manage slots")}
                         </a>
                       </td>
                     </tr>
@@ -803,7 +804,7 @@ export class StaffRosterGrid extends LitElement {
                         ? html`<small class="text-muted d-block">${slot.location}</small>`
                         : nothing}
                     </th>
-                    ${DAYS.map((_, day) => {
+                    ${DAYS().map((_, day) => {
                       const date = this.cellDate(day);
                       const applies = this.cellApplies(slot, day);
                       const isException = this.exceptionFor(date);
@@ -828,7 +829,7 @@ export class StaffRosterGrid extends LitElement {
                           @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, slot, date, slotIdx, day)}
                           @focus=${() => (this.focusedCellKey = cellKey)}
                         >
-                          <small>closed</small>
+                          <small>${__("closed")}</small>
                         </td>`;
                       }
                       const assignments = this.assignmentsFor(slot.id, date);
@@ -909,11 +910,11 @@ export class StaffRosterGrid extends LitElement {
     const fields = this.week?.assignment_fields ?? [];
     const STATUSES: Assignment["status"][] = ["scheduled", "confirmed", "completed", "cancelled", "no_show"];
     const STATUS_LABELS: Record<Assignment["status"], string> = {
-      scheduled: "Scheduled",
-      confirmed: "Confirmed",
-      completed: "Completed",
-      cancelled: "Cancelled",
-      no_show: "No-show",
+      scheduled: __("Scheduled"),
+      confirmed: __("Confirmed"),
+      completed: __("Completed"),
+      cancelled: __("Cancelled"),
+      no_show: __("No-show"),
     };
     return html`
       <div
@@ -929,17 +930,17 @@ export class StaffRosterGrid extends LitElement {
         <div class="modal-dialog modal-lg srg-edit-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header">
-              <h1 class="modal-title">Edit assignment</h1>
-              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelEdit()}></button>
+              <h1 class="modal-title">${__("Edit assignment")}</h1>
+              <button type="button" class="btn-close" aria-label="${__('Close')}" @click=${() => this.cancelEdit()}></button>
             </div>
             <div class="modal-body srg-edit-body">
               <p class="srg-edit-subject">
                 <strong>${a.surname}, ${a.firstname}</strong>
-                <span class="text-muted"> · ${FULL_DAYS[this.dayIdxForDate(a.assignment_date)]} ${a.assignment_date}</span>
+                <span class="text-muted"> · ${FULL_DAYS()[this.dayIdxForDate(a.assignment_date)]} ${a.assignment_date}</span>
               </p>
               <div class="srg-edit-grid">
                 <div class="srg-edit-row">
-                  <label for="srg-edit-status">Status</label>
+                  <label for="srg-edit-status">${__("Status")}</label>
                   <select
                     id="srg-edit-status"
                     class="form-select"
@@ -950,12 +951,12 @@ export class StaffRosterGrid extends LitElement {
                   </select>
                 </div>
                 <div class="srg-edit-row">
-                  <label for="srg-edit-notes">Notes</label>
+                  <label for="srg-edit-notes">${__("Notes")}</label>
                   <textarea
                     id="srg-edit-notes"
                     class="form-control"
                     rows="3"
-                    placeholder="Optional notes shown on the chip and in handoffs"
+                    placeholder="${__('Optional notes shown on the chip and in handoffs')}"
                     .value=${this.editForm.notes}
                     @input=${(e: Event) => (this.editForm = { ...this.editForm, notes: (e.target as HTMLTextAreaElement).value })}
                   ></textarea>
@@ -965,11 +966,11 @@ export class StaffRosterGrid extends LitElement {
             </div>
             <div class="modal-footer srg-edit-footer">
               <button type="button" class="btn btn-danger me-auto" @click=${() => this.deleteFromEdit()}>
-                <i class="fa fa-trash"></i> Remove
+                <i class="fa fa-trash"></i> ${__("Remove")}
               </button>
-              <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>Cancel</button>
+              <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>${__("Cancel")}</button>
               <button type="button" class="btn btn-primary" @click=${() => void this.saveEdit()}>
-                <i class="fa fa-save"></i> Save
+                <i class="fa fa-save"></i> ${__("Save")}
               </button>
             </div>
           </div>
@@ -999,7 +1000,7 @@ export class StaffRosterGrid extends LitElement {
               setValues(v === "" ? [] : [v]);
             }}
           >
-            <option value="">— None —</option>
+            <option value="">${__("— None —")}</option>
             ${f.av_options.map((opt) => html`<option value=${opt.value} ?selected=${opt.value === value}>${opt.lib || opt.value}</option>`)}
           </select>
         </div>
@@ -1013,7 +1014,7 @@ export class StaffRosterGrid extends LitElement {
           id=${id}
           type="text"
           class="form-control"
-          placeholder=${f.repeatable ? "comma-separated values" : ""}
+          placeholder=${f.repeatable ? __("comma-separated values") : ""}
           .value=${text}
           @input=${(e: Event) => {
             const raw = (e.target as HTMLInputElement).value;
@@ -1031,18 +1032,18 @@ export class StaffRosterGrid extends LitElement {
 
   private renderDeleteModal(a: Assignment) {
     return renderModalShell({
-      title: "Remove assignment?",
+      title: __("Remove assignment?"),
       onCancel: () => this.cancelDelete(),
       body: html`
-        <p>Remove <strong>${a.surname}, ${a.firstname}</strong> from this slot on ${a.assignment_date}?</p>
-        <p class="text-muted">You can undo with Cmd-Z (or the Undo button) if this was a mistake.</p>
+        <p>${__("Remove")} <strong>${a.surname}, ${a.firstname}</strong> ${__("from this slot on")} ${a.assignment_date}?</p>
+        <p class="text-muted">${__("You can undo with Cmd-Z (or the Undo button) if this was a mistake.")}</p>
       `,
       footer: html`
         <button type="button" class="btn btn-danger" @click=${() => void this.confirmDelete()}>
-          <i class="fa fa-trash"></i> Remove
+          <i class="fa fa-trash"></i> ${__("Remove")}
         </button>
         <button type="button" class="btn btn-default" @click=${() => this.cancelDelete()}>
-          <i class="fa fa-times"></i> Cancel
+          <i class="fa fa-times"></i> ${__("Cancel")}
         </button>
       `,
     });

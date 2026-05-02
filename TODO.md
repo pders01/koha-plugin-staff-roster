@@ -15,15 +15,10 @@ _Empty — pick the next batch._
 - [ ] **Skills / competencies**: schema doesn't model "John can work CIRC
       but not REF". Add `staff_skills` table + per-roster-type required
       skills; filter `/staff/available` by competency.
-- [ ] **i18n**: all strings hardcoded English. Either Koha's gettext or
-      `@jpahd/lit-stack/i18n` for the Lit component.
 - [ ] **Volunteer / non-staff self-service (OPAC)**: only build if real
       demand surfaces. The intranet self-service shipped (see Done) covers
       every staff/borrower-with-staff-perm case; OPAC pulls in a separate
       auth surface and `@jpahd/kalendus` distribution. Skip until asked.
-- [ ] **Self-unclaim lockout**: setting hook `self_unclaim_lockout_hours`
-      not yet implemented. Decide whether to enforce a window
-      (e.g. ≥24h before shift) before letting staff drop their own shift.
 
 ## Hardening follow-ups (from cross-codebase review 2026-05-02)
 
@@ -63,6 +58,24 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **i18n + complete German translation**: `Lib/I18N.pm` loads
+      `locales/<lang>.json` keyed by `C4::Languages::getlanguage`;
+      `get_template` wrapper exposes a `tr` coderef so every TT can
+      use `[% tr('English source') | html %]`. `src/i18n/index.ts`
+      mirrors the design for the Lit side; `de.ts` re-exports the same
+      JSON so Perl + JS share one source of truth. Wrapped surfaces:
+      every config/admin/report/aside string + tool.tt list / forms /
+      messages / sidebar / modals + the three Lit components +
+      shared toolbar/toasts. `locales/de.json` ships ~270 entries.
+      Missing keys fall through to English. Bundle grew from 84 KB
+      to 107 KB (gzip 22 → 30 KB) for the embedded dictionary.
+- [x] **Self-unclaim lockout** (`self_unclaim_lockout_hours`):
+      `self_delete` now joins `staff_roster_slots` to compute the
+      shift's start datetime, then rejects with structured 403
+      (`hours_until_shift`, `lockout_hours`) when the configured
+      window hasn't passed. 0 (default) disables the gate. Configure
+      page exposes a number input under Permission Settings;
+      t/self_service.t adds a 'self-unclaim lockout window' subtest.
 - [x] **Pin frontend deps**: `lit` + `@lit/context` + `vite` switched
       from `^` to `~` (patch-only); `typescript` pinned exact to
       `6.0.3` since betas carry no semver guarantee. `@jpahd/lit-stack`

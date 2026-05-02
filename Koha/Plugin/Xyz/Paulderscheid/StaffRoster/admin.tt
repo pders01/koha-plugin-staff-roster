@@ -6,11 +6,11 @@
 [% INCLUDE 'doc-head-open.inc' %]
 <title>
     [% IF op == 'add_form' %]
-        [% IF roster_type.id %]Modify roster type[% ELSE %]New roster type[% END %] &rsaquo;
+        [% IF roster_type.id %][% tr('Modify roster type') | html %][% ELSE %][% tr('New roster type') | html %][% END %] &rsaquo;
     [% ELSIF op == 'delete_confirm' %]
-        Confirm deletion &rsaquo;
+        [% tr('Confirm deletion') | html %] &rsaquo;
     [% END %]
-    Staff Roster - Roster Types | Plugins | Koha
+    [% tr('Staff Roster') | html %] - [% tr('Roster Types') | html %] | [% tr('Plugins') | html %] | Koha
 </title>
 [% INCLUDE 'doc-head-close.inc' %]
 <link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster-plugin.css" />
@@ -24,25 +24,25 @@
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]
         [% WRAPPER breadcrumb_item %]
-            <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a>
+            <a href="/cgi-bin/koha/plugins/plugins-home.pl">[% tr('Plugins') | html %]</a>
         [% END %]
         [% WRAPPER breadcrumb_item %]
-            <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Staff Roster</a>
+            <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Staff Roster') | html %]</a>
         [% END %]
         [% IF op == 'add_form' || op == 'delete_confirm' %]
             [% WRAPPER breadcrumb_item %]
-                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">Roster Types</a>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">[% tr('Roster Types') | html %]</a>
             [% END %]
             [% WRAPPER breadcrumb_item bc_active = 1 %]
                 [% IF op == 'add_form' %]
-                    [% IF roster_type.id %]Modify roster type[% ELSE %]New roster type[% END %]
+                    [% IF roster_type.id %][% tr('Modify roster type') | html %][% ELSE %][% tr('New roster type') | html %][% END %]
                 [% ELSE %]
-                    Confirm deletion
+                    [% tr('Confirm deletion') | html %]
                 [% END %]
             [% END %]
         [% ELSE %]
             [% WRAPPER breadcrumb_item bc_active = 1 %]
-                <span>Roster Types</span>
+                <span>[% tr('Roster Types') | html %]</span>
             [% END %]
         [% END %]
     [% END %]
@@ -61,19 +61,19 @@
         <div class="alert alert-[% m.type | html %]">
             [% SWITCH m.code %]
             [% CASE 'error_on_update' %]
-                <span>An error occurred when updating this roster type.</span>
+                <span>[% tr('An error occurred when updating this roster type.') | html %]</span>
             [% CASE 'error_on_insert' %]
-                <span>An error occurred when adding this roster type. The code might already exist.</span>
+                <span>[% tr('An error occurred when adding this roster type. The code might already exist.') | html %]</span>
             [% CASE 'error_on_delete' %]
-                <span>An error occurred when deleting this roster type. It may be in use by existing rosters.</span>
+                <span>[% tr('An error occurred when deleting this roster type. It may be in use by existing rosters.') | html %]</span>
             [% CASE 'success_on_update' %]
-                <span>Roster type updated successfully.</span>
+                <span>[% tr('Roster type updated successfully.') | html %]</span>
             [% CASE 'success_on_insert' %]
-                <span>Roster type added successfully.</span>
+                <span>[% tr('Roster type added successfully.') | html %]</span>
             [% CASE 'success_on_delete' %]
-                <span>Roster type deleted successfully.</span>
+                <span>[% tr('Roster type deleted successfully.') | html %]</span>
             [% CASE 'cannot_delete_in_use' %]
-                <span>Cannot delete this roster type because it is used by [% m.count | html %] roster(s).</span>
+                <span>[% tr('Cannot delete this roster type because it is in use by N roster(s).') | replace('N', m.count) | html %]</span>
             [% CASE %]
                 <span>[% m.code | html %]</span>
             [% END %]
@@ -81,7 +81,7 @@
     [% END %]
 
     [% IF op == 'add_form' %]
-        <h1>[% IF roster_type.id %]Modify roster type[% ELSE %]New roster type[% END %]</h1>
+        <h1>[% IF roster_type.id %][% tr('Modify roster type') | html %][% ELSE %][% tr('New roster type') | html %][% END %]</h1>
 
         <form method="post" action="/cgi-bin/koha/plugins/run.pl" class="validated">
             [% INCLUDE 'csrf-token.inc' %]
@@ -94,60 +94,60 @@
                 <ol>
                     [% IF roster_type.id %]
                         <li>
-                            <span class="label">ID:</span>
+                            <span class="label">[% tr('ID:') | html %]</span>
                             [% roster_type.id | html %]
                         </li>
                     [% END %]
                     <li>
-                        <label for="code" class="required">Code:</label>
+                        <label for="code" class="required">[% tr('Code:') | html %]</label>
                         <input type="text" name="code" id="code" value="[% roster_type.code | html %]"
                                size="20" maxlength="50" required="required" class="required focus"
-                               pattern="[A-Z0-9_]+" title="Uppercase letters, numbers, and underscores only" />
-                        <span class="required">Required</span>
-                        <span class="hint">Short identifier (e.g., CIRC, REF). Uppercase letters, numbers, underscores only.</span>
+                               pattern="[A-Z0-9_]+" title="[% tr('Uppercase letters, numbers, and underscores only') | html %]" />
+                        <span class="required">[% tr('Required') | html %]</span>
+                        <span class="hint">[% tr('Short identifier (e.g., CIRC, REF). Uppercase letters, numbers, underscores only.') | html %]</span>
                     </li>
                     <li>
-                        <label for="name" class="required">Name:</label>
+                        <label for="name" class="required">[% tr('Name:') | html %]</label>
                         <input type="text" name="name" id="name" value="[% roster_type.name | html %]"
                                size="50" maxlength="255" required="required" class="required" />
-                        <span class="required">Required</span>
+                        <span class="required">[% tr('Required') | html %]</span>
                     </li>
                     <li>
-                        <label for="description">Description:</label>
+                        <label for="description">[% tr('Description:') | html %]</label>
                         <textarea name="description" id="description" rows="3" cols="50">[% roster_type.description | html %]</textarea>
                     </li>
                     <li>
-                        <label for="color">Color:</label>
+                        <label for="color">[% tr('Color:') | html %]</label>
                         <input type="color" name="color" id="color" value="[% roster_type.color || '#3498db' | html %]" />
-                        <span class="hint">Color used to display this roster type in the calendar</span>
+                        <span class="hint">[% tr('Color used to display this roster type in the calendar') | html %]</span>
                     </li>
                     <li>
-                        <label for="is_active">Active:</label>
+                        <label for="is_active">[% tr('Active:') | html %]</label>
                         <select name="is_active" id="is_active">
-                            <option value="1" [% IF roster_type.is_active || !roster_type.id %]selected[% END %]>Yes</option>
-                            <option value="0" [% IF roster_type.id && !roster_type.is_active %]selected[% END %]>No</option>
+                            <option value="1" [% IF roster_type.is_active || !roster_type.id %]selected[% END %]>[% tr('Yes') | html %]</option>
+                            <option value="0" [% IF roster_type.id && !roster_type.is_active %]selected[% END %]>[% tr('No') | html %]</option>
                         </select>
-                        <span class="hint">Inactive types cannot be used for new rosters</span>
+                        <span class="hint">[% tr('Inactive types cannot be used for new rosters') | html %]</span>
                     </li>
                 </ol>
             </fieldset>
 
             <fieldset class="action">
-                <input type="submit" class="btn btn-primary" value="Save roster type" />
-                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">Cancel</a>
+                <input type="submit" class="btn btn-primary" value="[% tr('Save roster type') | html %]" />
+                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">[% tr('Cancel') | html %]</a>
             </fieldset>
         </form>
     [% END %]
 
     [% IF op == 'delete_confirm' %]
-        <h1>Delete roster type '[% roster_type.name | html %]'?</h1>
+        <h1>[% tr("Delete roster type 'NAME'?") | replace('NAME', roster_type.name) | html %]</h1>
 
         <div class="page-section">
             <table>
-                <tr><th scope="row">ID:</th><td>[% roster_type.id | html %]</td></tr>
-                <tr><th scope="row">Code:</th><td>[% roster_type.code | html %]</td></tr>
-                <tr><th scope="row">Name:</th><td>[% roster_type.name | html %]</td></tr>
-                <tr><th scope="row">Description:</th><td>[% roster_type.description | html %]</td></tr>
+                <tr><th scope="row">[% tr('ID:') | html %]</th><td>[% roster_type.id | html %]</td></tr>
+                <tr><th scope="row">[% tr('Code:') | html %]</th><td>[% roster_type.code | html %]</td></tr>
+                <tr><th scope="row">[% tr('Name:') | html %]</th><td>[% roster_type.name | html %]</td></tr>
+                <tr><th scope="row">[% tr('Description:') | html %]</th><td>[% roster_type.description | html %]</td></tr>
             </table>
         </div>
 
@@ -158,8 +158,8 @@
             <input type="hidden" name="op" value="cud-delete" />
             <input type="hidden" name="id" value="[% roster_type.id | html %]" />
             <fieldset class="action">
-                <input type="submit" class="btn btn-primary" value="Yes, delete this roster type" />
-                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">No, do not delete</a>
+                <input type="submit" class="btn btn-primary" value="[% tr('Yes, delete this roster type') | html %]" />
+                <a class="cancel" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">[% tr('No, do not delete') | html %]</a>
             </fieldset>
         </form>
     [% END %]
@@ -167,28 +167,28 @@
     [% IF op == 'list' %]
         <div id="toolbar" class="btn-toolbar">
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin&op=add_form">
-                <i class="fa fa-plus"></i> New roster type
+                <i class="fa fa-plus"></i> [% tr('New roster type') | html %]
             </a>
             <a class="btn btn-default" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">
-                <i class="fa fa-calendar"></i> Back to Roster
+                <i class="fa fa-calendar"></i> [% tr('Back to Roster') | html %]
             </a>
         </div>
 
-        <h1>Roster Types</h1>
-        <p>Roster types define the categories of duties staff can be assigned to (e.g., Circulation Desk, Reference Desk).</p>
+        <h1>[% tr('Roster Types') | html %]</h1>
+        <p>[% tr('Roster types define the categories of duties staff can be assigned to (e.g., Circulation Desk, Reference Desk).') | html %]</p>
 
         [% IF roster_types.size %]
             <div class="page-section">
                 <table id="roster_types_table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Code</th>
-                            <th>Name</th>
-                            <th>Description</th>
-                            <th>Color</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th>[% tr('ID') | html %]</th>
+                            <th>[% tr('Code') | html %]</th>
+                            <th>[% tr('Name') | html %]</th>
+                            <th>[% tr('Description') | html %]</th>
+                            <th>[% tr('Color') | html %]</th>
+                            <th>[% tr('Status') | html %]</th>
+                            <th>[% tr('Actions') | html %]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -204,17 +204,17 @@
                                 </td>
                                 <td>
                                     [% IF rt.is_active %]
-                                        <span class="text-success"><i class="fa fa-circle"></i> Active</span>
+                                        <span class="text-success"><i class="fa fa-circle"></i> [% tr('Active') | html %]</span>
                                     [% ELSE %]
-                                        <span class="text-muted"><i class="fa fa-circle-o"></i> Inactive</span>
+                                        <span class="text-muted"><i class="fa fa-circle-o"></i> [% tr('Inactive') | html %]</span>
                                     [% END %]
                                 </td>
                                 <td class="actions">
                                     <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin&op=add_form&id=[% rt.id | uri %]">
-                                        <i class="fa fa-pencil"></i> Edit
+                                        <i class="fa fa-pencil"></i> [% tr('Edit') | html %]
                                     </a>
                                     <a class="btn btn-default btn-xs" href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin&op=delete_confirm&id=[% rt.id | uri %]">
-                                        <i class="fa fa-trash"></i> Delete
+                                        <i class="fa fa-trash"></i> [% tr('Delete') | html %]
                                     </a>
                                 </td>
                             </tr>
@@ -224,7 +224,7 @@
             </div>
         [% ELSE %]
             <div class="alert alert-info">
-                No roster types defined. <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin&op=add_form">Create a new roster type</a>.
+                [% tr('No roster types defined.') | html %] <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin&op=add_form">[% tr('Create a new roster type') | html %]</a>.
             </div>
         [% END %]
     [% END %]

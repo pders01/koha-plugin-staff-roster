@@ -8,15 +8,15 @@
 %]
 <aside>
     <div class="staff-roster-menu sidebar_menu">
-        <h5>Staff Roster</h5>
+        <h5>[% tr('Staff Roster') | html %]</h5>
         <ul>
-            <li><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">Rosters</a></li>
-            <li><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">New roster</a></li>
+            <li><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool">[% tr('Rosters') | html %]</a></li>
+            <li><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">[% tr('New roster') | html %]</a></li>
         </ul>
-        <h5>Administration</h5>
+        <h5>[% tr('Administration') | html %]</h5>
         <ul>
-            <li[% IF aside_active == 'admin' %] class="active"[% END %]><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">Roster types</a></li>
-            <li[% IF aside_active == 'configure' %] class="active"[% END %]><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">Configuration</a></li>
+            <li[% IF aside_active == 'admin' %] class="active"[% END %]><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin">[% tr('Roster types') | html %]</a></li>
+            <li[% IF aside_active == 'configure' %] class="active"[% END %]><a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">[% tr('Configuration') | html %]</a></li>
         </ul>
     </div>
 </aside>

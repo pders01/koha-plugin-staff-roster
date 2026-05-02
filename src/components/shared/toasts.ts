@@ -1,4 +1,5 @@
 import { html, nothing, type TemplateResult } from "lit";
+import { __ } from "../../i18n/index.js";
 
 export type ToastOpts = {
   successMsg?: string;
@@ -27,7 +28,7 @@ export function renderToasts(opts: ToastOpts): TemplateResult | typeof nothing {
               ? html`<button
                   type="button"
                   class="btn-close"
-                  aria-label="Dismiss"
+                  aria-label="${__('Dismiss')}"
                   @click=${onDismissError}
                 ></button>`
               : nothing}

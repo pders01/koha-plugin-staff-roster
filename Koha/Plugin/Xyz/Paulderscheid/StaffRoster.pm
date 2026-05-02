@@ -50,6 +50,8 @@ use Koha::Library::Groups;
 use Koha::Patron::Categories;
 use Koha::Patrons;
 
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N;
+
 # Recurrence helpers; pulled in early so the slot save path doesn't pay the
 # require cost on first request.
 use DateTime::Event::ICal;
@@ -94,6 +96,21 @@ sub new {
     my ( $class, $args ) = @_;
 
     return $class->SUPER::new( { ( $args // {} )->%*, metadata => { $metadata->%*, class => $class } } );
+}
+
+# Wrap Koha::Plugins::Base::get_template so every template the plugin
+# renders gets a `tr` filter pre-bound to the current locale. Templates
+# look up English source via [% tr('Save configuration') | html %], with
+# the dictionary at locales/<lang>.json. Missing keys fall through to
+# English so partial translations don't break pages.
+sub get_template {
+    my ( $self, $args ) = @_;
+    my $template = $self->SUPER::get_template($args);
+    $template->param(
+        tr        => Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N::translator(),
+        plugin_lang => Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N::_current_lang(),
+    );
+    return $template;
 }
 
 =head3 install

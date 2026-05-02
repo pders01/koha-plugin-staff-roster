@@ -1,4 +1,5 @@
 import { html, nothing, type TemplateResult } from "lit";
+import { __ } from "../../i18n/index.js";
 
 export type WeekToolbarOpts = {
   weekStart: string;
@@ -15,17 +16,17 @@ export function renderWeekToolbar(opts: WeekToolbarOpts): TemplateResult {
     <div class="btn-toolbar srg-toolbar" role="toolbar">
       <div class="btn-group" role="group">
         <button class="btn btn-default btn-sm" @click=${() => onShift(-7)}>
-          <i class="fa fa-arrow-left" aria-hidden="true"></i> Previous
+          <i class="fa fa-arrow-left" aria-hidden="true"></i> ${__("Previous")}
         </button>
         <button class="btn btn-default btn-sm" @click=${() => onShift(7)}>
-          Next <i class="fa fa-arrow-right" aria-hidden="true"></i>
+          ${__("Next")} <i class="fa fa-arrow-right" aria-hidden="true"></i>
         </button>
       </div>
-      <span class="srg-week-label">Week of ${weekStart}</span>
+      <span class="srg-week-label">${__("Week of")} ${weekStart}</span>
       ${extras ?? nothing}
       <div class="btn-group" role="group">
         <button class="btn btn-default btn-sm" @click=${() => onRefresh()}>
-          <i class="fa fa-refresh" aria-hidden="true"></i> Refresh
+          <i class="fa fa-refresh" aria-hidden="true"></i> ${__("Refresh")}
         </button>
       </div>
     </div>
