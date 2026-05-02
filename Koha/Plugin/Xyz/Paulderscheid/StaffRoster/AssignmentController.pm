@@ -242,13 +242,18 @@ sub bulk {
             return $c->render( status => 400, openapi => { error => 'ids must be a non-empty array' } );
         }
 
-        my $dbh          = C4::Context->dbh;
-        my $placeholders = join q{,}, ('?') x @{$ids};
+        my $dbh = C4::Context->dbh;
+
+        my $env   = C4::Context->userenv;
+        my $actor = $env ? $env->{number} : undef;
 
         if ( $op eq 'clear' ) {
-            $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id IN (} . $placeholders . q{)}, undef, @{$ids}, );
+            # One static prepared statement, executed per id, instead of
+            # building an IN-list with interpolated placeholders.
+            my $sth = $dbh->prepare(q{DELETE FROM staff_roster_assignments WHERE id = ?});
+            $sth->execute($_) for @{$ids};
             Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit( 'DELETE', undef,
-                { entity => 'assignment_bulk', op => 'clear', ids => $ids } );
+                { entity => 'assignment_bulk', op => 'clear', ids => $ids, actor => $actor } );
             return $c->render( status => 200, openapi => { deleted => scalar @{$ids} } );
         }
 
@@ -265,14 +270,20 @@ sub bulk {
                     openapi => { error => 'target must include slot_id, patron_id, or assignment_date' }
                 );
             }
-            my $set_sql    = join q{, }, ( map {"$_ = ?"} @set_fields ), 'updated_at = NOW()';
-            my @set_params = map { $target->{$_} } @set_fields;
 
             # Pre-flight every id under one transaction. Fail on first
             # conflict to keep semantics consistent with the single-row
             # update endpoint — partial bulk moves were the original bug.
             $dbh->begin_work;
             my $error;
+            # Always rewrite all three target columns from the merged row;
+            # static SQL avoids composing a SET clause from variable column
+            # names.
+            my $update_sth = $dbh->prepare(
+                q{UPDATE staff_roster_assignments
+                    SET slot_id = ?, borrowernumber = ?, assignment_date = ?, updated_at = NOW()
+                  WHERE id = ?}
+            );
             for my $id ( @{$ids} ) {
                 my $current = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_assignments WHERE id = ?}, undef, $id, );
                 if ( !$current ) {
@@ -295,7 +306,7 @@ sub bulk {
                     last;
                 }
 
-                $dbh->do( "UPDATE staff_roster_assignments SET $set_sql WHERE id = ?", undef, @set_params, $id, );
+                $update_sth->execute( $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $id );
             }
 
             if ($error) {
@@ -305,7 +316,7 @@ sub bulk {
             $dbh->commit;
 
             Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit( 'MODIFY', undef,
-                { entity => 'assignment_bulk', op => 'move', ids => $ids, target => $target } );
+                { entity => 'assignment_bulk', op => 'move', ids => $ids, target => $target, actor => $actor } );
             return $c->render( status => 200, openapi => { updated => scalar @{$ids} } );
         }
 
@@ -537,38 +548,49 @@ sub _conflict_check {
         return 'Slot does not run on that day';
     }
 
-    my @fill_clauses = ( q{slot_id = ?}, q{assignment_date = ?} );
-    my @fill_params  = ( $slot_id, $date );
+    my $filled;
     if ($exclude_id) {
-        push @fill_clauses, q{id != ?};
-        push @fill_params,  $exclude_id;
+        ($filled) = $dbh->selectrow_array(
+            q{SELECT COUNT(*) FROM staff_roster_assignments
+              WHERE slot_id = ? AND assignment_date = ? AND id != ?},
+            undef, $slot_id, $date, $exclude_id,
+        );
     }
-
-    my ($filled)
-        = $dbh->selectrow_array( q{SELECT COUNT(*) FROM staff_roster_assignments WHERE } . join( q{ AND }, @fill_clauses ),
-        undef, @fill_params, );
+    else {
+        ($filled) = $dbh->selectrow_array(
+            q{SELECT COUNT(*) FROM staff_roster_assignments
+              WHERE slot_id = ? AND assignment_date = ?},
+            undef, $slot_id, $date,
+        );
+    }
     return "Slot full ($filled/$max_staff)" if $filled >= $max_staff;
 
-    my @dup_clauses = (
-        q{a.borrowernumber = ?},
-        q{a.assignment_date = ?},
-        q{s1.start_time < s2.end_time},
-        q{s2.start_time < s1.end_time},
-    );
-    my @dup_params = ( $slot_id, $borrowernumber, $date );
+    my $double;
     if ($exclude_id) {
-        push @dup_clauses, q{a.id != ?};
-        push @dup_params,  $exclude_id;
+        ($double) = $dbh->selectrow_array(
+            q{SELECT COUNT(*) FROM staff_roster_assignments a
+              JOIN staff_roster_slots s1 ON a.slot_id = s1.id
+              JOIN staff_roster_slots s2 ON s2.id = ?
+              WHERE a.borrowernumber = ?
+                AND a.assignment_date = ?
+                AND s1.start_time < s2.end_time
+                AND s2.start_time < s1.end_time
+                AND a.id != ?},
+            undef, $slot_id, $borrowernumber, $date, $exclude_id,
+        );
     }
-
-    my ($double) = $dbh->selectrow_array(
-        q{SELECT COUNT(*) FROM staff_roster_assignments a
-          JOIN staff_roster_slots s1 ON a.slot_id = s1.id
-          JOIN staff_roster_slots s2 ON s2.id = ?
-          WHERE }
-            . join( q{ AND }, @dup_clauses ),
-        undef, @dup_params,
-    );
+    else {
+        ($double) = $dbh->selectrow_array(
+            q{SELECT COUNT(*) FROM staff_roster_assignments a
+              JOIN staff_roster_slots s1 ON a.slot_id = s1.id
+              JOIN staff_roster_slots s2 ON s2.id = ?
+              WHERE a.borrowernumber = ?
+                AND a.assignment_date = ?
+                AND s1.start_time < s2.end_time
+                AND s2.start_time < s1.end_time},
+            undef, $slot_id, $borrowernumber, $date,
+        );
+    }
     return 'Staff already assigned to overlapping slot that day' if $double > 0;
 
     return;

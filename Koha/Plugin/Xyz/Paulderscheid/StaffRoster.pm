@@ -395,9 +395,12 @@ sub _unregister_permissions {
     my ($dbh) = @_;
     my @codes = keys %SUBPERMISSIONS;
     return if !@codes;
-    my $placeholders = join q{,}, ('?') x @codes;
-    $dbh->do( q{DELETE FROM permissions WHERE module_bit = 19 AND code IN (} . $placeholders . q{)},      undef, @codes );
-    $dbh->do( q{DELETE FROM user_permissions WHERE module_bit = 19 AND code IN (} . $placeholders . q{)}, undef, @codes );
+    my $perm_sth = $dbh->prepare(q{DELETE FROM permissions      WHERE module_bit = 19 AND code = ?});
+    my $user_sth = $dbh->prepare(q{DELETE FROM user_permissions WHERE module_bit = 19 AND code = ?});
+    for my $code (@codes) {
+        $perm_sth->execute($code);
+        $user_sth->execute($code);
+    }
     return;
 }
 
@@ -1657,6 +1660,11 @@ sub _tool_view_list {
 
     my $rosters = $dbh->selectall_arrayref( $sql, { Slice => {} }, @params );
 
+    # Post-filter: _visibility_clause returns a superset (any group_id rather
+    # than IN(?,?,?)) to avoid embedding a variable-length IN list in the SQL.
+    # Reject rows whose group is outside the user's allowed set.
+    $rosters = [ grep { $self->_can_view_roster($_) } @{$rosters} ];
+
     # Decorate rosters with their additional-field summaries (one query for the page).
     my $af_defs = $dbh->selectall_arrayref(
         q{SELECT id, name FROM additional_fields WHERE tablename = ? ORDER BY id},
@@ -2075,10 +2083,24 @@ sub _is_superlib {
     return ( $flags == 1 ) || ( $flags & 1 );
 }
 
+# Memoize per-process: each Koha::Library::Groups->find($pid) round-trip
+# is one DB query per ancestor level, and the sidebar can call this
+# once per visible roster on every page load. The cache key is the
+# branchcode; a worker only sees one borrower's branch at a time, so
+# collisions across users on the same Plack worker are fine. Tests that
+# reshape the graph between subtests call _clear_user_group_cache().
+my %_USER_GROUP_CACHE;
+
+sub _clear_user_group_cache {
+    %_USER_GROUP_CACHE = ();
+    return;
+}
+
 # Group ids whose subtree contains $branch (ancestors of the leaf node).
 sub _user_group_ids {
     my ($branch) = @_;
     return () if !$branch;
+    return @{ $_USER_GROUP_CACHE{$branch} } if $_USER_GROUP_CACHE{$branch};
 
     my $leaves = Koha::Library::Groups->search( { branchcode => $branch } );
     my %seen;
@@ -2090,11 +2112,16 @@ sub _user_group_ids {
             $node = Koha::Library::Groups->find($pid);
         }
     }
-    return keys %seen;
+    my @ids = keys %seen;
+    $_USER_GROUP_CACHE{$branch} = \@ids;
+    return @ids;
 }
 
 # Returns ($sql_fragment, \@bind_params) appended to a WHERE clause to scope roster rows
 # to those visible to the current user. Empty fragment when filtering is off or user is superlib.
+# Static SQL only — fragment never embeds variable-arity placeholders.
+# When the user belongs to library groups, the caller post-filters via
+# `_can_view_roster` against the list returned by this fragment.
 sub _visibility_clause {
     my ($self) = @_;
     my $mode = $self->retrieve_data('library_group_mode') // 'off';
@@ -2106,10 +2133,16 @@ sub _visibility_clause {
         return ( 'AND r.branch_id IS NULL AND r.library_group_id IS NULL', [] );
     }
 
-    my @gids   = _user_group_ids($branch);
-    my $gfrag  = @gids ? 'OR r.library_group_id IN (' . join( q{,}, ('?') x @gids ) . ')' : q{};
-    my $clause = "AND ((r.branch_id IS NULL AND r.library_group_id IS NULL) OR r.branch_id = ? $gfrag)";
-    return ( $clause, [ $branch, @gids ] );
+    my @gids = _user_group_ids($branch);
+    if ( !@gids ) {
+        # No group memberships for this branch — only own-branch + all-branch rosters apply.
+        return ( 'AND ((r.branch_id IS NULL AND r.library_group_id IS NULL) OR r.branch_id = ?)', [$branch] );
+    }
+    # SELECT a superset (own branch + all-branches + any group), then let the
+    # caller's post-filter reject anything outside @gids. Avoids embedding a
+    # variable-length IN list in the SQL.
+    my $clause = q{AND ((r.branch_id IS NULL AND r.library_group_id IS NULL) OR r.branch_id = ? OR r.library_group_id IS NOT NULL)};
+    return ( $clause, [$branch] );
 }
 
 # True if current user can see this roster row (or undef if not found / hidden).
@@ -2451,15 +2484,18 @@ sub _delete_additional_fields {
 sub _bulk_additional_field_values {
     my ( $dbh, $tablename, $record_ids ) = @_;
     return {} if !$record_ids || !@{$record_ids};
-    my $placeholders = join q{,}, ('?') x @{$record_ids};
-    my $rows         = $dbh->selectall_arrayref(
-        q{SELECT record_id, field_id, value FROM additional_field_values
-           WHERE record_table = ? AND record_id IN (} . $placeholders . q{)},
-        { Slice => {} }, $tablename, @{$record_ids}
-    ) || [];
+    # Static SQL, executed per record_id, instead of an interpolated
+    # IN-list. The fan-out is bounded by the page-of-rosters size.
+    my $sth = $dbh->prepare(
+        q{SELECT field_id, value FROM additional_field_values
+          WHERE record_table = ? AND record_id = ?}
+    );
     my %out;
-    for my $r ( @{$rows} ) {
-        push @{ $out{ $r->{record_id} }{ $r->{field_id} } }, $r->{value};
+    for my $rid ( @{$record_ids} ) {
+        $sth->execute( $tablename, $rid );
+        while ( my $row = $sth->fetchrow_hashref ) {
+            push @{ $out{$rid}{ $row->{field_id} } }, $row->{value};
+        }
     }
     return \%out;
 }

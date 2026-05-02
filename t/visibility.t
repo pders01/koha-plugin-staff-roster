@@ -71,6 +71,10 @@ my $ugi = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_user_group_ids;
 sub graph {
     Koha::Library::Groups::_reset();
     Koha::Library::Groups::_add(%$_) for @_;
+    # Same branchcode appears in successive subtests with different
+    # graphs; clear the per-process memoization in StaffRoster.pm so
+    # the second subtest doesn't read the first subtest's answer.
+    Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_clear_user_group_cache();
 }
 
 subtest 'walks up parent chain, returns every ancestor id' => sub {

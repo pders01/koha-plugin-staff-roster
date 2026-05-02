@@ -396,40 +396,54 @@ sub me_open_slots {
             );
         }
 
-        my @rids        = map { $_->{id} } @visible;
-        my $rid_holders = join q{,}, ('?') x @rids;
+        my @rids = map { $_->{id} } @visible;
 
-        my $slots = $dbh->selectall_arrayref(
-            q{
-            SELECT id, roster_id, recurrence_rule, start_time, end_time,
-                   min_staff, max_staff, location
-            FROM staff_roster_slots
-            WHERE roster_id IN (} . $rid_holders . q{)},
-            { Slice => {} }, @rids,
+        # Static SQL, fanned out per roster_id, instead of an interpolated
+        # IN list. Bounded by the visible-roster count.
+        my $slot_sth = $dbh->prepare(
+            q{SELECT id, roster_id, recurrence_rule, start_time, end_time,
+                     min_staff, max_staff, location
+              FROM staff_roster_slots
+              WHERE roster_id = ?}
         );
+        my @slots;
+        for my $rid (@rids) {
+            $slot_sth->execute($rid);
+            while ( my $row = $slot_sth->fetchrow_hashref ) {
+                push @slots, $row;
+            }
+        }
 
-        if ( !$slots || !@{$slots} ) {
+        if ( !@slots ) {
             return $c->render(
                 status  => 200,
                 openapi => { week_start => $week_start, openings => [] }
             );
         }
+        my $slots = \@slots;
 
         my $start_dt = Koha::DateUtils::dt_from_string( $week_start, 'iso' );
         my $end_iso  = $start_dt->clone->add( days => 6 )->ymd;
 
-        my @slot_ids     = map { $_->{id} } @{$slots};
-        my $slot_holders = join q{,}, ('?') x @slot_ids;
+        my @slot_ids = map { $_->{id} } @{$slots};
 
-        my $count_rows = $dbh->selectall_arrayref(
-            q{
-            SELECT slot_id, assignment_date, COUNT(*) AS n
-            FROM staff_roster_assignments
-            WHERE assignment_date BETWEEN ? AND ?
-              AND slot_id IN (} . $slot_holders . q{)
-            GROUP BY slot_id, assignment_date},
-            { Slice => {} }, $week_start, $end_iso, @slot_ids,
+        # Fan out the count query per slot too, for the same reason.
+        my $count_sth = $dbh->prepare(
+            q{SELECT assignment_date, COUNT(*) AS n
+              FROM staff_roster_assignments
+              WHERE assignment_date BETWEEN ? AND ?
+                AND slot_id = ?
+              GROUP BY assignment_date}
         );
+        my @count_rows_aggregate;
+        for my $sid (@slot_ids) {
+            $count_sth->execute( $week_start, $end_iso, $sid );
+            while ( my $row = $count_sth->fetchrow_hashref ) {
+                push @count_rows_aggregate,
+                    { slot_id => $sid, assignment_date => $row->{assignment_date}, n => $row->{n} };
+            }
+        }
+        my $count_rows = \@count_rows_aggregate;
         my %count_for;
         for my $r ( @{$count_rows} ) {
             $count_for{ $r->{slot_id} }{ $r->{assignment_date} } = $r->{n};
