@@ -134,8 +134,16 @@ sub upgrade {
 
 =head2 uninstall($plugin)
 
-Drop tables in FK-dependency reverse order, unregister permissions,
-delete plugin-owned letter rows. Returns 1.
+Drop tables in FK-dependency reverse order and unregister permissions.
+Letter rows are intentionally preserved so an admin's edits to the
+REMINDER notice survive uninstall/reinstall cycles. The
+C<_register_notice_templates> seeder uses C<INSERT IGNORE> on the
+re-install path, so leaving rows behind is consistent with the install
+contract. To wipe them explicitly, run:
+
+  DELETE FROM letter WHERE module = 'STAFFROSTER';
+
+Returns 1.
 
 =cut
 
@@ -151,7 +159,6 @@ sub uninstall {
     $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_types });
 
     Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::unregister($dbh);
-    $dbh->do(q{DELETE FROM letter WHERE module = 'STAFFROSTER'});
     return 1;
 }
 
