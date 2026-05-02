@@ -1,0 +1,70 @@
+name: Sync wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/wiki/**"
+      - ".github/workflows/wiki.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage wiki content
+        run: |
+          # The wiki action expects a single dir whose contents become
+          # the wiki tip. Anything not in this dir gets removed by the
+          # action's force-push.
+          mkdir -p wiki
+          cp docs/wiki/*.md wiki/
+
+          # Rewrite repo-style links [Text](Page-Name.md) into the wiki
+          # form [[Text|Page-Name]]. Repo Markdown viewers happily follow
+          # the .md path; the rendered wiki uses the bracketed form.
+          # Skip already-bracketed [[...]] links (none today, defensive).
+          for f in wiki/*.md; do
+            sed -i -E 's/\[([^]]+)\]\(([A-Za-z0-9_-]+)\.md\)/[[\1|\2]]/g' "$f"
+          done
+
+          # Sidebar grouped by section instead of alpha so the nav
+          # mirrors Home.md's table-of-contents order. Hyphenated page
+          # names get a friendly display label via [[Display|Page]].
+          {
+            echo "## Getting started"
+            for n in Installation Configuration; do
+              [ -f "wiki/${n}.md" ] && echo "- [[${n//-/ }|${n}]]"
+            done
+            echo
+            echo "## Use"
+            for n in User-Manual Self-Service Permissions; do
+              [ -f "wiki/${n}.md" ] && echo "- [[${n//-/ }|${n}]]"
+            done
+            echo
+            echo "## Reference"
+            for n in Architecture Database-Schema Translation-Guide; do
+              [ -f "wiki/${n}.md" ] && echo "- [[${n//-/ }|${n}]]"
+            done
+          } > wiki/_Sidebar.md
+
+          # Footer: pointer back to the canonical source so wiki readers
+          # don't sink edits into the wiki UI (those get overwritten on
+          # the next sync). github.repository expands to owner/repo.
+          cat > wiki/_Footer.md <<EOF
+          ---
+          Source of truth: [\`docs/wiki/\`](https://github.com/${{ github.repository }}/tree/main/docs/wiki) in the main repo. Edits made through the GitHub Wiki UI are overwritten on the next push to main.
+          EOF
+
+      - name: Push to wiki
+        uses: Andrew-Chen-Wang/github-wiki-action@v4
+        env:
+          WIKI_DIR: wiki/
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_MAIL: actions@github.com
+          GH_NAME: github-actions[bot]
