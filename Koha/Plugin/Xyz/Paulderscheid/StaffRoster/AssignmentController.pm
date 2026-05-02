@@ -36,6 +36,27 @@ use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility;
 # JSON wire format uses Koha terminology: patron_id rather than the internal
 # borrowernumber column name. _from_body / _to_response map between the two
 # so handler bodies + response renderers don't have to think about it.
+# Emit a CONFLICT_REJECTED action_logs row whenever a slot capacity /
+# overlap / closure / visibility check rejects a 409. Lets admins
+# reconstruct attempted-but-blocked assignments from tools/viewlog.pl
+# without grepping warn lines. object_id stays undef because the
+# rejected row never exists.
+sub _audit_conflict {
+    my ( $action, $slot_id, $borrowernumber, $date, $reason ) = @_;
+    Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit(
+        'CONFLICT_REJECTED',
+        undef,
+        {   entity          => 'assignment',
+            action          => $action,
+            slot_id         => $slot_id,
+            borrowernumber  => $borrowernumber,
+            assignment_date => $date,
+            reason          => $reason,
+        },
+    );
+    return;
+}
+
 sub _from_body {
     my ($body) = @_;
     return $body if !ref $body || ref $body ne 'HASH';
@@ -91,6 +112,7 @@ sub create {
 
         my $conflict = _conflict_check( $dbh, $slot_id, $borrowernumber, $date );
         if ($conflict) {
+            _audit_conflict( 'create', $slot_id, $borrowernumber, $date, $conflict );
             return $c->render( status => 409, openapi => { error => $conflict } );
         }
 
@@ -156,6 +178,7 @@ sub update {
             my $conflict
                 = _conflict_check( $dbh, $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $id );
             if ($conflict) {
+                _audit_conflict( 'update', $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $conflict );
                 return $c->render( status => 409, openapi => { error => $conflict } );
             }
         }
@@ -307,6 +330,7 @@ sub bulk {
                 my $conflict
                     = _conflict_check( $dbh, $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $id, );
                 if ($conflict) {
+                    _audit_conflict( 'bulk_move', $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $conflict );
                     $error = { status => 409, body => { error => $conflict, id => $id + 0 } };
                     last;
                 }
@@ -393,11 +417,13 @@ sub self_create {
         if (   $roster_for_close
             && Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::is_closed_for_roster( $plugin, $roster_for_close, $date ) )
         {
+            _audit_conflict( 'self_claim', $slot_id, $borrowernumber, $date, 'Date is closed' );
             return $c->render( status => 409, openapi => { error => 'Date is closed' } );
         }
 
         my $conflict = _conflict_check( $dbh, $slot_id, $borrowernumber, $date );
         if ($conflict) {
+            _audit_conflict( 'self_claim', $slot_id, $borrowernumber, $date, $conflict );
             return $c->render( status => 409, openapi => { error => $conflict } );
         }
 
