@@ -53,8 +53,33 @@ export class StaffRosterGrid extends LitElement {
   @state() private availableContextDay: number | null = null;
   @state() private staffQuery = "";
   @state() private error = "";
-  @state() private dragging: Cargo | null = null;
-  @state() private pickedUp: Cargo | null = null;
+  // Unified pickup/drag state. Both HTML5 DnD (`drag`) and the keyboard
+  // / touch flow (`pickup`) write through setActiveCargo so the
+  // component never holds two cargos at once. The `dragging` and
+  // `pickedUp` getters below preserve the previous read-side API for
+  // call sites that still phrase the question per-mode.
+  @state() private activeCargo: Cargo | null = null;
+  @state() private activeMode: "drag" | "pickup" | null = null;
+  private get dragging(): Cargo | null {
+    return this.activeMode === "drag" ? this.activeCargo : null;
+  }
+  private get pickedUp(): Cargo | null {
+    return this.activeMode === "pickup" ? this.activeCargo : null;
+  }
+  private setActiveCargo(cargo: Cargo, mode: "drag" | "pickup"): void {
+    this.activeCargo = cargo;
+    this.activeMode = mode;
+  }
+  private clearActiveCargo(): void {
+    this.activeCargo = null;
+    this.activeMode = null;
+    // Drop visual indicator on any cell that still carries it after a
+    // drag is aborted (the dragend / Esc paths can fire after the
+    // pointer has already left a cell that previously took dragover).
+    for (const el of this.querySelectorAll(".srg-dropping")) {
+      el.classList.remove("srg-dropping");
+    }
+  }
   @state() private pendingDelete: Assignment | null = null;
   @state() private editing: Assignment | null = null;
   @state() private editForm: { status: string; notes: string; fields: Record<string, string[]> } = {
@@ -91,6 +116,10 @@ export class StaffRosterGrid extends LitElement {
     new EscapeController(this, () => this.editing !== null, () => this.cancelEdit());
     new EscapeController(this, () => this.pendingDelete !== null, () => this.cancelDelete());
     new EscapeController(this, () => this.pickedUp !== null, () => this.cancelPickup());
+    // Esc during a mid-flight HTML5 drag aborts the cargo as well.
+    // Browsers fire `dragend` after the user releases the pointer;
+    // pressing Esc keyboard-first lets the user bail before that.
+    new EscapeController(this, () => this.dragging !== null, () => this.cancelDrag());
   }
 
   private setError(message: string): void {
@@ -319,7 +348,7 @@ export class StaffRosterGrid extends LitElement {
         // Clear dragging before refresh so the poll-race guard in
         // refresh() (which drops a response while dragging) doesn't
         // swallow the post-drop reload.
-        this.dragging = null;
+        this.clearActiveCargo();
         // Optimistic insert keeps the chip on screen even on devices
         // (iOS Safari with table-layout: fixed) where the post-refresh
         // reflow stalls until the next viewport resize. The follow-up
@@ -332,13 +361,13 @@ export class StaffRosterGrid extends LitElement {
         }
         await this.refresh();
       } catch (err) {
-        this.dragging = null;
+        this.clearActiveCargo();
         this.setError((err as Error).message);
       }
     } else {
       const a = cargo.assignment;
       if (a.slot_id === slot.id && a.assignment_date === date) {
-        this.dragging = null;
+        this.clearActiveCargo();
         return;
       }
       try {
@@ -348,10 +377,10 @@ export class StaffRosterGrid extends LitElement {
           id: a.id,
           before: { slot_id: a.slot_id, patron_id: a.patron_id, assignment_date: a.assignment_date },
         });
-        this.dragging = null;
+        this.clearActiveCargo();
         await this.refresh();
       } catch (err) {
-        this.dragging = null;
+        this.clearActiveCargo();
         this.setError((err as Error).message);
       }
     }
@@ -505,7 +534,7 @@ export class StaffRosterGrid extends LitElement {
   }
 
   private pickUpStaff(staff: Staff, origin: HTMLElement): void {
-    this.pickedUp = { kind: "staff", staff };
+    this.setActiveCargo({ kind: "staff", staff }, "pickup");
     this.pickupOriginEl = origin;
     this.liveMessage = `${__("Picked up")} ${staff.firstname} ${staff.surname}. ${__("Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.")}`;
     const target = this.firstApplicableCellKey();
@@ -516,7 +545,7 @@ export class StaffRosterGrid extends LitElement {
   }
 
   private pickUpAssignment(a: Assignment, origin: HTMLElement): void {
-    this.pickedUp = { kind: "assignment", assignment: a };
+    this.setActiveCargo({ kind: "assignment", assignment: a }, "pickup");
     this.pickupOriginEl = origin;
     this.liveMessage = `${__("Picked up")} ${a.firstname} ${a.surname}. ${__("Use arrow keys to move. Press Enter to drop, Esc to cancel.")}`;
     const target = this.firstApplicableCellKey();
@@ -527,11 +556,16 @@ export class StaffRosterGrid extends LitElement {
   }
 
   private cancelPickup(): void {
-    this.pickedUp = null;
+    this.clearActiveCargo();
     this.liveMessage = __("Cancelled.");
     const origin = this.pickupOriginEl;
     this.pickupOriginEl = null;
     if (origin) requestAnimationFrame(() => origin.focus());
+  }
+
+  private cancelDrag(): void {
+    this.clearActiveCargo();
+    this.liveMessage = __("Cancelled.");
   }
 
   private async dropFromKeyboard(slot: Slot, date: string): Promise<void> {
@@ -539,8 +573,10 @@ export class StaffRosterGrid extends LitElement {
     const cargo = this.pickedUp;
     const name = this.cargoName(cargo);
     const time = slot.start_time.slice(0, 5);
-    this.dragging = cargo;
-    this.pickedUp = null;
+    // Switch the same cargo from pickup mode to drag mode so the
+    // shared dropOnCell() path can clear it on completion via the
+    // single clearActiveCargo() helper.
+    this.setActiveCargo(cargo, "drag");
     this.pickupOriginEl = null;
     const errBefore = this.error;
     await this.dropOnCell(slot, date);
@@ -775,8 +811,16 @@ export class StaffRosterGrid extends LitElement {
                     aria-label="${s.surname}, ${s.firstname}. ${__("Press Enter to pick up.")}"
                     draggable="true"
                     @dragstart=${(e: DragEvent) => {
-                      this.dragging = { kind: "staff", staff: s };
+                      this.setActiveCargo({ kind: "staff", staff: s }, "drag");
                       e.dataTransfer?.setData("text/plain", String(s.patron_id));
+                    }}
+                    @dragend=${() => {
+                      // Browser fires dragend after the user releases
+                      // the pointer, regardless of whether a drop
+                      // landed on a cell. Clear here so an aborted drag
+                      // (Esc, drop outside any srg-cell) doesn't leave
+                      // a stale cargo behind.
+                      if (this.activeMode === "drag") this.clearActiveCargo();
                     }}
                     @click=${(e: MouseEvent) => {
                       // Touch + mouse fallback: HTML5 DnD does not fire on
@@ -929,8 +973,11 @@ export class StaffRosterGrid extends LitElement {
                                   aria-label="${a.firstname} ${a.surname}, ${statusLabels[a.status]}. ${__("Press Enter to move, Delete to remove. Click to edit.")}"
                                   title="${a.firstname} ${a.surname} (${statusLabels[a.status]}). ${__("Click to edit.")}"
                                   @dragstart=${(e: DragEvent) => {
-                                    this.dragging = { kind: "assignment", assignment: a };
+                                    this.setActiveCargo({ kind: "assignment", assignment: a }, "drag");
                                     e.dataTransfer?.setData("text/plain", String(a.id));
+                                  }}
+                                  @dragend=${() => {
+                                    if (this.activeMode === "drag") this.clearActiveCargo();
                                   }}
                                   @click=${async (e: MouseEvent) => {
                                     // When a pickup is active, tapping a

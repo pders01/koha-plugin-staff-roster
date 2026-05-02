@@ -43,13 +43,14 @@ the French translation:
       pulls all three plus the embedded German dict). Vite already
       supports multiple entries; the TT changes are
       `<script src="staff-roster-grid.js">` etc.
-- [ ] **`dragging` / `pickedUp` unification in
-      `staff-roster-grid.ts`**: collapse the parallel state machines
-      (HTML5 DnD vs keyboard pickup vs touch tap) into a single
-      `activeCargo` + `activeMode` pair. Today the EscapeController
-      can cancel `pickedUp` but not a mid-flight `dragging`, and a
-      double-pickup window exists if a user starts a drag while a
-      keyboard pickup is set.
+- [x] **`dragging` / `pickedUp` unification in
+      `staff-roster-grid.ts`** (`2d3fcee`). Single `activeCargo`
+      + `activeMode` pair owned by `setActiveCargo` /
+      `clearActiveCargo`; `dragging` and `pickedUp` survive as
+      derived getters so render reads stay one-to-one. New
+      EscapeController for `activeMode === 'drag'` and `@dragend`
+      handlers on the pill + chip clean up after aborted drags.
+      Cypress 27/27.
 
 ## Phase 2 (planned features, each its own work block)
 
