@@ -216,7 +216,10 @@ sub bulk {
         my $placeholders = join q{,}, ('?') x @{$ids};
 
         if ( $op eq 'clear' ) {
-            $dbh->do( "DELETE FROM staff_roster_assignments WHERE id IN ($placeholders)", undef, @{$ids} );
+            $dbh->do(
+                q{DELETE FROM staff_roster_assignments WHERE id IN (} . $placeholders . q{)},
+                undef, @{$ids},
+            );
             require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
             Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
                 'DELETE', undef, { entity => 'assignment_bulk', op => 'clear', ids => $ids } );
@@ -487,30 +490,38 @@ sub _conflict_check {
         return 'Slot does not run on that day';
     }
 
-    my $exclude_fill_clause = $exclude_id ? 'AND id != ?'   : q{};
-    my $exclude_dup_clause  = $exclude_id ? 'AND a.id != ?' : q{};
-    my @fill_params         = ( $slot_id, $date );
-    push @fill_params, $exclude_id if $exclude_id;
+    my @fill_clauses = ( q{slot_id = ?}, q{assignment_date = ?} );
+    my @fill_params  = ( $slot_id, $date );
+    if ($exclude_id) {
+        push @fill_clauses, q{id != ?};
+        push @fill_params, $exclude_id;
+    }
 
     my ($filled) = $dbh->selectrow_array(
-        "SELECT COUNT(*) FROM staff_roster_assignments
-         WHERE slot_id = ? AND assignment_date = ? $exclude_fill_clause",
+        q{SELECT COUNT(*) FROM staff_roster_assignments WHERE }
+            . join( q{ AND }, @fill_clauses ),
         undef, @fill_params,
     );
     return "Slot full ($filled/$max_staff)" if $filled >= $max_staff;
 
+    my @dup_clauses = (
+        q{a.borrowernumber = ?},
+        q{a.assignment_date = ?},
+        q{s1.start_time < s2.end_time},
+        q{s2.start_time < s1.end_time},
+    );
     my @dup_params = ( $slot_id, $borrowernumber, $date );
-    push @dup_params, $exclude_id if $exclude_id;
+    if ($exclude_id) {
+        push @dup_clauses, q{a.id != ?};
+        push @dup_params, $exclude_id;
+    }
 
     my ($double) = $dbh->selectrow_array(
-        "SELECT COUNT(*) FROM staff_roster_assignments a
-         JOIN staff_roster_slots s1 ON a.slot_id = s1.id
-         JOIN staff_roster_slots s2 ON s2.id = ?
-         WHERE a.borrowernumber = ?
-           AND a.assignment_date = ?
-           $exclude_dup_clause
-           AND s1.start_time < s2.end_time
-           AND s2.start_time < s1.end_time",
+        q{SELECT COUNT(*) FROM staff_roster_assignments a
+          JOIN staff_roster_slots s1 ON a.slot_id = s1.id
+          JOIN staff_roster_slots s2 ON s2.id = ?
+          WHERE }
+            . join( q{ AND }, @dup_clauses ),
         undef, @dup_params,
     );
     return 'Staff already assigned to overlapping slot that day' if $double > 0;

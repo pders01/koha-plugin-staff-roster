@@ -292,11 +292,11 @@ sub _unregister_permissions {
     return if !@codes;
     my $placeholders = join q{,}, ('?') x @codes;
     $dbh->do(
-        qq{DELETE FROM permissions WHERE module_bit = 19 AND code IN ($placeholders)},
+        q{DELETE FROM permissions WHERE module_bit = 19 AND code IN (} . $placeholders . q{)},
         undef, @codes
     );
     $dbh->do(
-        qq{DELETE FROM user_permissions WHERE module_bit = 19 AND code IN ($placeholders)},
+        q{DELETE FROM user_permissions WHERE module_bit = 19 AND code IN (} . $placeholders . q{)},
         undef, @codes
     );
     return;
@@ -2303,8 +2303,8 @@ sub _bulk_additional_field_values {
     return {} if !$record_ids || !@{$record_ids};
     my $placeholders = join q{,}, ('?') x @{$record_ids};
     my $rows         = $dbh->selectall_arrayref(
-        qq{SELECT record_id, field_id, value FROM additional_field_values
-           WHERE record_table = ? AND record_id IN ($placeholders)},
+        q{SELECT record_id, field_id, value FROM additional_field_values
+           WHERE record_table = ? AND record_id IN (} . $placeholders . q{)},
         { Slice => {} }, $tablename, @{$record_ids}
     ) || [];
     my %out;
@@ -2315,12 +2315,8 @@ sub _bulk_additional_field_values {
 }
 
 sub _get_current_week_start {
-    my @today             = localtime;
-    my $wday              = $today[6];
-    my $days_since_monday = ( $wday + 6 ) % 7;
-    my $monday            = time - ( $days_since_monday * 86400 );
-    my @mon               = localtime($monday);
-    return sprintf '%04d-%02d-%02d', $mon[5] + 1900, $mon[4] + 1, $mon[3];
+    require Koha::DateUtils;
+    return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
 }
 
 =head3 api_namespace

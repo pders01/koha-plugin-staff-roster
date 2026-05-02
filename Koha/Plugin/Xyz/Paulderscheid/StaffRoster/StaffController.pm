@@ -136,7 +136,7 @@ sub available {
         }
 
         my $limit = 200;
-        $sql .= " ORDER BY p.surname, p.firstname LIMIT $limit";
+        $sql .= q{ ORDER BY p.surname, p.firstname LIMIT } . $limit;
 
         my $rows = $dbh->selectall_arrayref( $sql, { Slice => {} }, @params );
 
@@ -367,12 +367,12 @@ sub me_open_slots {
         my $rid_holders = join q{,}, ('?') x @rids;
 
         my $slots = $dbh->selectall_arrayref(
-            qq{
+            q{
             SELECT id, roster_id, recurrence_rule, start_time, end_time,
                    min_staff, max_staff, location
             FROM staff_roster_slots
-            WHERE roster_id IN ($rid_holders)
-        }, { Slice => {} }, @rids
+            WHERE roster_id IN (} . $rid_holders . q{)},
+            { Slice => {} }, @rids,
         );
 
         if ( !$slots || !@{$slots} ) {
@@ -388,13 +388,13 @@ sub me_open_slots {
         my $slot_holders   = join q{,}, ('?') x @slot_ids;
 
         my $count_rows = $dbh->selectall_arrayref(
-            qq{
+            q{
             SELECT slot_id, assignment_date, COUNT(*) AS n
             FROM staff_roster_assignments
             WHERE assignment_date BETWEEN ? AND ?
-              AND slot_id IN ($slot_holders)
-            GROUP BY slot_id, assignment_date
-        }, { Slice => {} }, $week_start, $end_iso, @slot_ids
+              AND slot_id IN (} . $slot_holders . q{)
+            GROUP BY slot_id, assignment_date},
+            { Slice => {} }, $week_start, $end_iso, @slot_ids,
         );
         my %count_for;
         for my $r ( @{$count_rows} ) {
