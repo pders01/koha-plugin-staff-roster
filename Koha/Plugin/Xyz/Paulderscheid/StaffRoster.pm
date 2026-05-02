@@ -533,16 +533,22 @@ sub admin {
     my $template = $self->get_template( { file => 'admin.tt' } );
     my @messages;
 
+    my $post_redirect_op;
     if ( my $handler = $ADMIN_ACTIONS{$op} ) {
         $handler->( $dbh, $cgi, $id, \@messages );
-        $op = 'list';
+        $op               = 'list';
+        $post_redirect_op = $op;
     }
 
     if ( my $renderer = $ADMIN_VIEWS{$op} ) {
         $renderer->( $dbh, $id, $template );
     }
 
-    $template->param( op => $op, messages => \@messages );
+    $template->param(
+        op               => $op,
+        messages         => \@messages,
+        post_redirect_op => $post_redirect_op,
+    );
 
     return $self->output_html( $template->output );
 }
@@ -691,7 +697,7 @@ sub configure {
             }
         }
         $self->store_data( \%config );
-        $template->param( saved => 1 );
+        $template->param( saved => 1, post_redirect_op => 'configure' );
     }
 
     for my $key (@config_keys) {
@@ -900,9 +906,11 @@ sub tool {
     my $branches
         = $dbh->selectall_arrayref( q{SELECT branchcode, branchname FROM branches ORDER BY branchname}, { Slice => {} } );
 
+    my $post_redirect_op;
     if ( my $entry = $TOOL_ACTIONS{$op} ) {
         $entry->{handler}->( $self, $dbh, $cgi, \@messages );
-        $op = $entry->{next};
+        $op               = $entry->{next};
+        $post_redirect_op = $op;
     }
 
     # Visibility gate for ops accessing a specific roster
@@ -919,7 +927,14 @@ sub tool {
         $renderer->( $self, $dbh, $cgi, $template );
     }
 
-    $template->param( op => $op, messages => \@messages, roster_types => $roster_types, branches => $branches );
+    $template->param(
+        op               => $op,
+        messages         => \@messages,
+        roster_types     => $roster_types,
+        branches         => $branches,
+        post_redirect_op => $post_redirect_op,
+        post_redirect_roster_id => $post_redirect_op ? $cgi->param('roster_id') : undef,
+    );
 
     return $self->output_html( $template->output );
 }

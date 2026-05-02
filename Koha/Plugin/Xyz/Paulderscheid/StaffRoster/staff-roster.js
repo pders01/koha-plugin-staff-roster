@@ -675,59 +675,59 @@ async function Qe(e) {
 }
 //#endregion
 //#region ../../../pers/web/lit-framework/node_modules/ts-pattern/dist/index.js
-var N = Symbol.for("@ts-pattern/matcher"), $e = Symbol.for("@ts-pattern/isVariadic"), P = "@ts-pattern/anonymous-select-key", et = (e) => !!(e && typeof e == "object"), F = (e) => e && !!e[N], I = (e, t, n) => {
-	if (F(e)) {
+var N = Symbol.for("@ts-pattern/matcher"), $e = Symbol.for("@ts-pattern/isVariadic"), et = "@ts-pattern/anonymous-select-key", tt = (e) => !!(e && typeof e == "object"), nt = (e) => e && !!e[N], P = (e, t, n) => {
+	if (nt(e)) {
 		let { matched: r, selections: i } = e[N]().match(t);
 		return r && i && Object.keys(i).forEach((e) => n(e, i[e])), r;
 	}
-	if (et(e)) {
-		if (!et(t)) return !1;
+	if (tt(e)) {
+		if (!tt(t)) return !1;
 		if (Array.isArray(e)) {
 			if (!Array.isArray(t)) return !1;
 			let r = [], i = [], a = [];
 			for (let t of e.keys()) {
 				let n = e[t];
-				F(n) && n[$e] ? a.push(n) : a.length ? i.push(n) : r.push(n);
+				nt(n) && n[$e] ? a.push(n) : a.length ? i.push(n) : r.push(n);
 			}
 			if (a.length) {
 				if (a.length > 1) throw Error("Pattern error: Using `...P.array(...)` several times in a single pattern is not allowed.");
 				if (t.length < r.length + i.length) return !1;
 				let e = t.slice(0, r.length), o = i.length === 0 ? [] : t.slice(-i.length), s = t.slice(r.length, i.length === 0 ? Infinity : -i.length);
-				return r.every((t, r) => I(t, e[r], n)) && i.every((e, t) => I(e, o[t], n)) && (a.length === 0 || I(a[0], s, n));
+				return r.every((t, r) => P(t, e[r], n)) && i.every((e, t) => P(e, o[t], n)) && (a.length === 0 || P(a[0], s, n));
 			}
-			return e.length === t.length && e.every((e, r) => I(e, t[r], n));
+			return e.length === t.length && e.every((e, r) => P(e, t[r], n));
 		}
 		return Reflect.ownKeys(e).every((r) => {
 			let i = e[r];
-			return (r in t || F(a = i) && a[N]().matcherType === "optional") && I(i, t[r], n);
+			return (r in t || nt(a = i) && a[N]().matcherType === "optional") && P(i, t[r], n);
 			var a;
 		});
 	}
 	return Object.is(t, e);
-}, L = (e) => {
+}, F = (e) => {
 	var t;
-	return et(e) ? F(e) ? (t = e[N]()).getSelectionKeys?.call(t) ?? [] : tt(Array.isArray(e) ? e : Object.values(e), L) : [];
-}, tt = (e, t) => e.reduce((e, n) => e.concat(t(n)), []);
-function nt(...e) {
+	return tt(e) ? nt(e) ? (t = e[N]()).getSelectionKeys?.call(t) ?? [] : rt(Array.isArray(e) ? e : Object.values(e), F) : [];
+}, rt = (e, t) => e.reduce((e, n) => e.concat(t(n)), []);
+function it(...e) {
 	if (e.length === 1) {
 		let [t] = e;
-		return (e) => I(t, e, () => {});
+		return (e) => P(t, e, () => {});
 	}
 	if (e.length === 2) {
 		let [t, n] = e;
-		return I(t, n, () => {});
+		return P(t, n, () => {});
 	}
 	throw Error(`isMatching wasn't given the right number of arguments: expected 1 or 2, received ${e.length}.`);
 }
-function R(e) {
+function I(e) {
 	return Object.assign(e, {
-		optional: () => it(e),
-		and: (t) => z(e, t),
-		or: (t) => ct(e, t),
-		select: (t) => t === void 0 ? V(e) : V(t, e)
+		optional: () => ot(e),
+		and: (t) => L(e, t),
+		or: (t) => ut(e, t),
+		select: (t) => t === void 0 ? z(e) : z(t, e)
 	});
 }
-function rt(e) {
+function at(e) {
 	return Object.assign(((e) => Object.assign(e, { [Symbol.iterator]() {
 		let t = 0, n = [{
 			value: Object.assign(e, { [$e]: !0 }),
@@ -738,148 +738,148 @@ function rt(e) {
 		}];
 		return { next: () => n[t++] ?? n.at(-1) };
 	} }))(e), {
-		optional: () => rt(it(e)),
-		select: (t) => rt(t === void 0 ? V(e) : V(t, e))
+		optional: () => at(ot(e)),
+		select: (t) => at(t === void 0 ? z(e) : z(t, e))
 	});
 }
-function it(e) {
-	return R({ [N]: () => ({
+function ot(e) {
+	return I({ [N]: () => ({
 		match: (t) => {
 			let n = {}, r = (e, t) => {
 				n[e] = t;
 			};
-			return t === void 0 ? (L(e).forEach((e) => r(e, void 0)), {
+			return t === void 0 ? (F(e).forEach((e) => r(e, void 0)), {
 				matched: !0,
 				selections: n
 			}) : {
-				matched: I(e, t, r),
+				matched: P(e, t, r),
 				selections: n
 			};
 		},
-		getSelectionKeys: () => L(e),
+		getSelectionKeys: () => F(e),
 		matcherType: "optional"
 	}) });
 }
-var at = (e, t) => {
+var st = (e, t) => {
 	for (let n of e) if (!t(n)) return !1;
 	return !0;
-}, ot = (e, t) => {
+}, ct = (e, t) => {
 	for (let [n, r] of e.entries()) if (!t(r, n)) return !1;
 	return !0;
-}, st = (e, t) => {
+}, lt = (e, t) => {
 	let n = Reflect.ownKeys(e);
 	for (let r of n) if (!t(r, e[r])) return !1;
 	return !0;
 };
-function z(...e) {
-	return R({ [N]: () => ({
+function L(...e) {
+	return I({ [N]: () => ({
 		match: (t) => {
 			let n = {}, r = (e, t) => {
 				n[e] = t;
 			};
 			return {
-				matched: e.every((e) => I(e, t, r)),
+				matched: e.every((e) => P(e, t, r)),
 				selections: n
 			};
 		},
-		getSelectionKeys: () => tt(e, L),
+		getSelectionKeys: () => rt(e, F),
 		matcherType: "and"
 	}) });
 }
-function ct(...e) {
-	return R({ [N]: () => ({
+function ut(...e) {
+	return I({ [N]: () => ({
 		match: (t) => {
 			let n = {}, r = (e, t) => {
 				n[e] = t;
 			};
-			return tt(e, L).forEach((e) => r(e, void 0)), {
-				matched: e.some((e) => I(e, t, r)),
+			return rt(e, F).forEach((e) => r(e, void 0)), {
+				matched: e.some((e) => P(e, t, r)),
 				selections: n
 			};
 		},
-		getSelectionKeys: () => tt(e, L),
+		getSelectionKeys: () => rt(e, F),
 		matcherType: "or"
 	}) });
 }
-function B(e) {
+function R(e) {
 	return { [N]: () => ({ match: (t) => ({ matched: !!e(t) }) }) };
 }
-function V(...e) {
+function z(...e) {
 	let t = typeof e[0] == "string" ? e[0] : void 0, n = e.length === 2 ? e[1] : typeof e[0] == "string" ? void 0 : e[0];
-	return R({ [N]: () => ({
+	return I({ [N]: () => ({
 		match: (e) => {
-			let r = { [t ?? P]: e };
+			let r = { [t ?? et]: e };
 			return {
-				matched: n === void 0 || I(n, e, (e, t) => {
+				matched: n === void 0 || P(n, e, (e, t) => {
 					r[e] = t;
 				}),
 				selections: r
 			};
 		},
-		getSelectionKeys: () => [t ?? P].concat(n === void 0 ? [] : L(n))
+		getSelectionKeys: () => [t ?? et].concat(n === void 0 ? [] : F(n))
 	}) });
 }
-function lt(e) {
+function dt(e) {
 	return !0;
 }
-function H(e) {
+function B(e) {
 	return typeof e == "number";
 }
-function U(e) {
+function V(e) {
 	return typeof e == "string";
 }
-function W(e) {
+function H(e) {
 	return typeof e == "bigint";
 }
-var ut = R(B(lt)), dt = R(B(lt)), ft = ut, G = (e) => Object.assign(R(e), {
+var ft = I(R(dt)), pt = I(R(dt)), mt = ft, U = (e) => Object.assign(I(e), {
 	startsWith: (t) => {
-		return G(z(e, (n = t, B((e) => U(e) && e.startsWith(n)))));
+		return U(L(e, (n = t, R((e) => V(e) && e.startsWith(n)))));
 		var n;
 	},
 	endsWith: (t) => {
-		return G(z(e, (n = t, B((e) => U(e) && e.endsWith(n)))));
+		return U(L(e, (n = t, R((e) => V(e) && e.endsWith(n)))));
 		var n;
 	},
-	minLength: (t) => G(z(e, ((e) => B((t) => U(t) && t.length >= e))(t))),
-	length: (t) => G(z(e, ((e) => B((t) => U(t) && t.length === e))(t))),
-	maxLength: (t) => G(z(e, ((e) => B((t) => U(t) && t.length <= e))(t))),
+	minLength: (t) => U(L(e, ((e) => R((t) => V(t) && t.length >= e))(t))),
+	length: (t) => U(L(e, ((e) => R((t) => V(t) && t.length === e))(t))),
+	maxLength: (t) => U(L(e, ((e) => R((t) => V(t) && t.length <= e))(t))),
 	includes: (t) => {
-		return G(z(e, (n = t, B((e) => U(e) && e.includes(n)))));
+		return U(L(e, (n = t, R((e) => V(e) && e.includes(n)))));
 		var n;
 	},
 	regex: (t) => {
-		return G(z(e, (n = t, B((e) => U(e) && !!e.match(n)))));
+		return U(L(e, (n = t, R((e) => V(e) && !!e.match(n)))));
 		var n;
 	}
-}), pt = G(B(U)), K = (e) => Object.assign(R(e), {
-	between: (t, n) => K(z(e, ((e, t) => B((n) => H(n) && e <= n && t >= n))(t, n))),
-	lt: (t) => K(z(e, ((e) => B((t) => H(t) && t < e))(t))),
-	gt: (t) => K(z(e, ((e) => B((t) => H(t) && t > e))(t))),
-	lte: (t) => K(z(e, ((e) => B((t) => H(t) && t <= e))(t))),
-	gte: (t) => K(z(e, ((e) => B((t) => H(t) && t >= e))(t))),
-	int: () => K(z(e, B((e) => H(e) && Number.isInteger(e)))),
-	finite: () => K(z(e, B((e) => H(e) && Number.isFinite(e)))),
-	positive: () => K(z(e, B((e) => H(e) && e > 0))),
-	negative: () => K(z(e, B((e) => H(e) && e < 0)))
-}), mt = K(B(H)), q = (e) => Object.assign(R(e), {
-	between: (t, n) => q(z(e, ((e, t) => B((n) => W(n) && e <= n && t >= n))(t, n))),
-	lt: (t) => q(z(e, ((e) => B((t) => W(t) && t < e))(t))),
-	gt: (t) => q(z(e, ((e) => B((t) => W(t) && t > e))(t))),
-	lte: (t) => q(z(e, ((e) => B((t) => W(t) && t <= e))(t))),
-	gte: (t) => q(z(e, ((e) => B((t) => W(t) && t >= e))(t))),
-	positive: () => q(z(e, B((e) => W(e) && e > 0))),
-	negative: () => q(z(e, B((e) => W(e) && e < 0)))
-}), J = {
+}), ht = U(R(V)), W = (e) => Object.assign(I(e), {
+	between: (t, n) => W(L(e, ((e, t) => R((n) => B(n) && e <= n && t >= n))(t, n))),
+	lt: (t) => W(L(e, ((e) => R((t) => B(t) && t < e))(t))),
+	gt: (t) => W(L(e, ((e) => R((t) => B(t) && t > e))(t))),
+	lte: (t) => W(L(e, ((e) => R((t) => B(t) && t <= e))(t))),
+	gte: (t) => W(L(e, ((e) => R((t) => B(t) && t >= e))(t))),
+	int: () => W(L(e, R((e) => B(e) && Number.isInteger(e)))),
+	finite: () => W(L(e, R((e) => B(e) && Number.isFinite(e)))),
+	positive: () => W(L(e, R((e) => B(e) && e > 0))),
+	negative: () => W(L(e, R((e) => B(e) && e < 0)))
+}), gt = W(R(B)), G = (e) => Object.assign(I(e), {
+	between: (t, n) => G(L(e, ((e, t) => R((n) => H(n) && e <= n && t >= n))(t, n))),
+	lt: (t) => G(L(e, ((e) => R((t) => H(t) && t < e))(t))),
+	gt: (t) => G(L(e, ((e) => R((t) => H(t) && t > e))(t))),
+	lte: (t) => G(L(e, ((e) => R((t) => H(t) && t <= e))(t))),
+	gte: (t) => G(L(e, ((e) => R((t) => H(t) && t >= e))(t))),
+	positive: () => G(L(e, R((e) => H(e) && e > 0))),
+	negative: () => G(L(e, R((e) => H(e) && e < 0)))
+}), K = {
 	__proto__: null,
 	matcher: N,
-	optional: it,
+	optional: ot,
 	array: function(...e) {
-		return rt({ [N]: () => ({
+		return at({ [N]: () => ({
 			match: (t) => {
 				if (!Array.isArray(t)) return { matched: !1 };
 				if (e.length === 0) return { matched: !0 };
 				let n = e[0], r = {};
-				if (t.length === 0) return L(n).forEach((e) => {
+				if (t.length === 0) return F(n).forEach((e) => {
 					r[e] = [];
 				}), {
 					matched: !0,
@@ -889,15 +889,15 @@ var ut = R(B(lt)), dt = R(B(lt)), ft = ut, G = (e) => Object.assign(R(e), {
 					r[e] = (r[e] || []).concat([t]);
 				};
 				return {
-					matched: t.every((e) => I(n, e, i)),
+					matched: t.every((e) => P(n, e, i)),
 					selections: r
 				};
 			},
-			getSelectionKeys: () => e.length === 0 ? [] : L(e[0])
+			getSelectionKeys: () => e.length === 0 ? [] : F(e[0])
 		}) });
 	},
 	set: function(...e) {
-		return R({ [N]: () => ({
+		return I({ [N]: () => ({
 			match: (t) => {
 				if (!(t instanceof Set)) return { matched: !1 };
 				let n = {};
@@ -910,15 +910,15 @@ var ut = R(B(lt)), dt = R(B(lt)), ft = ut, G = (e) => Object.assign(R(e), {
 					n[e] = (n[e] || []).concat([t]);
 				}, i = e[0];
 				return {
-					matched: at(t, (e) => I(i, e, r)),
+					matched: st(t, (e) => P(i, e, r)),
 					selections: n
 				};
 			},
-			getSelectionKeys: () => e.length === 0 ? [] : L(e[0])
+			getSelectionKeys: () => e.length === 0 ? [] : F(e[0])
 		}) });
 	},
 	map: function(...e) {
-		return R({ [N]: () => ({
+		return I({ [N]: () => ({
 			match: (t) => {
 				if (!(t instanceof Map)) return { matched: !1 };
 				let n = {};
@@ -933,73 +933,73 @@ var ut = R(B(lt)), dt = R(B(lt)), ft = ut, G = (e) => Object.assign(R(e), {
 				if (e.length === 1) throw Error(`\`P.map\` wasn't given enough arguments. Expected (key, value), received ${e[0]?.toString()}`);
 				let [i, a] = e;
 				return {
-					matched: ot(t, (e, t) => {
-						let n = I(i, t, r), o = I(a, e, r);
+					matched: ct(t, (e, t) => {
+						let n = P(i, t, r), o = P(a, e, r);
 						return n && o;
 					}),
 					selections: n
 				};
 			},
-			getSelectionKeys: () => e.length === 0 ? [] : [...L(e[0]), ...L(e[1])]
+			getSelectionKeys: () => e.length === 0 ? [] : [...F(e[0]), ...F(e[1])]
 		}) });
 	},
 	record: function(...e) {
-		return R({ [N]: () => ({
+		return I({ [N]: () => ({
 			match: (t) => {
 				if (typeof t != "object" || !t || Array.isArray(t)) return { matched: !1 };
 				if (e.length === 0) throw Error(`\`P.record\` wasn't given enough arguments. Expected (value) or (key, value), received ${e[0]?.toString()}`);
 				let n = {}, r = (e, t) => {
 					n[e] = (n[e] || []).concat([t]);
-				}, [i, a] = e.length === 1 ? [pt, e[0]] : e;
+				}, [i, a] = e.length === 1 ? [ht, e[0]] : e;
 				return {
-					matched: st(t, (e, t) => {
-						let n = typeof e != "string" || Number.isNaN(Number(e)) ? null : Number(e), o = n !== null && I(i, n, r), s = I(i, e, r), c = I(a, t, r);
+					matched: lt(t, (e, t) => {
+						let n = typeof e != "string" || Number.isNaN(Number(e)) ? null : Number(e), o = n !== null && P(i, n, r), s = P(i, e, r), c = P(a, t, r);
 						return (s || o) && c;
 					}),
 					selections: n
 				};
 			},
-			getSelectionKeys: () => e.length === 0 ? [] : [...L(e[0]), ...L(e[1])]
+			getSelectionKeys: () => e.length === 0 ? [] : [...F(e[0]), ...F(e[1])]
 		}) });
 	},
-	intersection: z,
-	union: ct,
+	intersection: L,
+	union: ut,
 	not: function(e) {
-		return R({ [N]: () => ({
-			match: (t) => ({ matched: !I(e, t, () => {}) }),
+		return I({ [N]: () => ({
+			match: (t) => ({ matched: !P(e, t, () => {}) }),
 			getSelectionKeys: () => [],
 			matcherType: "not"
 		}) });
 	},
-	when: B,
-	select: V,
-	any: ut,
-	unknown: dt,
-	_: ft,
-	string: pt,
-	number: mt,
-	bigint: q(B(W)),
-	boolean: R(B(function(e) {
+	when: R,
+	select: z,
+	any: ft,
+	unknown: pt,
+	_: mt,
+	string: ht,
+	number: gt,
+	bigint: G(R(H)),
+	boolean: I(R(function(e) {
 		return typeof e == "boolean";
 	})),
-	symbol: R(B(function(e) {
+	symbol: I(R(function(e) {
 		return typeof e == "symbol";
 	})),
-	nullish: R(B(function(e) {
+	nullish: I(R(function(e) {
 		return e == null;
 	})),
-	nonNullable: R(B(function(e) {
+	nonNullable: I(R(function(e) {
 		return e != null;
 	})),
 	instanceOf: function(e) {
-		return R(B(function(e) {
+		return I(R(function(e) {
 			return (t) => t instanceof e;
 		}(e)));
 	},
 	shape: function(e) {
-		return R(B(nt(e)));
+		return I(R(it(e)));
 	}
-}, ht = class extends Error {
+}, _t = class extends Error {
 	constructor(e) {
 		let t;
 		try {
@@ -1009,14 +1009,14 @@ var ut = R(B(lt)), dt = R(B(lt)), ft = ut, G = (e) => Object.assign(R(e), {
 		}
 		super(`Pattern matching error: no pattern matches value ${t}`), this.input = void 0, this.input = e;
 	}
-}, gt = {
+}, vt = {
 	matched: !1,
 	value: void 0
 };
-function _t(e) {
-	return new vt(e, gt);
+function yt(e) {
+	return new bt(e, vt);
 }
-var vt = class e {
+var bt = class e {
 	constructor(e, t) {
 		this.input = void 0, this.state = void 0, this.input = e, this.state = t;
 	}
@@ -1026,9 +1026,9 @@ var vt = class e {
 		t.length === 3 && typeof t[1] == "function" ? i = t[1] : t.length > 2 && r.push(...t.slice(1, t.length - 1));
 		let a = !1, o = {}, s = (e, t) => {
 			a = !0, o[e] = t;
-		}, c = !r.some((e) => I(e, this.input, s)) || i && !i(this.input) ? gt : {
+		}, c = !r.some((e) => P(e, this.input, s)) || i && !i(this.input) ? vt : {
 			matched: !0,
-			value: n(a ? P in o ? o[P] : o : this.input, this.input)
+			value: n(a ? et in o ? o[et] : o : this.input, this.input)
 		};
 		return new e(this.input, c);
 	}
@@ -1038,12 +1038,12 @@ var vt = class e {
 		return new e(this.input, r ? {
 			matched: !0,
 			value: n(this.input, this.input)
-		} : gt);
+		} : vt);
 	}
 	otherwise(e) {
 		return this.state.matched ? this.state.value : e(this.input);
 	}
-	exhaustive(e = yt) {
+	exhaustive(e = xt) {
 		return this.state.matched ? this.state.value : e(this.input);
 	}
 	run() {
@@ -1056,12 +1056,12 @@ var vt = class e {
 		return this;
 	}
 };
-function yt(e) {
-	throw new ht(e);
+function xt(e) {
+	throw new _t(e);
 }
 //#endregion
 //#region ../../../pers/web/lit-framework/dist/http-CJJa-frZ.js
-var bt = class {
+var St = class {
 	constructor(e, t, n) {
 		this.interceptors = [], this.inflight = /* @__PURE__ */ new Map(), this.basePath = e, this.endpoints = t, this.retry = n ?? { maxRetries: 0 };
 	}
@@ -1107,7 +1107,7 @@ var bt = class {
 		return l;
 	}
 	_stringifyQuery(e) {
-		return _t(e).with(J.nullish, () => "").with(J.string, (e) => e.startsWith("?") ? e.slice(1) : e).with(J._, (e) => new URLSearchParams(e).toString()).exhaustive();
+		return yt(e).with(K.nullish, () => "").with(K.string, (e) => e.startsWith("?") ? e.slice(1) : e).with(K._, (e) => new URLSearchParams(e).toString()).exhaustive();
 	}
 	_toRelativeUrl(e, t, n) {
 		if (!e) throw Error(`Argument basePath is ${e}.`);
@@ -1131,13 +1131,13 @@ var bt = class {
 			...a.requestInit,
 			...r
 		};
-		s = _t(r?.body).with(J.nullish, () => s).with(J.instanceOf(FormData), () => s).with(J._, (e) => ({
+		s = yt(r?.body).with(K.nullish, () => s).with(K.instanceOf(FormData), () => s).with(K._, (e) => ({
 			...s,
 			headers: { "Content-Type": "application/json" },
 			body: e
 		})).exhaustive();
 		let c = navigator.userAgent.toLowerCase();
-		s.cache = _t(c).when((e) => e.includes("chrome"), () => a.ignoreCache ? "no-cache" : "no-store").when((e) => e.includes("firefox"), () => a.ignoreCache ? "no-cache" : "default").otherwise(() => a.ignoreCache ? "no-cache" : a.cache ? "default" : "force-cache");
+		s.cache = yt(c).when((e) => e.includes("chrome"), () => a.ignoreCache ? "no-cache" : "no-store").when((e) => e.includes("firefox"), () => a.ignoreCache ? "no-cache" : "default").otherwise(() => a.ignoreCache ? "no-cache" : a.cache ? "default" : "force-cache");
 		let l = new URLSearchParams();
 		if (a.query && (l = new URLSearchParams(a.query)), n) {
 			let e = new URLSearchParams(l);
@@ -1196,52 +1196,70 @@ var bt = class {
 			}
 		});
 	}
-}, Y = "/api/v1/contrib/staffroster", X = new bt(Y, {
+}, q = "/api/v1/contrib/staffroster", J = new St(q, {
 	get: {
 		rosterWeek: {
-			url: `${Y}/rosters`,
+			url: `${q}/rosters`,
 			cache: !1
 		},
 		availableStaff: {
-			url: `${Y}/staff/available`,
+			url: `${q}/staff/available`,
+			cache: !1
+		},
+		myWeek: {
+			url: `${q}/me/week`,
+			cache: !1
+		},
+		myOpenSlots: {
+			url: `${q}/me/open_slots`,
 			cache: !1
 		}
 	},
 	post: {
 		assignments: {
-			url: `${Y}/assignments`,
+			url: `${q}/assignments`,
 			cache: !1
 		},
 		bulk: {
-			url: `${Y}/assignments/bulk`,
+			url: `${q}/assignments/bulk`,
+			cache: !1
+		},
+		selfClaim: {
+			url: `${q}/me/claim`,
 			cache: !1
 		}
 	},
 	put: { assignments: {
-		url: `${Y}/assignments`,
+		url: `${q}/assignments`,
 		cache: !1
 	} },
-	delete: { assignments: {
-		url: `${Y}/assignments`,
-		cache: !1
-	} }
+	delete: {
+		assignments: {
+			url: `${q}/assignments`,
+			cache: !1
+		},
+		selfClaim: {
+			url: `${q}/me/claim`,
+			cache: !1
+		}
+	}
 });
-async function Z(e) {
+async function Y(e) {
 	if (!e.ok) {
 		let t = await e.json().catch(() => ({})), n = Error(t.error ?? `HTTP ${e.status}`);
 		throw n.status = e.status, n;
 	}
 	if (e.status !== 204) return await e.json();
 }
-async function xt(e, t) {
-	return Z(await X.get({
+async function Ct(e, t) {
+	return Y(await J.get({
 		endpoint: "rosterWeek",
 		path: [String(e), "week"],
 		query: { start: t }
 	}));
 }
-async function St(e) {
-	return Z(await X.post({
+async function wt(e) {
+	return Y(await J.post({
 		endpoint: "assignments",
 		requestInit: {
 			method: "post",
@@ -1249,8 +1267,8 @@ async function St(e) {
 		}
 	}));
 }
-async function Ct(e, t) {
-	return Z(await X.put({
+async function Tt(e, t) {
+	return Y(await J.put({
 		endpoint: "assignments",
 		path: [String(e)],
 		requestInit: {
@@ -1259,22 +1277,78 @@ async function Ct(e, t) {
 		}
 	}));
 }
-async function wt(e) {
-	await Z(await X.delete({
+async function Et(e) {
+	await Y(await J.delete({
 		endpoint: "assignments",
 		path: [String(e)]
 	}));
 }
-async function Tt(e) {
+async function Dt(e) {
+	return Y(await J.get({
+		endpoint: "myWeek",
+		query: { start: e }
+	}));
+}
+async function Ot(e) {
+	return Y(await J.get({
+		endpoint: "myOpenSlots",
+		query: { start: e }
+	}));
+}
+async function kt(e) {
+	return Y(await J.post({
+		endpoint: "selfClaim",
+		requestInit: {
+			method: "post",
+			body: JSON.stringify(e)
+		}
+	}));
+}
+async function At(e) {
+	await Y(await J.delete({
+		endpoint: "selfClaim",
+		path: [String(e)]
+	}));
+}
+async function jt(e) {
 	let t = { date: e.date };
-	return e.slot_id && (t.slot_id = String(e.slot_id)), e.branch && (t.branch = e.branch), e.q && (t.q = e.q), Z(await X.get({
+	return e.slot_id && (t.slot_id = String(e.slot_id)), e.branch && (t.branch = e.branch), e.q && (t.q = e.q), Y(await J.get({
 		endpoint: "availableStaff",
 		query: t
 	}));
 }
 //#endregion
+//#region src/util.ts
+function Mt(e) {
+	let t = (e.getDay() + 6) % 7, n = new Date(e);
+	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);
+}
+function Nt() {
+	return new URLSearchParams(window.location.search).get("class") ?? "";
+}
+function Pt(e, t) {
+	let n = new Date(e);
+	return n.setDate(n.getDate() + t), n.toISOString().slice(0, 10);
+}
+var Ft = [
+	"Sunday",
+	"Monday",
+	"Tuesday",
+	"Wednesday",
+	"Thursday",
+	"Friday",
+	"Saturday"
+];
+function It(e) {
+	let t = /* @__PURE__ */ new Date(e + "T00:00:00");
+	return `${Ft[t.getDay()]}, ${t.toLocaleDateString(void 0, {
+		month: "short",
+		day: "numeric"
+	})}`;
+}
+//#endregion
 //#region \0@oxc-project+runtime@0.127.0/helpers/decorate.js
-function Q(e, t, n, r) {
+function X(e, t, n, r) {
 	var i = arguments.length, a = i < 3 ? t : r === null ? r = Object.getOwnPropertyDescriptor(t, n) : r, o;
 	if (typeof Reflect == "object" && typeof Reflect.decorate == "function") a = Reflect.decorate(e, t, n, r);
 	else for (var s = e.length - 1; s >= 0; s--) (o = e[s]) && (a = (i < 3 ? o(a) : i > 3 ? o(t, n, a) : o(t, n)) || a);
@@ -1282,7 +1356,7 @@ function Q(e, t, n, r) {
 }
 //#endregion
 //#region src/components/staff-roster-grid.ts
-var Et = 5e3, Dt = 10, Ot = [
+var Lt = 5e3, Rt = 10, zt = [
 	"Mon",
 	"Tue",
 	"Wed",
@@ -1290,7 +1364,7 @@ var Et = 5e3, Dt = 10, Ot = [
 	"Fri",
 	"Sat",
 	"Sun"
-], kt = [
+], Bt = [
 	"Monday",
 	"Tuesday",
 	"Wednesday",
@@ -1298,7 +1372,7 @@ var Et = 5e3, Dt = 10, Ot = [
 	"Friday",
 	"Saturday",
 	"Sunday"
-], At = [
+], Vt = [
 	"MO",
 	"TU",
 	"WE",
@@ -1306,9 +1380,9 @@ var Et = 5e3, Dt = 10, Ot = [
 	"FR",
 	"SA",
 	"SU"
-], $ = class extends k {
+], Z = class extends k {
 	constructor(...e) {
-		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.staffQuery = "", this.error = "", this.dragging = null, this.pickedUp = null, this.pendingDelete = null, this.editing = null, this.editForm = {
+		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.availableMeta = null, this.availableContextDay = null, this.staffQuery = "", this.error = "", this.dragging = null, this.pickedUp = null, this.pendingDelete = null, this.editing = null, this.editForm = {
 			status: "scheduled",
 			notes: "",
 			fields: {}
@@ -1333,7 +1407,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		return this;
 	}
 	connectedCallback() {
-		super.connectedCallback(), this.weekStart ||= jt(/* @__PURE__ */ new Date()), this.refresh(), this.loadAvailable(), this.pollTimer = setInterval(() => void this.refresh(), Et), document.addEventListener("keydown", this.onKeyDown);
+		super.connectedCallback(), this.weekStart ||= Mt(/* @__PURE__ */ new Date()), this.refresh(), this.loadAvailable(), this.pollTimer = setInterval(() => void this.refresh(), Lt), document.addEventListener("keydown", this.onKeyDown);
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this.pollTimer && clearInterval(this.pollTimer), this.recentlyChangedTimer && clearTimeout(this.recentlyChangedTimer), document.removeEventListener("keydown", this.onKeyDown);
@@ -1342,7 +1416,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		if (this.rosterId) try {
 			let e = /* @__PURE__ */ new Map(), t = /* @__PURE__ */ new Set();
 			for (let n of this.week?.assignments ?? []) e.set(this.assignmentKey(n), n.updated_at), t.add(n.id);
-			let n = await xt(this.rosterId, this.weekStart);
+			let n = await Ct(this.rosterId, this.weekStart);
 			if (this.week = n, this.error = "", t.size > 0) {
 				let t = /* @__PURE__ */ new Set();
 				for (let r of n.assignments) {
@@ -1360,12 +1434,47 @@ var Et = 5e3, Dt = 10, Ot = [
 	assignmentKey(e) {
 		return `${e.id}`;
 	}
-	async loadAvailable() {
+	renderAvailableFilterHeader() {
+		let e = this.availableMeta;
+		if (!e) return T;
+		let t = e.filter, n = t.mode === "codes" ? t.codes.join(", ") : "category type S (any patron flagged staff)", r = t.branch_scope.mode === "group" ? `library group: ${t.branch_scope.label ?? "(unnamed)"}` : t.branch_scope.mode === "branch" ? `branch: ${t.branch_scope.label}` : "all branches", i = this.availableContextDay === null ? null : Bt[this.availableContextDay], a = t.slot, o = a ? `Free at ${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} on ${i ?? a.date}` : `Free on ${t.date}`, s = e.count >= e.limit, c = t.mode === "category_type_s";
+		return C`
+      <div class="srg-avail-meta">
+        <div class="srg-avail-context">${o}</div>
+        <div class="srg-avail-filter" title="${n} · ${r}">
+          <i class="fa fa-filter" aria-hidden="true"></i>
+          <span>${n}</span>
+          <span class="text-muted"> · ${r}</span>
+        </div>
+        <div class="srg-avail-counter">
+          <strong>${e.count}</strong> of ${e.pool} eligible
+          ${s ? C`<span class="text-muted"> · capped at ${e.limit}</span>` : T}
+        </div>
+        ${c ? C`
+              <div class="srg-avail-warn text-muted">
+                <i class="fa fa-info-circle" aria-hidden="true"></i>
+                Showing all category-type-S patrons (incl. service accounts).
+                Set <em>staff_categorycodes</em> in plugin
+                <a href="?class=${Nt()}&method=configure">configuration</a>
+                to narrow.
+              </div>
+            ` : T}
+      </div>
+    `;
+	}
+	async loadAvailable(e) {
 		if (this.week) try {
-			this.available = await Tt({
-				date: this.weekStart,
+			let t = await jt({
+				date: e?.date ?? this.weekStart,
+				slot_id: e?.slotId,
 				q: this.staffQuery || void 0
 			});
+			this.available = t.staff, this.availableMeta = {
+				count: t.count,
+				pool: t.pool,
+				limit: t.limit,
+				filter: t.filter
+			}, this.availableContextDay = e?.dayIdx ?? null;
 		} catch (e) {
 			this.setError(e.message);
 		}
@@ -1385,12 +1494,12 @@ var Et = 5e3, Dt = 10, Ot = [
 		return (this.week?.exceptions ?? []).some((t) => t.exception_date === e);
 	}
 	async pushUndo(e) {
-		this.undoStack.push(e), this.undoStack.length > Dt && this.undoStack.shift();
+		this.undoStack.push(e), this.undoStack.length > Rt && this.undoStack.shift();
 	}
 	async undo() {
 		let e = this.undoStack.pop();
 		if (e) try {
-			e.kind === "create" ? await wt(e.id) : e.kind === "delete" ? await St(e.payload) : await Ct(e.id, e.before), await this.refresh();
+			e.kind === "create" ? await Et(e.id) : e.kind === "delete" ? await wt(e.payload) : await Tt(e.id, e.before), await this.refresh();
 		} catch (e) {
 			this.setError(`Undo failed: ${e.message}`);
 		}
@@ -1400,7 +1509,7 @@ var Et = 5e3, Dt = 10, Ot = [
 			if (this.dragging.kind === "staff") {
 				let n = this.dragging.staff;
 				try {
-					let r = await St({
+					let r = await wt({
 						slot_id: e.id,
 						borrowernumber: n.borrowernumber,
 						assignment_date: t
@@ -1416,7 +1525,7 @@ var Et = 5e3, Dt = 10, Ot = [
 				let n = this.dragging.assignment;
 				if (n.slot_id === e.id && n.assignment_date === t) return;
 				try {
-					await Ct(n.id, {
+					await Tt(n.id, {
 						slot_id: e.id,
 						assignment_date: t
 					}), await this.pushUndo({
@@ -1460,7 +1569,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		(this.week?.assignment_fields ?? []).length && (t.additional_fields = this.editForm.fields);
 		let n = this.dayIdxForDate(e.assignment_date), r = `${e.slot_id}-${n}`;
 		try {
-			await Ct(e.id, t), this.liveMessage = `Updated assignment for ${e.firstname} ${e.surname}.`, this.editing = null, this.editOriginEl = null, await this.refresh(), this.focusedCellKey = r, this.pendingFocusCellKey = r;
+			await Tt(e.id, t), this.liveMessage = `Updated assignment for ${e.firstname} ${e.surname}.`, this.editing = null, this.editOriginEl = null, await this.refresh(), this.focusedCellKey = r, this.pendingFocusCellKey = r;
 		} catch (e) {
 			this.setError(e.message);
 		}
@@ -1483,7 +1592,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		this.pendingDelete = null;
 		let t = this.dayIdxForDate(e.assignment_date), n = `${e.slot_id}-${t}`;
 		try {
-			await wt(e.id), await this.pushUndo({
+			await Et(e.id), await this.pushUndo({
 				kind: "delete",
 				payload: {
 					slot_id: e.slot_id,
@@ -1492,7 +1601,7 @@ var Et = 5e3, Dt = 10, Ot = [
 					status: e.status,
 					notes: e.notes ?? void 0
 				}
-			}), this.liveMessage = `Removed ${e.firstname} ${e.surname} from ${kt[t]} ${e.assignment_date}.`, await this.refresh();
+			}), this.liveMessage = `Removed ${e.firstname} ${e.surname} from ${Bt[t]} ${e.assignment_date}.`, await this.refresh();
 		} catch (e) {
 			this.setError(e.message);
 		}
@@ -1505,7 +1614,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		return [...this.week?.slots ?? []].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.id - t.id);
 	}
 	cellApplies(e, t) {
-		return e.applies_on_dates ? e.applies_on_dates.includes(this.cellDate(t)) : e.days_of_week.includes(At[t]);
+		return e.applies_on_dates ? e.applies_on_dates.includes(this.cellDate(t)) : e.days_of_week.includes(Vt[t]);
 	}
 	firstApplicableCellKey() {
 		let e = this.sortedSlots();
@@ -1516,7 +1625,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		return e.kind === "staff" ? `${e.staff.firstname} ${e.staff.surname}` : `${e.assignment.firstname} ${e.assignment.surname}`;
 	}
 	cellAriaLabel(e, t, n, r, i) {
-		let a = kt[n], o = `${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}`;
+		let a = Bt[n], o = `${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}`;
 		if (r) return `${a} ${t}, ${o} slot, closed.`;
 		let s = i.length, c = `${a} ${t}, ${o} slot, ${s} of ${e.max_staff} staff assigned`;
 		return s === 0 ? `${c}.` : `${c}: ${i.map((e) => `${e.firstname} ${e.surname}`).join(", ")}.`;
@@ -1547,7 +1656,7 @@ var Et = 5e3, Dt = 10, Ot = [
 		let n = this.pickedUp, r = this.cargoName(n), i = e.start_time.slice(0, 5);
 		this.dragging = n, this.pickedUp = null, this.pickupOriginEl = null;
 		let a = this.error;
-		await this.dropOnCell(e, t), this.error && this.error !== a ? this.liveMessage = `Cannot drop here. ${this.error}` : this.liveMessage = `Moved ${r} to ${kt[this.dayIdxForDate(t)]} ${t}, ${i} slot.`;
+		await this.dropOnCell(e, t), this.error && this.error !== a ? this.liveMessage = `Cannot drop here. ${this.error}` : this.liveMessage = `Moved ${r} to ${Bt[this.dayIdxForDate(t)]} ${t}, ${i} slot.`;
 		let o = `${e.id}-${this.dayIdxForDate(t)}`;
 		this.focusedCellKey = o, this.pendingFocusCellKey = o;
 	}
@@ -1704,6 +1813,7 @@ var Et = 5e3, Dt = 10, Ot = [
       <div class="srg-layout" style=${`--srg-type-color: ${e}`}>
         <section class="page-section srg-staff-panel">
           <h3 class="srg-panel-title" id="srg-staff-list-label">Available staff</h3>
+          ${this.renderAvailableFilterHeader()}
           <input
             type="search"
             class="form-control input-sm"
@@ -1758,7 +1868,7 @@ var Et = 5e3, Dt = 10, Ot = [
             <thead>
               <tr role="row" aria-rowindex="1">
                 <th class="srg-slot-col" role="columnheader" aria-colindex="1">Slot</th>
-                ${Ot.map((e, t) => C`
+                ${zt.map((e, t) => C`
                     <th role="columnheader" aria-colindex=${t + 2}>
                       <span class="srg-day">${e}</span>
                       <small class="text-muted">${this.cellDate(t).slice(5)}</small>
@@ -1771,7 +1881,7 @@ var Et = 5e3, Dt = 10, Ot = [
                     <tr role="row">
                       <td colspan="8" class="srg-empty" role="gridcell">
                         <p>No time slots defined for this roster yet.</p>
-                        <a class="btn btn-default btn-sm" href="?class=${Mt()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
+                        <a class="btn btn-default btn-sm" href="?class=${Nt()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
                           <i class="fa fa-clock" aria-hidden="true"></i> Manage slots
                         </a>
                       </td>
@@ -1788,7 +1898,7 @@ var Et = 5e3, Dt = 10, Ot = [
                       <span class="srg-slot-time">${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</span>
                       ${e.location ? C`<small class="text-muted d-block">${e.location}</small>` : T}
                     </th>
-                    ${Ot.map((r, i) => {
+                    ${zt.map((r, i) => {
 			let a = this.cellDate(i), o = this.cellApplies(e, i), s = this.exceptionFor(a), c = i + 2;
 			if (!o) return C`<td
                           class="srg-cell-empty"
@@ -1828,7 +1938,13 @@ var Et = 5e3, Dt = 10, Ot = [
 				t.preventDefault(), t.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(e, a);
 			}}
                           @keydown=${(n) => this.onCellKeyDown(n, e, a, t, i)}
-                          @focus=${() => this.focusedCellKey = l}
+                          @focus=${() => {
+				this.focusedCellKey = l, this.loadAvailable({
+					slotId: e.id,
+					date: a,
+					dayIdx: i
+				});
+			}}
                         >
                           ${Ze(u, (e) => e.id, (e) => {
 				let t = this.pickedUp?.kind === "assignment" && this.pickedUp.assignment.id === e.id, n = this.recentlyChanged.has(e.id);
@@ -1902,7 +2018,7 @@ var Et = 5e3, Dt = 10, Ot = [
             <div class="modal-body srg-edit-body">
               <p class="srg-edit-subject">
                 <strong>${e.surname}, ${e.firstname}</strong>
-                <span class="text-muted"> · ${kt[this.dayIdxForDate(e.assignment_date)]} ${e.assignment_date}</span>
+                <span class="text-muted"> · ${Bt[this.dayIdxForDate(e.assignment_date)]} ${e.assignment_date}</span>
               </p>
               <div class="srg-edit-grid">
                 <div class="srg-edit-row">
@@ -2036,18 +2152,432 @@ var Et = 5e3, Dt = 10, Ot = [
     `;
 	}
 };
-Q([ze({
+X([ze({
 	type: Number,
 	attribute: "roster-id"
-})], $.prototype, "rosterId", void 0), Q([ze({
+})], Z.prototype, "rosterId", void 0), X([ze({
 	type: String,
 	attribute: "week-start"
-})], $.prototype, "weekStart", void 0), Q([A()], $.prototype, "week", void 0), Q([A()], $.prototype, "available", void 0), Q([A()], $.prototype, "staffQuery", void 0), Q([A()], $.prototype, "error", void 0), Q([A()], $.prototype, "dragging", void 0), Q([A()], $.prototype, "pickedUp", void 0), Q([A()], $.prototype, "pendingDelete", void 0), Q([A()], $.prototype, "editing", void 0), Q([A()], $.prototype, "editForm", void 0), Q([A()], $.prototype, "liveMessage", void 0), Q([A()], $.prototype, "focusedCellKey", void 0), Q([A()], $.prototype, "focusedPillIdx", void 0), Q([A()], $.prototype, "recentlyChanged", void 0), $ = Q([Ie("staff-roster-grid")], $);
-function jt(e) {
-	let t = (e.getDay() + 6) % 7, n = new Date(e);
-	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);
-}
-function Mt() {
-	return new URLSearchParams(window.location.search).get("class") ?? "";
-}
+})], Z.prototype, "weekStart", void 0), X([A()], Z.prototype, "week", void 0), X([A()], Z.prototype, "available", void 0), X([A()], Z.prototype, "availableMeta", void 0), X([A()], Z.prototype, "availableContextDay", void 0), X([A()], Z.prototype, "staffQuery", void 0), X([A()], Z.prototype, "error", void 0), X([A()], Z.prototype, "dragging", void 0), X([A()], Z.prototype, "pickedUp", void 0), X([A()], Z.prototype, "pendingDelete", void 0), X([A()], Z.prototype, "editing", void 0), X([A()], Z.prototype, "editForm", void 0), X([A()], Z.prototype, "liveMessage", void 0), X([A()], Z.prototype, "focusedCellKey", void 0), X([A()], Z.prototype, "focusedPillIdx", void 0), X([A()], Z.prototype, "recentlyChanged", void 0), Z = X([Ie("staff-roster-grid")], Z);
+//#endregion
+//#region src/components/my-shifts-list.ts
+var Ht = {
+	scheduled: "Scheduled",
+	confirmed: "Confirmed",
+	completed: "Completed",
+	cancelled: "Cancelled",
+	no_show: "No-show"
+}, Q = class extends k {
+	constructor(...e) {
+		super(...e), this.weekStart = "", this.week = null, this.error = "", this.loading = !1, this.dropping = null, this.successMsg = "", this.pendingDrop = null;
+	}
+	createRenderRoot() {
+		return this;
+	}
+	connectedCallback() {
+		super.connectedCallback(), this.weekStart ||= Mt(/* @__PURE__ */ new Date()), this.refresh();
+	}
+	async refresh() {
+		this.loading = !0;
+		try {
+			this.week = await Dt(this.weekStart), this.error = "";
+		} catch (e) {
+			this.error = e instanceof Error ? e.message : String(e);
+		} finally {
+			this.loading = !1;
+		}
+	}
+	shiftWeek(e) {
+		this.weekStart = Pt(this.weekStart, e), this.refresh();
+	}
+	rosterById(e) {
+		return this.week?.rosters.find((t) => t.id === e);
+	}
+	requestDrop(e) {
+		this.pendingDrop = e;
+	}
+	cancelDrop() {
+		this.pendingDrop = null;
+	}
+	async confirmDrop() {
+		let e = this.pendingDrop;
+		if (e) {
+			this.pendingDrop = null, this.dropping = e.assignment_id, this.error = "";
+			try {
+				await At(e.assignment_id), this.successMsg = "Shift dropped.", setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
+			} catch (e) {
+				this.error = e instanceof Error ? e.message : String(e);
+			} finally {
+				this.dropping = null;
+			}
+		}
+	}
+	groupByDate() {
+		let e = /* @__PURE__ */ new Map();
+		for (let t of this.week?.shifts ?? []) {
+			let n = e.get(t.assignment_date);
+			n ? n.push(t) : e.set(t.assignment_date, [t]);
+		}
+		return [...e.entries()].sort(([e], [t]) => e.localeCompare(t)).map(([e, t]) => ({
+			date: e,
+			shifts: t
+		}));
+	}
+	render() {
+		if (this.loading && !this.week) return C`<div class="text-center text-muted py-4">Loading…</div>`;
+		let e = this.groupByDate();
+		return C`
+      ${this.successMsg ? C`
+            <div class="srg-toast alert alert-success" role="status" aria-live="polite">
+              <i class="fa fa-check" aria-hidden="true"></i>
+              <span>${this.successMsg}</span>
+            </div>
+          ` : T}
+      ${this.error ? C`
+            <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
+              <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+              <span>${this.error}</span>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Dismiss"
+                @click=${() => this.error = ""}
+              ></button>
+            </div>
+          ` : T}
+
+      <div class="btn-toolbar srg-toolbar" role="toolbar">
+        <div class="btn-group" role="group">
+          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(-7)}>
+            <i class="fa fa-arrow-left" aria-hidden="true"></i> Previous
+          </button>
+          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(7)}>
+            Next <i class="fa fa-arrow-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        <span class="srg-week-label">Week of ${this.weekStart}</span>
+        <div class="btn-group" role="group">
+          <button class="btn btn-default btn-sm" @click=${() => void this.refresh()}>
+            <i class="fa fa-refresh" aria-hidden="true"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <section class="page-section">
+        ${e.length === 0 ? C`<p class="text-muted">No shifts scheduled this week.</p>` : C`
+              <ul class="list-group">
+                ${Ze(e, (e) => e.date, (e) => C`
+                    <li class="list-group-item">
+                      <h4 class="srg-day-heading">${It(e.date)}</h4>
+                      <ul class="list-unstyled">
+                        ${e.shifts.map((e) => this.renderShift(e))}
+                      </ul>
+                    </li>
+                  `)}
+              </ul>
+            `}
+      </section>
+
+      ${this.pendingDrop ? this.renderDropModal(this.pendingDrop) : T}
+    `;
+	}
+	renderShift(e) {
+		let t = this.rosterById(e.roster_id);
+		return C`
+      <li class="srg-my-shift">
+        <span
+          class="staff-roster-type-swatch"
+          style="background-color: ${t?.type_color ?? "#666"};"
+          aria-hidden="true"
+        ></span>
+        <span class="srg-my-shift-time">
+          ${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}
+        </span>
+        <span class="srg-my-shift-roster">
+          <a
+            href="?class=${Nt()}&method=tool&op=view_assignments&roster_id=${e.roster_id}&week_start=${this.weekStart}"
+          >
+            ${t?.name ?? "Roster #" + e.roster_id}
+          </a>
+          ${t?.branch_name ? C`<small class="text-muted"> · ${t.branch_name}</small>` : T}
+        </span>
+        ${e.location ? C`<span class="srg-my-shift-location text-muted">
+              <i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}
+            </span>` : T}
+        <span class="srg-my-shift-status badge">${Ht[e.status] ?? e.status}</span>
+        <a
+          class="btn btn-default btn-xs"
+          href="?class=${Nt()}&method=tool&op=manage_swaps&roster_id=${e.roster_id}"
+          title="Request swap on this roster"
+        >
+          <i class="fa fa-exchange" aria-hidden="true"></i> Swap
+        </a>
+        <button
+          type="button"
+          class="btn btn-default btn-xs"
+          ?disabled=${this.dropping === e.assignment_id}
+          @click=${() => this.requestDrop(e)}
+          title="Drop this shift"
+        >
+          <i class="fa fa-times" aria-hidden="true"></i>
+          ${this.dropping === e.assignment_id ? "Dropping…" : "Drop"}
+        </button>
+      </li>
+    `;
+	}
+	renderDropModal(e) {
+		let t = this.rosterById(e.roster_id);
+		return C`
+      <div
+        class="modal show staff-roster-modal-open"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        style="display: block;"
+        @click=${(e) => {
+			e.target.classList.contains("modal") && this.cancelDrop();
+		}}
+      >
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title">Drop this shift?</h1>
+              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelDrop()}></button>
+            </div>
+            <div class="modal-body">
+              <p>
+                Drop your shift on
+                <strong>${It(e.assignment_date)}</strong>,
+                <strong>${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</strong>
+                (${t?.name ?? "Roster #" + e.roster_id})?
+              </p>
+              <p class="text-muted">
+                The slot will be re-opened for someone else to claim. If you
+                need a one-for-one trade instead, use Swap.
+              </p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-danger" @click=${() => void this.confirmDrop()}>
+                <i class="fa fa-times"></i> Drop shift
+              </button>
+              <button type="button" class="btn btn-default" @click=${() => this.cancelDrop()}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop fade show staff-roster-modal-backdrop"></div>
+    `;
+	}
+};
+X([ze({
+	type: String,
+	attribute: "week-start"
+})], Q.prototype, "weekStart", void 0), X([A()], Q.prototype, "week", void 0), X([A()], Q.prototype, "error", void 0), X([A()], Q.prototype, "loading", void 0), X([A()], Q.prototype, "dropping", void 0), X([A()], Q.prototype, "successMsg", void 0), X([A()], Q.prototype, "pendingDrop", void 0), Q = X([Ie("my-shifts-list")], Q);
+//#endregion
+//#region src/components/open-shifts-list.ts
+var $ = class extends k {
+	constructor(...e) {
+		super(...e), this.weekStart = "", this.data = null, this.error = "", this.loading = !1, this.claiming = null, this.successMsg = "", this.pendingClaim = null;
+	}
+	createRenderRoot() {
+		return this;
+	}
+	connectedCallback() {
+		super.connectedCallback(), this.weekStart ||= Mt(/* @__PURE__ */ new Date()), this.refresh();
+	}
+	async refresh() {
+		this.loading = !0;
+		try {
+			this.data = await Ot(this.weekStart), this.error = "";
+		} catch (e) {
+			this.error = e instanceof Error ? e.message : String(e);
+		} finally {
+			this.loading = !1;
+		}
+	}
+	shiftWeek(e) {
+		this.weekStart = Pt(this.weekStart, e), this.refresh();
+	}
+	groupByDate() {
+		let e = /* @__PURE__ */ new Map();
+		for (let t of this.data?.openings ?? []) {
+			let n = e.get(t.assignment_date);
+			n ? n.push(t) : e.set(t.assignment_date, [t]);
+		}
+		return [...e.entries()].sort(([e], [t]) => e.localeCompare(t)).map(([e, t]) => ({
+			date: e,
+			openings: t
+		}));
+	}
+	requestClaim(e) {
+		this.pendingClaim = e;
+	}
+	cancelClaim() {
+		this.pendingClaim = null;
+	}
+	async confirmClaim() {
+		let e = this.pendingClaim;
+		if (!e) return;
+		this.pendingClaim = null;
+		let t = this.openingKey(e);
+		this.claiming = t, this.error = "";
+		try {
+			await kt({
+				slot_id: e.slot_id,
+				assignment_date: e.assignment_date
+			}), this.successMsg = `Claimed ${e.roster_name} on ${e.assignment_date}.`, setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
+		} catch (e) {
+			this.error = e instanceof Error ? e.message : String(e);
+		} finally {
+			this.claiming = null;
+		}
+	}
+	openingKey(e) {
+		return e.slot_id * 1e8 + this.dateHash(e.assignment_date);
+	}
+	render() {
+		if (this.loading && !this.data) return C`<div class="text-center text-muted py-4">Loading…</div>`;
+		let e = this.groupByDate();
+		return C`
+      ${this.successMsg ? C`
+            <div class="srg-toast alert alert-success" role="status" aria-live="polite">
+              <i class="fa fa-check" aria-hidden="true"></i>
+              <span>${this.successMsg}</span>
+            </div>
+          ` : T}
+      ${this.error ? C`
+            <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
+              <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+              <span>${this.error}</span>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Dismiss"
+                @click=${() => this.error = ""}
+              ></button>
+            </div>
+          ` : T}
+
+      <div class="btn-toolbar srg-toolbar" role="toolbar">
+        <div class="btn-group" role="group">
+          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(-7)}>
+            <i class="fa fa-arrow-left" aria-hidden="true"></i> Previous
+          </button>
+          <button class="btn btn-default btn-sm" @click=${() => this.shiftWeek(7)}>
+            Next <i class="fa fa-arrow-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        <span class="srg-week-label">Week of ${this.weekStart}</span>
+        <div class="btn-group" role="group">
+          <button class="btn btn-default btn-sm" @click=${() => void this.refresh()}>
+            <i class="fa fa-refresh" aria-hidden="true"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <section class="page-section">
+        ${e.length === 0 ? C`<p class="text-muted">No open shifts available this week.</p>` : C`
+              <ul class="list-group">
+                ${Ze(e, (e) => e.date, (e) => C`
+                    <li class="list-group-item">
+                      <h4 class="srg-day-heading">${It(e.date)}</h4>
+                      <ul class="list-unstyled">
+                        ${e.openings.map((e) => this.renderOpening(e))}
+                      </ul>
+                    </li>
+                  `)}
+              </ul>
+            `}
+      </section>
+
+      ${this.pendingClaim ? this.renderClaimModal(this.pendingClaim) : T}
+    `;
+	}
+	renderClaimModal(e) {
+		return C`
+      <div
+        class="modal show staff-roster-modal-open"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        style="display: block;"
+        @click=${(e) => {
+			e.target.classList.contains("modal") && this.cancelClaim();
+		}}
+      >
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title">Claim this shift?</h1>
+              <button type="button" class="btn-close" aria-label="Close" @click=${() => this.cancelClaim()}></button>
+            </div>
+            <div class="modal-body">
+              <p>
+                Claim
+                <strong>${It(e.assignment_date)}</strong>,
+                <strong>${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</strong>
+                on <strong>${e.roster_name}</strong>?
+              </p>
+              ${e.location ? C`<p class="text-muted"><i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}</p>` : T}
+              <p class="text-muted">
+                You'll be added to the roster immediately. Drop the shift later
+                from "My shifts" if plans change.
+              </p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" @click=${() => void this.confirmClaim()}>
+                <i class="fa fa-hand-paper-o"></i> Claim shift
+              </button>
+              <button type="button" class="btn btn-default" @click=${() => this.cancelClaim()}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop fade show staff-roster-modal-backdrop"></div>
+    `;
+	}
+	renderOpening(e) {
+		let t = this.openingKey(e), n = this.claiming === t;
+		return C`
+      <li class="srg-my-shift">
+        <span
+          class="staff-roster-type-swatch"
+          style="background-color: ${e.type_color};"
+          aria-hidden="true"
+        ></span>
+        <span class="srg-my-shift-time">
+          ${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}
+        </span>
+        <span class="srg-my-shift-roster">
+          ${e.roster_name}
+          ${e.branch_name ? C`<small class="text-muted"> · ${e.branch_name}</small>` : T}
+        </span>
+        ${e.location ? C`<span class="srg-my-shift-location text-muted">
+              <i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}
+            </span>` : T}
+        <span class="srg-my-shift-status badge">${e.capacity_remaining} open</span>
+        <button
+          type="button"
+          class="btn btn-primary btn-xs"
+          ?disabled=${n}
+          @click=${() => this.requestClaim(e)}
+        >
+          <i class="fa fa-hand-paper-o" aria-hidden="true"></i>
+          ${n ? "Claiming…" : "Claim"}
+        </button>
+      </li>
+    `;
+	}
+	dateHash(e) {
+		return Number(e.replaceAll("-", ""));
+	}
+};
+X([ze({
+	type: String,
+	attribute: "week-start"
+})], $.prototype, "weekStart", void 0), X([A()], $.prototype, "data", void 0), X([A()], $.prototype, "error", void 0), X([A()], $.prototype, "loading", void 0), X([A()], $.prototype, "claiming", void 0), X([A()], $.prototype, "successMsg", void 0), X([A()], $.prototype, "pendingClaim", void 0), $ = X([Ie("open-shifts-list")], $);
 //#endregion

@@ -252,6 +252,16 @@
 
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'datatables.inc' %]
+    [% IF post_redirect_op %]
+    <script>
+        // Post-Redirect-Get guard: replace the cud-* URL with the GET landing
+        // URL so a browser refresh doesn't re-POST the form.
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, '',
+                '/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=admin&op=[% post_redirect_op | uri %]');
+        }
+    </script>
+    [% END %]
     <script>
         $(document).ready(function() {
             $("#roster_types_table").dataTable($.extend(true, {}, dataTablesDefaults, {

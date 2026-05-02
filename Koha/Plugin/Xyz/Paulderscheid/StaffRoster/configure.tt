@@ -236,4 +236,13 @@
     </div>
 </div>
 
+[% IF post_redirect_op %]
+<script>
+    // Post-Redirect-Get guard: drop the cud-save URL so refresh doesn't resave.
+    if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, '',
+            '/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure');
+    }
+</script>
+[% END %]
 [% INCLUDE 'intranet-bottom.inc' %]
