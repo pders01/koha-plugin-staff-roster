@@ -2327,11 +2327,15 @@ sub intranet_js {
         staffroster_swap_approve: 'Staff Roster: approve swaps as a manager',
         staffroster_configure: 'Staff Roster: change plugin configuration'
       };
+      // Sub-permission checkboxes carry value="<flag>:<code>" (e.g.
+      // "plugins:staffroster_view") and id "<flag>_<code>". Strip the prefix
+      // before looking up our label map.
       document.querySelectorAll('input.flag[type="checkbox"][name="flag"]').forEach(function (cb) {
-        var code = cb.value;
+        var raw  = cb.value || '';
+        var code = raw.indexOf(':') >= 0 ? raw.split(':')[1] : raw;
         if (!Object.prototype.hasOwnProperty.call(labels, code)) return;
-        var label = (cb.closest('li, tr, div') || document)
-            .querySelector('label.permissiondesc') || document.querySelector('label[for="' + cb.id + '"]');
+        var label = document.querySelector('label[for="' + cb.id + '"]')
+                 || (cb.closest('li, tr, div') || document).querySelector('label.permissiondesc');
         if (label && !label.textContent.trim()) {
           label.innerHTML = '<span class="sub_permission">' + labels[code] +
             '</span> <span class="permissioncode">(' + code + ')</span>';
