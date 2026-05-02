@@ -104,6 +104,15 @@ Both items below need an external decision before any code lands.
 
 ## Done (recent — older entries pruned 2026-05-02)
 
+- [x] **Cypress coverage for the TT-form workflows**:
+      - `manage_slots_spec.ts` (3): create slot via add-slot form,
+        no-day-of-week validation, delete slot via inline confirm
+        modal — exercises cud-save_slot + cud-delete_slot through the
+        DOM.
+      - `swap_workflow_spec.ts` (2): create swap request via the
+        request-swap form, approve a pending swap via the per-row form
+        and verify the assignment now belongs to the target borrower.
+      Cypress count: 27.
 - [x] **Cypress coverage for assignment CRUD + Koha integrations**:
       - `assignment_crud_spec.ts` (5): create with default status,
         PUT updates status + notes, DELETE drops from week,
