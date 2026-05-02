@@ -652,6 +652,7 @@ sub admin {
         op               => $op,
         messages         => \@messages,
         post_redirect_op => $post_redirect_op,
+        aside            => $self->_aside_context( $dbh, op => 'admin' ),
     );
 
     return $self->output_html( $template->output );
@@ -728,6 +729,55 @@ sub _admin_delete_type {
     return;
 }
 
+=head3 _aside_context
+
+Common sidebar payload shared by every method (tool / admin / configure /
+report). Returns a hashref keyed for the unified _aside.inc:
+
+  rosters           - active rosters the current user can view, decorated
+                      with a short location label, sorted by name. Used by
+                      the sidebar's "Rosters" expanding section.
+  active_roster_id  - currently focused roster (for highlight + per-roster
+                      sub-nav rendering).
+  current_op        - current tool op string when in tool method, else
+                      'admin' / 'configure' / 'report'.
+
+=cut
+
+sub _aside_context {
+    my ( $self, $dbh, %args ) = @_;
+
+    my $rows = $dbh->selectall_arrayref(
+        q{
+        SELECT r.id, r.name, r.branch_id, r.library_group_id,
+               b.branchname AS branch_name, lg.title AS group_name
+        FROM staff_roster r
+        LEFT JOIN branches b ON r.branch_id = b.branchcode
+        LEFT JOIN library_groups lg ON r.library_group_id = lg.id
+        WHERE r.is_active = 1
+        ORDER BY r.name
+    }, { Slice => {} }
+    ) || [];
+
+    my @visible;
+    for my $r ( @{$rows} ) {
+        next if !$self->_can_view_roster($r);
+        my $location = $r->{branch_name} // $r->{group_name} // q{};
+        push @visible,
+            {
+            id       => $r->{id},
+            name     => $r->{name},
+            location => $location,
+            };
+    }
+
+    return {
+        rosters          => \@visible,
+        active_roster_id => $args{roster_id},
+        current_op       => $args{op},
+    };
+}
+
 sub _admin_view_list {
     my ( $dbh, $id, $template ) = @_;
     my $roster_types = $dbh->selectall_arrayref( q{SELECT * FROM staff_roster_types ORDER BY name}, { Slice => {} } );
@@ -777,6 +827,7 @@ sub configure {
     my ( $self, $args ) = @_;
 
     my $cgi = $self->{'cgi'};
+    my $dbh = C4::Context->dbh;
     my $op  = $cgi->param('op') // q{};
 
     my @config_keys = qw(
@@ -856,6 +907,7 @@ sub configure {
         all_libraries                => [ Koha::Libraries->search( {}, { order_by => 'branchname' } )->as_list ],
         patron_categories            => \@categories,
         staff_categories_is_default  => $is_default_fallback ? 1 : 0,
+        aside                        => $self->_aside_context( $dbh, op => 'configure' ),
     );
 
     return $self->output_html( $template->output );
@@ -938,6 +990,8 @@ sub report {
     my ( $self, $args ) = @_;
 
     my $template = $self->get_template( { file => 'report.tt' } );
+    my $dbh      = C4::Context->dbh;
+    $template->param( aside => $self->_aside_context( $dbh, op => 'report' ) );
 
     return $self->output_html( $template->output );
 }
@@ -1052,6 +1106,11 @@ sub tool {
         branches                => $branches,
         post_redirect_op        => $post_redirect_op,
         post_redirect_roster_id => $post_redirect_op ? $cgi->param('roster_id') : undef,
+        aside                   => $self->_aside_context(
+            $dbh,
+            op        => $op,
+            roster_id => $cgi->param('roster_id'),
+        ),
     );
 
     return $self->output_html( $template->output );

@@ -1345,6 +1345,7 @@ function Rt(e) {
 //#region src/i18n/index.ts
 var zt = { de: {
 	"Staff Roster": "Dienstplan",
+	"No rosters yet.": "Noch keine Dienstpläne.",
 	Plugins: "Plugins",
 	Configuration: "Konfiguration",
 	Administration: "Verwaltung",

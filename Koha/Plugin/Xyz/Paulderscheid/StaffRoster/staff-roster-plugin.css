@@ -135,3 +135,152 @@ fieldset.rows li > .hint {
 .staff-roster-day-checkbox input {
     margin: 0;
 }
+
+/* Unified sidebar (_aside.inc): native <details>/<summary> collapsing.
+ * The outer <details> is open by default; we only force-collapse it on
+ * narrow viewports. Inner roster list can be toggled independently. */
+
+.staff-roster-menu summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.staff-roster-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.staff-roster-menu > summary {
+    padding-left: 0.5em;
+}
+
+.staff-roster-menu > summary > h5 {
+    display: inline-block;
+    margin: 0;
+}
+
+.staff-roster-menu > summary::after {
+    content: "\f078";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-left: 0.5rem;
+    font-size: 0.7em;
+    color: #888;
+    transition: transform 0.15s ease;
+    display: none;
+}
+
+@media (max-width: 991px) {
+    .staff-roster-menu > summary {
+        display: block;
+        padding: 0.6rem 0.5em;
+    }
+    .staff-roster-menu > summary::after {
+        display: inline-block;
+    }
+    .staff-roster-menu[open] > summary::after {
+        transform: rotate(180deg);
+    }
+    /* Collapse the whole sidebar by default on mobile so it doesn't
+     * push the main content far down on initial load. */
+    aside .staff-roster-menu {
+        /* details[open] is set by the markup; override here. */
+        /* JS-free toggle: rely on the <summary> click. */
+    }
+}
+
+.staff-roster-menu-rosters {
+    margin: 0;
+}
+
+.staff-roster-menu-rosters > summary {
+    /* Match Koha's .sidebar_menu ul li a padding so the gap between
+     * the "Dienstplan" h5 and this dropdown reads the same as every
+     * other heading → submenu pair (e.g. Verwaltung → Dienstplantypen). */
+    padding: 0.7em 0.3em 0.7em 1rem;
+    color: #000;
+    font-weight: bold;
+    border-left: 5px solid transparent;
+    line-height: 1.3;
+}
+
+.staff-roster-menu-rosters[open] > summary {
+    border-left-color: #408540;
+    color: #006100;
+    background: #f3f4f4;
+}
+
+.staff-roster-menu-rosters > summary > a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.staff-roster-menu-rosters > summary > a .badge {
+    background: #e6e6e6;
+    color: #555;
+    font-weight: normal;
+    padding: 0.05em 0.45em;
+    border-radius: 999px;
+    font-size: 0.75em;
+    margin-left: 0.3em;
+}
+
+.staff-roster-menu-roster-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: #f7f8f8;
+}
+
+.staff-roster-menu-roster-list li a {
+    display: block;
+    padding: 0.3em 0.3em 0.3em 1.5rem;
+    border-left: 5px solid transparent;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.9em;
+    line-height: 1.2;
+}
+
+.staff-roster-menu-roster-list li a:hover {
+    background: #eff3ef;
+    border-left-color: rgba(64, 133, 64, 0.5);
+}
+
+.staff-roster-menu-roster-list li.active > a {
+    background: #e8f5e9;
+    border-left-color: #408540;
+    color: #006100;
+    font-weight: bold;
+}
+
+.staff-roster-menu-roster-list small {
+    display: block;
+    margin-top: 0;
+    font-size: 0.78em;
+    color: #6c757d;
+    line-height: 1.1;
+}
+
+.staff-roster-menu-empty {
+    margin: 0.3rem 1rem;
+    font-size: 0.85em;
+    font-style: italic;
+}
+
+/* Tighten the gap between sidebar sections so the four h5 headings
+ * don't feel airy, and kill the default <ul> top + bottom margin so
+ * the menu items sit right under their heading. The selector goes
+ * through `aside` so it beats Koha core's
+ * `.sidebar_menu ul { margin-bottom: 10px }` on specificity. */
+aside .staff-roster-menu h5 {
+    margin: 0.75rem 0 0.5rem;
+    padding-top: 0;
+}
+
+aside .staff-roster-menu ul {
+    margin: 0;
+}
+
+aside .staff-roster-menu > details > ul + h5 {
+    margin-top: 0.4rem;
+}
