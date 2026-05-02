@@ -27,6 +27,8 @@ use C4::Context;
 use Try::Tiny qw( catch try );
 
 use Koha::DateUtils;
+
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
 
 =head1 API
@@ -248,7 +250,7 @@ sub me_week {
         }
         my $borrowernumber = $user->borrowernumber;
 
-        my $week_start = _validated_week_start( $c->req->param('start') );
+        my $week_start = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils::validated_week_start( $c->req->param('start') );
 
         my $dbh    = C4::Context->dbh;
         my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
@@ -364,7 +366,7 @@ sub me_open_slots {
         }
         my $borrowernumber = $user->borrowernumber;
 
-        my $week_start = _validated_week_start( $c->req->param('start') );
+        my $week_start = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils::validated_week_start( $c->req->param('start') );
 
         my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
         if ( !$plugin->retrieve_data('staff_can_self_assign') ) {
@@ -527,33 +529,6 @@ sub me_open_slots {
     catch {
         $c->unhandled_exception($_);
     };
-}
-
-=head3 _current_week_start
-
-Returns the YYYY-MM-DD of the most recent Monday in the Koha-configured
-timezone, used as the fallback when the C<start> query param is absent
-or malformed.
-
-=cut
-
-sub _current_week_start {
-    return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
-}
-
-=head3 _validated_week_start
-
-Returns C<$input> when it parses as YYYY-MM-DD, otherwise falls back to
-C<_current_week_start>. Keeps malformed input from flowing into
-DATE_ADD bind values where it would silently coerce to NULL.
-
-=cut
-
-sub _validated_week_start {
-    my ($input) = @_;
-    return _current_week_start()
-        unless defined $input && $input =~ /\A\d{4}-\d{2}-\d{2}\z/;
-    return $input;
 }
 
 1;

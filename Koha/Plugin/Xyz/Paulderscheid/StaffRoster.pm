@@ -51,6 +51,7 @@ use Koha::Patron::Categories;
 use Koha::Patrons;
 
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils;
 
 # Recurrence helpers; pulled in early so the slot save path doesn't pay the
 # require cost on first request.
@@ -1792,7 +1793,7 @@ sub _tool_view_manage_slots {
 sub _tool_view_assignments {
     my ( $self, $dbh, $cgi, $template ) = @_;
     my $roster_id  = $cgi->param('roster_id');
-    my $week_start = $cgi->param('week_start') // _get_current_week_start();
+    my $week_start = $cgi->param('week_start') // Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils::current_week_start();
 
     my $roster = $dbh->selectrow_hashref(
         q{
@@ -1818,14 +1819,14 @@ sub _tool_view_assignments {
 
 sub _tool_view_my_shifts {
     my ( $self, $dbh, $cgi, $template ) = @_;
-    my $week_start = $cgi->param('week_start') // _get_current_week_start();
+    my $week_start = $cgi->param('week_start') // Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils::current_week_start();
     $template->param( week_start => $week_start );
     return;
 }
 
 sub _tool_view_open_shifts {
     my ( $self, $dbh, $cgi, $template ) = @_;
-    my $week_start = $cgi->param('week_start') // _get_current_week_start();
+    my $week_start = $cgi->param('week_start') // Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils::current_week_start();
     $template->param(
         week_start            => $week_start,
         staff_can_self_assign => $self->retrieve_data('staff_can_self_assign') ? 1 : 0,
@@ -2500,9 +2501,6 @@ sub _bulk_additional_field_values {
     return \%out;
 }
 
-sub _get_current_week_start {
-    return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
-}
 
 =head3 api_namespace
 

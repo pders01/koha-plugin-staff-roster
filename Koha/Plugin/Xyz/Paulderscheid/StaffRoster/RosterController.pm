@@ -28,6 +28,7 @@ use Try::Tiny qw( catch try );
 use Koha::AuthorisedValues;
 use Koha::DateUtils;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils;
 
 =head1 API
 
@@ -51,7 +52,7 @@ sub get_week {
         my $week_start
             = ( defined $start_param && $start_param =~ /\A\d{4}-\d{2}-\d{2}\z/ )
             ? $start_param
-            : _current_week_start();
+            : Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils::current_week_start();
 
         my $dbh = C4::Context->dbh;
 
@@ -205,16 +206,5 @@ sub get_week {
     };
 }
 
-=head3 _current_week_start
-
-Default fallback for the C<start> query param. Returns the YYYY-MM-DD of
-the most recent Monday in the Koha-configured timezone (DateTime's
-truncate(week) anchors to Monday).
-
-=cut
-
-sub _current_week_start {
-    return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
-}
 
 1;
