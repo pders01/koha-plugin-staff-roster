@@ -6,22 +6,22 @@ const BASE = `/api/v1/contrib/${NS}`;
 
 const ENDPOINTS: ApiEndpoints = {
   get: {
-    rosterWeek: { url: `${BASE}/rosters`, cache: false },
-    availableStaff: { url: `${BASE}/staff/available`, cache: false },
-    myWeek: { url: `${BASE}/me/week`, cache: false },
-    myOpenSlots: { url: `${BASE}/me/open_slots`, cache: false },
+    rosterWeek: { url: `${BASE}/rosters`, ignoreCache: true },
+    availableStaff: { url: `${BASE}/staff/available`, ignoreCache: true },
+    myWeek: { url: `${BASE}/me/week`, ignoreCache: true },
+    myOpenSlots: { url: `${BASE}/me/open_slots`, ignoreCache: true },
   },
   post: {
-    assignments: { url: `${BASE}/assignments`, cache: false },
-    bulk: { url: `${BASE}/assignments/bulk`, cache: false },
-    selfClaim: { url: `${BASE}/me/claim`, cache: false },
+    assignments: { url: `${BASE}/assignments`, ignoreCache: true },
+    bulk: { url: `${BASE}/assignments/bulk`, ignoreCache: true },
+    selfClaim: { url: `${BASE}/me/claim`, ignoreCache: true },
   },
   put: {
-    assignments: { url: `${BASE}/assignments`, cache: false },
+    assignments: { url: `${BASE}/assignments`, ignoreCache: true },
   },
   delete: {
-    assignments: { url: `${BASE}/assignments`, cache: false },
-    selfClaim: { url: `${BASE}/me/claim`, cache: false },
+    assignments: { url: `${BASE}/assignments`, ignoreCache: true },
+    selfClaim: { url: `${BASE}/me/claim`, ignoreCache: true },
   },
 };
 

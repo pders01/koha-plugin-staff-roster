@@ -1200,47 +1200,47 @@ var wt = class {
 	get: {
 		rosterWeek: {
 			url: `${G}/rosters`,
-			cache: !1
+			ignoreCache: !0
 		},
 		availableStaff: {
 			url: `${G}/staff/available`,
-			cache: !1
+			ignoreCache: !0
 		},
 		myWeek: {
 			url: `${G}/me/week`,
-			cache: !1
+			ignoreCache: !0
 		},
 		myOpenSlots: {
 			url: `${G}/me/open_slots`,
-			cache: !1
+			ignoreCache: !0
 		}
 	},
 	post: {
 		assignments: {
 			url: `${G}/assignments`,
-			cache: !1
+			ignoreCache: !0
 		},
 		bulk: {
 			url: `${G}/assignments/bulk`,
-			cache: !1
+			ignoreCache: !0
 		},
 		selfClaim: {
 			url: `${G}/me/claim`,
-			cache: !1
+			ignoreCache: !0
 		}
 	},
 	put: { assignments: {
 		url: `${G}/assignments`,
-		cache: !1
+		ignoreCache: !0
 	} },
 	delete: {
 		assignments: {
 			url: `${G}/assignments`,
-			cache: !1
+			ignoreCache: !0
 		},
 		selfClaim: {
 			url: `${G}/me/claim`,
-			cache: !1
+			ignoreCache: !0
 		}
 	}
 });
@@ -1330,21 +1330,16 @@ function It(e, t) {
 	let n = new Date(e);
 	return n.setDate(n.getDate() + t), n.toISOString().slice(0, 10);
 }
-var Lt = [
-	"Sunday",
-	"Monday",
-	"Tuesday",
-	"Wednesday",
-	"Thursday",
-	"Friday",
-	"Saturday"
-];
+function Lt() {
+	return typeof document < "u" && document.documentElement.lang || "en";
+}
 function Rt(e) {
 	let t = /* @__PURE__ */ new Date(e + "T00:00:00");
-	return `${Lt[t.getDay()]}, ${t.toLocaleDateString(void 0, {
+	return new Intl.DateTimeFormat(Lt(), {
+		weekday: "long",
 		month: "short",
 		day: "numeric"
-	})}`;
+	}).format(t);
 }
 //#endregion
 //#region src/i18n/index.ts
@@ -1852,7 +1847,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 			status: "scheduled",
 			notes: "",
 			fields: {}
-		}, this.editOriginEl = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.recentlyChanged = /* @__PURE__ */ new Set(), this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
+		}, this.editOriginEl = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.fetchGeneration = 0, this.recentlyChanged = /* @__PURE__ */ new Set(), this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
 			(e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey && (e.preventDefault(), this.undo());
 		}, new Y(this, () => this.editing !== null, () => this.cancelEdit()), new Y(this, () => this.pendingDelete !== null, () => this.cancelDelete()), new Y(this, () => this.pickedUp !== null, () => this.cancelPickup());
 	}
@@ -1869,18 +1864,23 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		super.disconnectedCallback(), this.pollTimer && clearInterval(this.pollTimer), this.recentlyChangedTimer && clearTimeout(this.recentlyChangedTimer), document.removeEventListener("keydown", this.onKeyDown);
 	}
 	async refresh() {
-		if (this.rosterId) try {
-			let e = /* @__PURE__ */ new Map(), t = /* @__PURE__ */ new Set();
-			for (let n of this.week?.assignments ?? []) e.set(this.assignmentKey(n), n.updated_at), t.add(n.id);
-			let n = await Tt(this.rosterId, this.weekStart);
-			if (this.dragging) return;
-			if (this.week = n, this.error = "", t.size > 0) {
-				let t = /* @__PURE__ */ new Set();
-				for (let r of n.assignments) {
-					let n = e.get(this.assignmentKey(r));
-					(!n || n !== r.updated_at) && t.add(r.id);
+		if (!this.rosterId) return;
+		let e = ++this.fetchGeneration, t = () => {
+			let e = this.querySelector(".srg-grid");
+			e && e.offsetWidth;
+		};
+		try {
+			let n = /* @__PURE__ */ new Map(), r = /* @__PURE__ */ new Set();
+			for (let e of this.week?.assignments ?? []) n.set(this.assignmentKey(e), e.updated_at), r.add(e.id);
+			let i = await Tt(this.rosterId, this.weekStart);
+			if (this.dragging || e !== this.fetchGeneration) return;
+			if (this.week = i, this.updateComplete.then(t), this.error = "", r.size > 0) {
+				let e = /* @__PURE__ */ new Set();
+				for (let t of i.assignments) {
+					let r = n.get(this.assignmentKey(t));
+					(!r || r !== t.updated_at) && e.add(t.id);
 				}
-				t.size > 0 && (this.recentlyChanged = t, this.recentlyChangedTimer && clearTimeout(this.recentlyChangedTimer), this.recentlyChangedTimer = setTimeout(() => {
+				e.size > 0 && (this.recentlyChanged = e, this.recentlyChangedTimer && clearTimeout(this.recentlyChangedTimer), this.recentlyChangedTimer = setTimeout(() => {
 					this.recentlyChanged = /* @__PURE__ */ new Set();
 				}, 4e3));
 			}
@@ -1960,43 +1960,48 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		}
 	}
 	async dropOnCell(e, t) {
-		if (this.dragging) {
-			if (this.dragging.kind === "staff") {
-				let n = this.dragging.staff;
-				try {
-					let r = await Et({
-						slot_id: e.id,
-						patron_id: n.patron_id,
-						assignment_date: t
-					});
-					await this.pushUndo({
-						kind: "create",
-						id: r.id
-					}), await this.refresh();
-				} catch (e) {
-					this.setError(e.message);
-				}
-			} else {
-				let n = this.dragging.assignment;
-				if (n.slot_id === e.id && n.assignment_date === t) return;
-				try {
-					await Dt(n.id, {
-						slot_id: e.id,
-						assignment_date: t
-					}), await this.pushUndo({
-						kind: "update",
-						id: n.id,
-						before: {
-							slot_id: n.slot_id,
-							patron_id: n.patron_id,
-							assignment_date: n.assignment_date
-						}
-					}), await this.refresh();
-				} catch (e) {
-					this.setError(e.message);
-				}
+		if (!this.dragging) return;
+		let n = this.dragging;
+		if (n.kind === "staff") {
+			let r = n.staff;
+			try {
+				let n = await Et({
+					slot_id: e.id,
+					patron_id: r.patron_id,
+					assignment_date: t
+				});
+				await this.pushUndo({
+					kind: "create",
+					id: n.id
+				}), this.dragging = null, this.week &&= {
+					...this.week,
+					assignments: [...this.week.assignments, n]
+				}, await this.refresh();
+			} catch (e) {
+				this.dragging = null, this.setError(e.message);
 			}
-			this.dragging = null;
+		} else {
+			let r = n.assignment;
+			if (r.slot_id === e.id && r.assignment_date === t) {
+				this.dragging = null;
+				return;
+			}
+			try {
+				await Dt(r.id, {
+					slot_id: e.id,
+					assignment_date: t
+				}), await this.pushUndo({
+					kind: "update",
+					id: r.id,
+					before: {
+						slot_id: r.slot_id,
+						patron_id: r.patron_id,
+						assignment_date: r.assignment_date
+					}
+				}), this.dragging = null, await this.refresh();
+			} catch (e) {
+				this.dragging = null, this.setError(e.message);
+			}
 		}
 	}
 	requestDelete(e) {
@@ -2284,6 +2289,9 @@ var Kt = 5e3, qt = 10, Jt = () => [
 					staff: e
 				}, t.dataTransfer?.setData("text/plain", String(e.patron_id));
 			}}
+                    @click=${(t) => {
+				n ? this.cancelPickup() : this.pickUpStaff(e, t.currentTarget);
+			}}
                     @keydown=${(n) => this.onPillKeyDown(n, e, t)}
                     @focus=${() => this.focusedPillIdx = t}
                   >
@@ -2377,6 +2385,9 @@ var Kt = 5e3, qt = 10, Jt = () => [
                           @drop=${async (t) => {
 				t.preventDefault(), t.currentTarget.classList.remove("srg-dropping"), await this.dropOnCell(e, o);
 			}}
+                          @click=${async () => {
+				this.pickedUp && await this.dropFromKeyboard(e, o);
+			}}
                           @keydown=${(n) => this.onCellKeyDown(n, e, o, t, a)}
                           @focus=${() => {
 				this.focusedCellKey = u, this.loadAvailable({
@@ -2386,26 +2397,32 @@ var Kt = 5e3, qt = 10, Jt = () => [
 				});
 			}}
                         >
-                          ${Qe(d, (e) => e.id, (e) => {
-				let t = this.pickedUp?.kind === "assignment" && this.pickedUp.assignment.id === e.id, n = this.recentlyChanged.has(e.id);
+                          ${Qe(d, (e) => e.id, (t) => {
+				let n = this.pickedUp?.kind === "assignment" && this.pickedUp.assignment.id === t.id, r = this.recentlyChanged.has(t.id);
 				return x`
                                 <div
-                                  class="srg-assignment srg-status-${e.status} ${t ? "srg-picked-up" : ""} ${n ? "srg-recent-update" : ""}"
+                                  class="srg-assignment srg-status-${t.status} ${n ? "srg-picked-up" : ""} ${r ? "srg-recent-update" : ""}"
                                   role="button"
                                   tabindex="0"
                                   draggable="true"
-                                  aria-label="${e.firstname} ${e.surname}, ${i[e.status]}. ${J("Press Enter to move, Delete to remove. Click to edit.")}"
-                                  title="${e.firstname} ${e.surname} (${i[e.status]}). ${J("Click to edit.")}"
-                                  @dragstart=${(t) => {
+                                  aria-label="${t.firstname} ${t.surname}, ${i[t.status]}. ${J("Press Enter to move, Delete to remove. Click to edit.")}"
+                                  title="${t.firstname} ${t.surname} (${i[t.status]}). ${J("Click to edit.")}"
+                                  @dragstart=${(e) => {
 					this.dragging = {
 						kind: "assignment",
-						assignment: e
-					}, t.dataTransfer?.setData("text/plain", String(e.id));
+						assignment: t
+					}, e.dataTransfer?.setData("text/plain", String(t.id));
 				}}
-                                  @click=${(t) => this.requestEdit(e, t.currentTarget)}
-                                  @keydown=${(t) => this.onAssignmentKeyDown(t, e)}
+                                  @click=${async (n) => {
+					if (this.pickedUp) {
+						n.stopPropagation(), await this.dropFromKeyboard(e, o);
+						return;
+					}
+					this.requestEdit(t, n.currentTarget);
+				}}
+                                  @keydown=${(e) => this.onAssignmentKeyDown(e, t)}
                                 >
-                                  ${e.surname}, ${e.firstname}
+                                  ${t.surname}, ${t.firstname}
                                 </div>
                               `;
 			})}
@@ -2703,23 +2720,25 @@ var Q = class extends D {
               <i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}
             </span>` : C}
         <span class="srg-my-shift-status badge">${Gt()[e.status] ?? e.status}</span>
-        <a
-          class="btn btn-default btn-xs"
-          href="?class=${Ft()}&method=tool&op=manage_swaps&roster_id=${e.roster_id}"
-          title="${J("Request swap on this roster")}"
-        >
-          <i class="fa fa-exchange" aria-hidden="true"></i> ${J("Swap")}
-        </a>
-        <button
-          type="button"
-          class="btn btn-default btn-xs"
-          ?disabled=${this.dropping === e.assignment_id}
-          @click=${() => this.requestDrop(e)}
-          title="${J("Drop this shift")}"
-        >
-          <i class="fa fa-times" aria-hidden="true"></i>
-          ${this.dropping === e.assignment_id ? J("Dropping…") : J("Drop")}
-        </button>
+        <span class="srg-my-shift-actions">
+          <a
+            class="btn btn-default btn-xs"
+            href="?class=${Ft()}&method=tool&op=manage_swaps&roster_id=${e.roster_id}"
+            title="${J("Request swap on this roster")}"
+          >
+            <i class="fa fa-exchange" aria-hidden="true"></i> ${J("Swap")}
+          </a>
+          <button
+            type="button"
+            class="btn btn-default btn-xs"
+            ?disabled=${this.dropping === e.assignment_id}
+            @click=${() => this.requestDrop(e)}
+            title="${J("Drop this shift")}"
+          >
+            <i class="fa fa-times" aria-hidden="true"></i>
+            ${this.dropping === e.assignment_id ? J("Dropping…") : J("Drop")}
+          </button>
+        </span>
       </li>
     `;
 	}

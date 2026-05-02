@@ -69,6 +69,10 @@ export class StaffRosterGrid extends LitElement {
 
   private undoStack: UndoOp[] = [];
   private pollTimer?: ReturnType<typeof setInterval>;
+  // Monotonic counter that supersedes in-flight refresh responses. When a
+  // drop fires its own refresh, the in-flight 5s poll's response would
+  // otherwise land afterwards and overwrite the new chip with stale data.
+  private fetchGeneration = 0;
   @state() private recentlyChanged: Set<number> = new Set();
   private recentlyChangedTimer?: ReturnType<typeof setTimeout>;
   private staffDebounce?: ReturnType<typeof setTimeout>;
@@ -129,6 +133,14 @@ export class StaffRosterGrid extends LitElement {
 
   private async refresh(): Promise<void> {
     if (!this.rosterId) return;
+    const myGen = ++this.fetchGeneration;
+    // iOS Safari + table-layout: fixed sometimes skips reflow when chips
+    // are inserted into existing cells; reading layout post-update kicks
+    // the table to repaint so new assignments appear without resize.
+    const forceReflow = () => {
+      const tbl = this.querySelector(".srg-grid") as HTMLElement | null;
+      if (tbl) void tbl.offsetWidth;
+    };
     try {
       const previousByKey = new Map<string, string>();
       const previousIds = new Set<number>();
@@ -138,11 +150,12 @@ export class StaffRosterGrid extends LitElement {
       }
 
       const next = await fetchWeek(this.rosterId, this.weekStart);
-      // A drag started after the fetch went out: applying the response
-      // would replace this.week (and thus the chip the user is holding)
-      // mid-flight. Drop the result; the next poll picks it up.
-      if (this.dragging) return;
+      // Drop the result if (a) a drag is still in flight (race-safe poll
+      // guard) or (b) a newer refresh started after us — in that case
+      // applying our older response would clobber the fresher state.
+      if (this.dragging || myGen !== this.fetchGeneration) return;
       this.week = next;
+      void this.updateComplete.then(forceReflow);
       this.error = "";
 
       // Highlight rows whose updated_at advanced since the previous fetch, or
@@ -292,9 +305,10 @@ export class StaffRosterGrid extends LitElement {
 
   private async dropOnCell(slot: Slot, date: string): Promise<void> {
     if (!this.dragging) return;
+    const cargo = this.dragging;
 
-    if (this.dragging.kind === "staff") {
-      const staff = this.dragging.staff;
+    if (cargo.kind === "staff") {
+      const staff = cargo.staff;
       try {
         const created = await createAssignment({
           slot_id: slot.id,
@@ -302,13 +316,31 @@ export class StaffRosterGrid extends LitElement {
           assignment_date: date,
         });
         await this.pushUndo({ kind: "create", id: created.id });
+        // Clear dragging before refresh so the poll-race guard in
+        // refresh() (which drops a response while dragging) doesn't
+        // swallow the post-drop reload.
+        this.dragging = null;
+        // Optimistic insert keeps the chip on screen even on devices
+        // (iOS Safari with table-layout: fixed) where the post-refresh
+        // reflow stalls until the next viewport resize. The follow-up
+        // refresh reconciles against the canonical server state.
+        if (this.week) {
+          this.week = {
+            ...this.week,
+            assignments: [...this.week.assignments, created],
+          };
+        }
         await this.refresh();
       } catch (err) {
+        this.dragging = null;
         this.setError((err as Error).message);
       }
     } else {
-      const a = this.dragging.assignment;
-      if (a.slot_id === slot.id && a.assignment_date === date) return;
+      const a = cargo.assignment;
+      if (a.slot_id === slot.id && a.assignment_date === date) {
+        this.dragging = null;
+        return;
+      }
       try {
         await updateAssignment(a.id, { slot_id: slot.id, assignment_date: date });
         await this.pushUndo({
@@ -316,12 +348,13 @@ export class StaffRosterGrid extends LitElement {
           id: a.id,
           before: { slot_id: a.slot_id, patron_id: a.patron_id, assignment_date: a.assignment_date },
         });
+        this.dragging = null;
         await this.refresh();
       } catch (err) {
+        this.dragging = null;
         this.setError((err as Error).message);
       }
     }
-    this.dragging = null;
   }
 
   private requestDelete(a: Assignment): void {
@@ -745,6 +778,13 @@ export class StaffRosterGrid extends LitElement {
                       this.dragging = { kind: "staff", staff: s };
                       e.dataTransfer?.setData("text/plain", String(s.patron_id));
                     }}
+                    @click=${(e: MouseEvent) => {
+                      // Touch + mouse fallback: HTML5 DnD does not fire on
+                      // touch, so a tap toggles the same pickup state the
+                      // keyboard uses. Tapping the picked-up pill cancels.
+                      if (isPicked) this.cancelPickup();
+                      else this.pickUpStaff(s, e.currentTarget as HTMLElement);
+                    }}
                     @keydown=${(e: KeyboardEvent) => this.onPillKeyDown(e, s, i)}
                     @focus=${() => (this.focusedPillIdx = i)}
                   >
@@ -860,6 +900,12 @@ export class StaffRosterGrid extends LitElement {
                             (e.currentTarget as HTMLElement).classList.remove("srg-dropping");
                             await this.dropOnCell(slot, date);
                           }}
+                          @click=${async () => {
+                            // Touch + mouse fallback: when something is
+                            // already picked up, tapping a cell completes
+                            // the drop (same path the keyboard uses).
+                            if (this.pickedUp) await this.dropFromKeyboard(slot, date);
+                          }}
                           @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, slot, date, slotIdx, day)}
                           @focus=${() => {
                             this.focusedCellKey = cellKey;
@@ -886,7 +932,18 @@ export class StaffRosterGrid extends LitElement {
                                     this.dragging = { kind: "assignment", assignment: a };
                                     e.dataTransfer?.setData("text/plain", String(a.id));
                                   }}
-                                  @click=${(e: MouseEvent) => this.requestEdit(a, e.currentTarget as HTMLElement)}
+                                  @click=${async (e: MouseEvent) => {
+                                    // When a pickup is active, tapping a
+                                    // chip should drop into its cell rather
+                                    // than open the edit modal — matches
+                                    // the cell-tap fallback above.
+                                    if (this.pickedUp) {
+                                      e.stopPropagation();
+                                      await this.dropFromKeyboard(slot, date);
+                                      return;
+                                    }
+                                    this.requestEdit(a, e.currentTarget as HTMLElement);
+                                  }}
                                   @keydown=${(e: KeyboardEvent) => this.onAssignmentKeyDown(e, a)}
                                 >
                                   ${a.surname}, ${a.firstname}
