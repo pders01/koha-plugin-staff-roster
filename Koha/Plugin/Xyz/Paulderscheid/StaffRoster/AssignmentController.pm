@@ -7,6 +7,8 @@ use Mojo::Base 'Mojolicious::Controller';
 use C4::Context;
 use Try::Tiny qw( catch try );
 
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+
 =head1 API
 
 =head2 Methods
@@ -22,7 +24,6 @@ sub create {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
@@ -63,7 +64,6 @@ sub create {
 
         my $id    = $dbh->last_insert_id( undef, undef, undef, undef );
         my $after = _load( $dbh, $id );
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
             'CREATE', $id,
             { entity => 'assignment', %{$after} },
@@ -86,7 +86,6 @@ sub update {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
@@ -130,14 +129,12 @@ sub update {
         );
 
         if ( exists $body->{additional_fields} ) {
-            require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
             Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_save_additional_fields_from_map(
                 $dbh, 'staff_roster_assignments', $id, $body->{additional_fields}
             );
         }
 
         my $after = _load( $dbh, $id );
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
             'MODIFY', $id,
             {   entity  => 'assignment',
@@ -162,7 +159,6 @@ sub delete {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
@@ -178,7 +174,6 @@ sub delete {
 
         $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id = ?}, undef, $id );
 
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
             'DELETE', $id, { entity => 'assignment' }, $original );
 
@@ -199,7 +194,6 @@ sub bulk {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
@@ -220,7 +214,6 @@ sub bulk {
                 q{DELETE FROM staff_roster_assignments WHERE id IN (} . $placeholders . q{)},
                 undef, @{$ids},
             );
-            require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
             Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
                 'DELETE', undef, { entity => 'assignment_bulk', op => 'clear', ids => $ids } );
             return $c->render( status => 200, openapi => { deleted => scalar @{$ids} } );
@@ -284,7 +277,6 @@ sub bulk {
             }
             $dbh->commit;
 
-            require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
             Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
                 'MODIFY', undef,
                 { entity => 'assignment_bulk', op => 'move', ids => $ids, target => $target } );
@@ -311,7 +303,6 @@ sub self_create {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_self_assign') ) {
             return $c->render( status => 403,
                 openapi => { error => 'staffroster_self_assign permission required' } );
@@ -398,7 +389,6 @@ sub self_delete {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_self_assign') ) {
             return $c->render( status => 403,
                 openapi => { error => 'staffroster_self_assign permission required' } );
@@ -448,7 +438,6 @@ sub _gate_slot {
     );
     return { status => 404, error => 'Slot or roster not found' } if !$roster;
 
-    require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
     my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
 
     if ( !$plugin->_can_view_roster($roster) ) {
@@ -485,7 +474,6 @@ sub _conflict_check {
     );
     return 'Slot not found' if !defined $max_staff;
 
-    require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
     if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $rrule, $date, $anchor ) ) {
         return 'Slot does not run on that day';
     }
@@ -543,7 +531,6 @@ sub _load {
     );
     return if !$row;
 
-    require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
     my $af = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_load_additional_fields(
         $dbh, 'staff_roster_assignments', $id );
     $row->{additional_fields} = $af->{values};

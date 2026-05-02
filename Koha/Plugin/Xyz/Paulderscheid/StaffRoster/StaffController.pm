@@ -7,6 +7,9 @@ use Mojo::Base 'Mojolicious::Controller';
 use C4::Context;
 use Try::Tiny qw( catch try );
 
+use Koha::DateUtils;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+
 =head1 API
 
 =head2 Methods
@@ -23,7 +26,6 @@ sub available {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
             return $c->render( status => 403,
                 openapi => { error => 'staffroster_assign permission required' } );
@@ -211,7 +213,6 @@ sub me_week {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_view') ) {
             return $c->render( status => 403,
                 openapi => { error => 'staffroster_view permission required' } );
@@ -323,7 +324,6 @@ sub me_open_slots {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_self_assign') ) {
             return $c->render( status => 403,
                 openapi => { error => 'staffroster_self_assign permission required' } );
@@ -380,7 +380,6 @@ sub me_open_slots {
                 openapi => { week_start => $week_start, openings => [] } );
         }
 
-        require Koha::DateUtils;
         my $start_dt = Koha::DateUtils::dt_from_string( $week_start, 'iso' );
         my $end_iso  = $start_dt->clone->add( days => 6 )->ymd;
 
@@ -481,7 +480,6 @@ sub me_open_slots {
 }
 
 sub _current_week_start {
-    require Koha::DateUtils;
     return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
 }
 

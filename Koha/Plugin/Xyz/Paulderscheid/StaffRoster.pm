@@ -7,6 +7,25 @@ use base qw(Koha::Plugins::Base);
 use C4::Context;
 use Mojo::JSON qw( decode_json );
 
+# Koha framework deps. C4::Log stays loaded lazily inside _audit (see comment
+# there) because action_logs is the one place we still want to soft-fail on
+# very old Koha installs that predate the diff-aware signature.
+use C4::Auth;
+use C4::Letters;
+use Koha::AuthorisedValues;
+use Koha::Calendar;
+use Koha::DateUtils;
+use Koha::Desks;
+use Koha::Libraries;
+use Koha::Library::Groups;
+use Koha::Patron::Categories;
+use Koha::Patrons;
+
+# Recurrence helpers; pulled in early so the slot save path doesn't pay the
+# require cost on first request.
+use DateTime::Event::ICal;
+use DateTime::Format::ICal;
+
 # Flow plugin mutations into Koha's action_logs so admins can audit changes
 # from tools/viewlog.pl alongside borrower / catalogue / acquisitions activity.
 # All entries land under module 'STAFFROSTER'; the entity (roster, slot,
@@ -332,7 +351,6 @@ sub _has_perm {
     return 0 if !$env;
     my $flags = $env->{flags} // 0;
     return 1 if $flags == 1 || ( $flags & 1 );
-    require C4::Auth;
     return C4::Auth::haspermission( $env->{id}, { plugins => $code } ) ? 1 : 0;
 }
 
@@ -715,9 +733,6 @@ sub configure {
         $template->param( $key => $self->retrieve_data($key) );
     }
 
-    require Koha::Library::Groups;
-    require Koha::Libraries;
-    require Koha::Patron::Categories;
     my $root_groups = Koha::Library::Groups->get_root_groups;
 
     my $selected_cats = $self->retrieve_data('staff_categories') // q{};
@@ -1077,7 +1092,6 @@ sub _tool_save_slot {
     if ( $self->retrieve_data('use_authorised_value_locations') && defined $location && length $location ) {
         my $cat = $self->retrieve_data('authorised_value_location_category')
             || 'STAFFROSTER_LOCATION';
-        require Koha::AuthorisedValues;
         my $match = Koha::AuthorisedValues->search(
             { category => $cat, authorised_value => $location } )->count;
         if ( !$match ) {
@@ -1540,7 +1554,6 @@ sub _tool_view_list {
 sub _tool_view_roster_form {
     my ( $self, $dbh, $cgi, $template ) = @_;
 
-    require Koha::Library::Groups;
     my $root_groups = Koha::Library::Groups->get_root_groups;
     $template->param( library_groups => _flatten_groups( $root_groups, 0 ) );
 
@@ -1612,7 +1625,6 @@ sub _tool_view_manage_slots {
     # targets a single branch.
     my @desks;
     if ( $self->retrieve_data('use_koha_desks') && $roster && $roster->{branch_id} ) {
-        require Koha::Desks;
         @desks = Koha::Desks->search( { branchcode => $roster->{branch_id} }, { order_by => 'desk_name' } )->as_list;
     }
 
@@ -1622,7 +1634,6 @@ sub _tool_view_manage_slots {
     if ( $self->retrieve_data('use_authorised_value_locations') ) {
         my $cat = $self->retrieve_data('authorised_value_location_category')
             || 'STAFFROSTER_LOCATION';
-        require Koha::AuthorisedValues;
         @av_locations = map { { value => $_->authorised_value, lib => $_->lib } }
             Koha::AuthorisedValues->search(
             { category => $cat },
@@ -1752,7 +1763,6 @@ sub cronjob_nightly {
         { Slice => {} }, $days
     ) || [];
 
-    require C4::Letters;
     my $sent   = 0;
     my $failed = 0;
     for my $a ( @{$rows} ) {
@@ -1896,7 +1906,6 @@ sub _user_branch {
     my $env = C4::Context->userenv;
     return $env->{branch} if $env && $env->{branch};
     if ( $env && $env->{number} ) {
-        require Koha::Patrons;
         my $patron = Koha::Patrons->find( $env->{number} );
         return $patron->branchcode if $patron;
     }
@@ -1913,7 +1922,6 @@ sub _is_superlib {
 sub _user_group_ids {
     my ($branch) = @_;
     return () if !$branch;
-    require Koha::Library::Groups;
 
     my $leaves = Koha::Library::Groups->search( { branchcode => $branch } );
     my %seen;
@@ -1979,7 +1987,6 @@ sub _branchcodes_for_roster {
     }
 
     if ( $roster->{library_group_id} ) {
-        require Koha::Library::Groups;
         my $group = Koha::Library::Groups->find( $roster->{library_group_id} ) or return ();
         my $libs = $group->libraries;
         return $libs ? $libs->get_column('branchcode') : ();
@@ -2003,8 +2010,6 @@ sub _is_closed_for_roster {
     my @branches = $self->_branchcodes_for_roster($roster);
     return 0 if !@branches;
 
-    require Koha::Calendar;
-    require Koha::DateUtils;
     my $dt = eval { Koha::DateUtils::dt_from_string( $date, 'iso' ) };
     return 0 if !$dt;
 
@@ -2117,7 +2122,6 @@ sub _rrule_label {
 sub _slot_applies_on {
     my ( $rrule, $date, $anchor_iso ) = @_;
     return 0 if !$rrule || !$date;
-    require Koha::DateUtils;
     my $dt = eval { Koha::DateUtils::dt_from_string( $date, 'iso' ) };
     return 0 if !$dt;
 
@@ -2132,8 +2136,6 @@ sub _slot_applies_on {
         return scalar grep { $_ == $wday } @{ $p->{dows} };
     }
 
-    require DateTime::Event::ICal;
-    require DateTime::Format::ICal;
     my $anchor = $anchor_iso
         ? eval { Koha::DateUtils::dt_from_string( $anchor_iso, 'iso' ) }
         : $dt->clone;
@@ -2315,7 +2317,6 @@ sub _bulk_additional_field_values {
 }
 
 sub _get_current_week_start {
-    require Koha::DateUtils;
     return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
 }
 

@@ -7,6 +7,10 @@ use Mojo::Base 'Mojolicious::Controller';
 use C4::Context;
 use Try::Tiny qw( catch try );
 
+use Koha::AuthorisedValues;
+use Koha::DateUtils;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+
 =head1 API
 
 =head2 Methods
@@ -52,7 +56,6 @@ sub get_week {
             return $c->render( status => 404, openapi => { error => 'Roster not found' } );
         }
 
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
         if ( !$plugin->_can_view_roster($roster) ) {
             return $c->render( status => 403, openapi => { error => 'Not authorized for this roster' } );
@@ -71,7 +74,6 @@ sub get_week {
         # Decorate slots with iCal BYDAY codes (legacy weekday filter) plus the
         # canonical per-date applies list for the visible week. The dates list
         # honors INTERVAL/UNTIL/MONTHLY ordinals; the client should prefer it.
-        require Koha::DateUtils;
         my $week_anchor = Koha::DateUtils::dt_from_string( $week_start, 'iso' );
         my $rec_anchor  = $roster->{effective_from};
         for my $slot ( @{$slots} ) {
@@ -108,7 +110,6 @@ sub get_week {
             { Slice => {} }, 'staff_roster_assignments'
         ) || [];
         if ( @{$assignment_fields} ) {
-            require Koha::AuthorisedValues;
             # Dedupe by category before hitting AuthorisedValues so two fields
             # sharing a category (or the same field across many polls) only
             # cost one query instead of one per field per poll.
@@ -151,7 +152,6 @@ sub get_week {
 
         # Merge Koha calendar closures (if enabled) into exceptions for the week.
         if ( $plugin->retrieve_data('use_koha_calendar') ) {
-            require Koha::DateUtils;
             my %seen = map { $_->{exception_date} => 1 } @{$exceptions};
             my $start_dt = Koha::DateUtils::dt_from_string( $week_start, 'iso' );
             for my $i ( 0 .. 6 ) {
@@ -188,7 +188,6 @@ sub get_week {
 }
 
 sub _current_week_start {
-    require Koha::DateUtils;
     return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
 }
 
