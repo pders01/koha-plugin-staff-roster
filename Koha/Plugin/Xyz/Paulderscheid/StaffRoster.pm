@@ -738,6 +738,29 @@ sub tool {
         $post_redirect_op = $op;
     }
 
+    # Sub-permission gates parallel to the REST layer's checks. The CGI
+    # views previously only relied on Koha's generic `tools` flag, which
+    # let any tools-flagged user reach the rendered shell even when the
+    # JSON endpoints behind it would 403. Gate first, then proceed.
+    state $perm_for_view = {
+        manage_slots      => 'staffroster_manage_rosters',
+        manage_exceptions => 'staffroster_manage_rosters',
+        manage_swaps      => 'staffroster_manage_rosters',
+        edit_roster       => 'staffroster_manage_rosters',
+        add_roster        => 'staffroster_manage_rosters',
+        delete_confirm    => 'staffroster_manage_rosters',
+        view_assignments  => 'staffroster_view',
+        list              => 'staffroster_view',
+        my_shifts         => 'staffroster_view',
+        open_shifts       => 'staffroster_self_assign',
+    };
+    if ( my $required = $perm_for_view->{$op} ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm($required) ) {
+            push @messages, { type => 'danger', code => 'access_denied' };
+            $op = 'list';
+        }
+    }
+
     # Visibility gate for ops accessing a specific roster
     state $roster_scoped_ops
         = { map { $_ => 1 } qw(edit_roster manage_slots manage_exceptions manage_swaps view_assignments delete_confirm) };
