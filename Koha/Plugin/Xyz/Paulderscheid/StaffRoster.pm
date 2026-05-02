@@ -54,6 +54,7 @@ use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility;
 
 # Recurrence helpers; pulled in early so the slot save path doesn't pay the
 # require cost on first request.
@@ -1979,142 +1980,14 @@ sub _tool_view_manage_swaps {
     return;
 }
 
-sub _user_branch {
-    my $env = C4::Context->userenv;
-    return $env->{branch} if $env && $env->{branch};
-    if ( $env && $env->{number} ) {
-        my $patron = Koha::Patrons->find( $env->{number} );
-        return $patron->branchcode if $patron;
-    }
-    return;
-}
-
-# Memoize per-process: each Koha::Library::Groups->find($pid) round-trip
-# is one DB query per ancestor level, and the sidebar can call this
-# once per visible roster on every page load. The cache key is the
-# branchcode; a worker only sees one borrower's branch at a time, so
-# collisions across users on the same Plack worker are fine. Tests that
-# reshape the graph between subtests call _clear_user_group_cache().
-my %_USER_GROUP_CACHE;
-
-sub _clear_user_group_cache {
-    %_USER_GROUP_CACHE = ();
-    return;
-}
-
-# Group ids whose subtree contains $branch (ancestors of the leaf node).
-sub _user_group_ids {
-    my ($branch) = @_;
-    return () if !$branch;
-    return @{ $_USER_GROUP_CACHE{$branch} } if $_USER_GROUP_CACHE{$branch};
-
-    my $leaves = Koha::Library::Groups->search( { branchcode => $branch } );
-    my %seen;
-    while ( my $leaf = $leaves->next ) {
-        my $node = $leaf;
-        while ($node) {
-            my $pid = $node->parent_id or last;
-            $seen{$pid} = 1;
-            $node = Koha::Library::Groups->find($pid);
-        }
-    }
-    my @ids = keys %seen;
-    $_USER_GROUP_CACHE{$branch} = \@ids;
-    return @ids;
-}
-
-# Returns ($sql_fragment, \@bind_params) appended to a WHERE clause to scope roster rows
-# to those visible to the current user. Empty fragment when filtering is off or user is superlib.
-# Static SQL only — fragment never embeds variable-arity placeholders.
-# When the user belongs to library groups, the caller post-filters via
-# `_can_view_roster` against the list returned by this fragment.
-sub _visibility_clause {
-    my ($self) = @_;
-    my $mode = $self->retrieve_data('library_group_mode') // 'off';
-    return ( q{}, [] ) if $mode eq 'off' || _is_superlib();
-
-    my $branch = _user_branch();
-    if ( !$branch ) {
-        return ( 'AND 1=0',                                                [] ) if $mode eq 'strict';
-        return ( 'AND r.branch_id IS NULL AND r.library_group_id IS NULL', [] );
-    }
-
-    my @gids = _user_group_ids($branch);
-    if ( !@gids ) {
-        # No group memberships for this branch — only own-branch + all-branch rosters apply.
-        return ( 'AND ((r.branch_id IS NULL AND r.library_group_id IS NULL) OR r.branch_id = ?)', [$branch] );
-    }
-    # SELECT a superset (own branch + all-branches + any group), then let the
-    # caller's post-filter reject anything outside @gids. Avoids embedding a
-    # variable-length IN list in the SQL.
-    my $clause = q{AND ((r.branch_id IS NULL AND r.library_group_id IS NULL) OR r.branch_id = ? OR r.library_group_id IS NOT NULL)};
-    return ( $clause, [$branch] );
-}
-
-# True if current user can see this roster row (or undef if not found / hidden).
-sub _can_view_roster {
-    my ( $self, $roster ) = @_;
-    return 0 if !$roster;
-    my $mode = $self->retrieve_data('library_group_mode') // 'off';
-    return 1 if $mode eq 'off' || _is_superlib();
-
-    my $branch = _user_branch();
-    return 0 if !$branch;
-
-    return 1 if !$roster->{branch_id} && !$roster->{library_group_id};
-    return 1 if $roster->{branch_id}  && $roster->{branch_id} eq $branch;
-    if ( $roster->{library_group_id} ) {
-        my %gids = map { $_ => 1 } _user_group_ids($branch);
-        return 1 if $gids{ $roster->{library_group_id} };
-    }
-    return 0;
-}
-
-# Resolve the list of branchcodes that a roster covers for calendar lookup.
-# Branch-bound roster -> [branch_id]
-# Group-bound roster -> all leaf branchcodes within the group (recursive)
-# All-branches roster -> [] (no calendar check)
-sub _branchcodes_for_roster {
-    my ( $self, $roster ) = @_;
-    return () if !$roster;
-
-    if ( $roster->{branch_id} ) {
-        return ( $roster->{branch_id} );
-    }
-
-    if ( $roster->{library_group_id} ) {
-        my $group = Koha::Library::Groups->find( $roster->{library_group_id} ) or return ();
-        my $libs  = $group->libraries;
-        return $libs ? $libs->get_column('branchcode') : ();
-    }
-
-    # All-branches roster: optional override via config
-    my $override = $self->retrieve_data('koha_calendar_branch');
-    return $override ? ($override) : ();
-}
-
-# Check if a date is closed per Koha calendar semantics for this roster.
-# - Branch-bound: closed iff that branch is closed.
-# - Group-bound: closed iff ALL branches in the group are closed (defensive).
-# - All-branches with config override: closed per the override branch.
-# - All-branches without override: never closed.
-# - Empty group (no branches resolved): never closed.
-sub _is_closed_for_roster {
-    my ( $self, $roster, $date ) = @_;
-    return 0 if !$self->retrieve_data('use_koha_calendar');
-
-    my @branches = $self->_branchcodes_for_roster($roster);
-    return 0 if !@branches;
-
-    my $dt = eval { Koha::DateUtils::dt_from_string( $date, 'iso' ) };
-    return 0 if !$dt;
-
-    for my $b (@branches) {
-        my $cal = Koha::Calendar->new( branchcode => $b );
-        return 0 if !$cal->is_holiday($dt);    # at least one branch open -> not closed
-    }
-    return 1;
-}
+# Backwards-compat shims. Real logic in Lib::Visibility.
+sub _user_branch              { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::user_branch(); }
+sub _clear_user_group_cache   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::clear_user_group_cache(); }
+sub _user_group_ids           { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::user_group_ids(@_); }
+sub _visibility_clause        { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::visibility_clause(@_); }
+sub _can_view_roster          { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::can_view_roster(@_); }
+sub _branchcodes_for_roster   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::branchcodes_for_roster(@_); }
+sub _is_closed_for_roster     { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::is_closed_for_roster(@_); }
 
 # RRule helpers -------------------------------------------------------------
 # Subset of RFC 5545: FREQ=WEEKLY|MONTHLY, BYDAY (with optional ordinal
