@@ -12,6 +12,7 @@ import { renderWeekToolbar } from "./shared/toolbar.js";
 import { renderToasts } from "./shared/toasts.js";
 import { renderModalShell } from "./shared/modal.js";
 import { groupByDate, renderDayGroups } from "./shared/day-groups.js";
+import { EscapeController } from "./shared/escape-controller.js";
 
 const STATUS_LABELS: Record<MyShift["status"], string> = {
   scheduled: "Scheduled",
@@ -31,6 +32,15 @@ export class MyShiftsList extends LitElement {
   @state() private dropping: number | null = null;
   @state() private successMsg = "";
   @state() private pendingDrop: MyShift | null = null;
+
+  constructor() {
+    super();
+    new EscapeController(
+      this,
+      () => this.pendingDrop !== null,
+      () => this.cancelDrop(),
+    );
+  }
 
   override createRenderRoot(): HTMLElement {
     return this;

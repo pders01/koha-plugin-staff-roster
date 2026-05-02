@@ -11,6 +11,7 @@ import { renderWeekToolbar } from "./shared/toolbar.js";
 import { renderToasts } from "./shared/toasts.js";
 import { renderModalShell } from "./shared/modal.js";
 import { groupByDate, renderDayGroups } from "./shared/day-groups.js";
+import { EscapeController } from "./shared/escape-controller.js";
 
 @customElement("open-shifts-list")
 export class OpenShiftsList extends LitElement {
@@ -22,6 +23,15 @@ export class OpenShiftsList extends LitElement {
   @state() private claiming: number | null = null;
   @state() private successMsg = "";
   @state() private pendingClaim: Opening | null = null;
+
+  constructor() {
+    super();
+    new EscapeController(
+      this,
+      () => this.pendingClaim !== null,
+      () => this.cancelClaim(),
+    );
+  }
 
   override createRenderRoot(): HTMLElement {
     return this;

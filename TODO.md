@@ -4,7 +4,15 @@ Open work items, grouped by priority. Items get crossed off as commits land.
 
 ## Now (small, cohesive)
 
-_Empty — pick the next batch._
+- [ ] **Backend Perl review against KOHA_CODING_GUIDELINES**:
+      `../koha-plugin/KOHA_CODING_GUIDELINES.md` (~2k lines). Pass over
+      `Koha/Plugin/Xyz/Paulderscheid/StaffRoster.pm` (~2.5k lines) +
+      `StaffRoster/*.pm` controllers. Likely hits: SQL section
+      (placeholders, ANSI quotes, backticks), HTML9 (filter all template
+      vars), TERM2/TERM3 (terminology), action-logs JSON Diff format,
+      .pm POD coverage, naming conventions. Backend is the explicit
+      ask — frontend dedup pass is done (HIGH + MEDIUM items shipped;
+      breadcrumbs include reverted, see Hardening note below).
 
 ## Next (single-feature batches)
 
@@ -39,6 +47,15 @@ _Empty — pick the next batch._
 - [ ] **Edit modal first-focus**: `pendingFocusModal` lands on the
       Cancel button; for the edit modal it should target the first form
       control (status select). Delete modal current behaviour is fine.
+- [ ] **Breadcrumbs include re-take**: `_breadcrumbs.inc` extraction
+      reverted — Koha core's `breadcrumbs` / `breadcrumb_item` BLOCKs
+      (in `html_helpers.inc`) didn't resolve from inside an INCLUDE'd
+      plugin TT, and PROCESS didn't help either. Anchors rendered as
+      plaintext. Re-attempt would need to either (a) PROCESS
+      `html_helpers.inc` at the top of the include (verify it doesn't
+      double-emit), or (b) drop the WRAPPER chain and emit the
+      `<nav><ol><li class="breadcrumb-item">` markup directly.
+      Duplication is small enough that doing nothing is fine.
 
 ## Distribution (blocks release, not dev)
 
@@ -70,6 +87,43 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Frontend dedup pass (Lit + TT)**:
+      - `src/components/shared/`: `toolbar.ts` (`renderWeekToolbar` —
+        Previous/Next/Refresh, schedule grid passes Undo via `extras`),
+        `toasts.ts` (success + error, `staff-roster-grid` was
+        error-only before), `modal.ts` (Bootstrap shell — delete in
+        grid, drop in my-shifts, claim in open-shifts),
+        `day-groups.ts` (`groupByDate<T>` + `renderDayGroups`),
+        `escape-controller.ts` (`ReactiveController` registers
+        doc-level keydown; first registered with truthy predicate
+        wins — grid uses three controllers in priority order
+        editing > pendingDelete > pickedUp).
+      - TT: `_aside.inc` (sidebar shared by admin/configure/report,
+        `aside_active` selects active class) and `_prg_guard.inc`
+        (Post-Redirect-Get script for tool/admin/configure, takes
+        `prg_method`). Resolved via `[% INCLUDE "$PLUGIN_DIR/_x.inc"
+        ... %]` because Koha sets `PLUGIN_DIR` to absolute and
+        `C4::Templates` runs with `ABSOLUTE => 1`.
+      - Bundle slimmed; ESC now cancels every modal in the plugin
+        (the edit modal had no ESC before).
+- [x] **Page-reload guard (Post-Redirect-Get)**: tool/admin/configure
+      handlers set `post_redirect_op` after a `cud-*` op; each TT
+      injects `history.replaceState` to swap the URL to the GET
+      landing op so F5 doesn't re-POST. No server-side redirect, no
+      session state.
+- [x] **Filter visibility on Available staff**: `/staff/available`
+      returns `{ staff, count, pool, limit, filter }`; filter exposes
+      mode (codes vs `category_type_s` fallback), configured codes,
+      `branch_scope` (all/branch/group with label), and slot context
+      (slot_id + date + start/end_time) when scoped to a focused cell.
+      Lit grid renders header chip + "N free of M eligible" + cell
+      focus refetches with `slot_id`.
+- [x] **Swap-request ownership fix**: `_tool_request_swap` rejects
+      with `swap_not_your_shift` when `from_assignment.borrowernumber`
+      != session borrower (was only checking roster membership).
+      Dropdown filtered to own_assignments; "In exchange for" filtered
+      to selected to_borrowernumber via small jQuery filter, with
+      stale-pick reset. Coverage in `t/swap_ownership.t`.
 - [x] **Staff self-service (intranet)**: "My shifts" + "Open shifts" tools
       under the existing staff intranet. Backed by GET /me/week,
       GET /me/open_slots, POST /me/claim, DELETE /me/claim/{id}. Four-layer

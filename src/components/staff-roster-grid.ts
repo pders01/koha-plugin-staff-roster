@@ -17,6 +17,7 @@ import { getClass, isoMonday } from "../util.js";
 import { renderWeekToolbar } from "./shared/toolbar.js";
 import { renderToasts } from "./shared/toasts.js";
 import { renderModalShell } from "./shared/modal.js";
+import { EscapeController } from "./shared/escape-controller.js";
 
 const POLL_MS = 5000;
 const UNDO_LIMIT = 10;
@@ -74,6 +75,16 @@ export class StaffRosterGrid extends LitElement {
   private pendingFocusPillIdx: number | null = null;
   private pendingFocusModal = false;
 
+  constructor() {
+    super();
+    // Order matters — first controller whose predicate matches handles
+    // the keystroke. Modal cancels take priority over picked-up state so
+    // a user with a pickup AND a stray modal hits Cancel-modal first.
+    new EscapeController(this, () => this.editing !== null, () => this.cancelEdit());
+    new EscapeController(this, () => this.pendingDelete !== null, () => this.cancelDelete());
+    new EscapeController(this, () => this.pickedUp !== null, () => this.cancelPickup());
+  }
+
   private setError(message: string): void {
     this.error = message;
     if (this.errorDismissTimer) clearTimeout(this.errorDismissTimer);
@@ -104,21 +115,11 @@ export class StaffRosterGrid extends LitElement {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    // ESC cancels are owned by EscapeController instances registered in
+    // the constructor (editing > pendingDelete > pickedUp).
     if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
       e.preventDefault();
       void this.undo();
-      return;
-    }
-    if (e.key === "Escape") {
-      if (this.pendingDelete) {
-        e.preventDefault();
-        this.cancelDelete();
-        return;
-      }
-      if (this.pickedUp) {
-        e.preventDefault();
-        this.cancelPickup();
-      }
     }
   };
 

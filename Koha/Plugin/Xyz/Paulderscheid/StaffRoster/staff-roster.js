@@ -25,7 +25,7 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return a(t);
-})(e) : e, { is: c, defineProperty: l, getOwnPropertyDescriptor: u, getOwnPropertyNames: d, getOwnPropertySymbols: f, getPrototypeOf: p } = Object, m = globalThis, ee = m.trustedTypes, te = ee ? ee.emptyScript : "", ne = m.reactiveElementPolyfillSupport, h = (e, t) => e, re = {
+})(e) : e, { is: c, defineProperty: l, getOwnPropertyDescriptor: u, getOwnPropertyNames: d, getOwnPropertySymbols: f, getPrototypeOf: p } = Object, m = globalThis, ee = m.trustedTypes, te = ee ? ee.emptyScript : "", ne = m.reactiveElementPolyfillSupport, re = (e, t) => e, ie = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
@@ -54,23 +54,23 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, ie = (e, t) => !c(e, t), ae = {
+}, ae = (e, t) => !c(e, t), oe = {
 	attribute: !0,
 	type: String,
-	converter: re,
+	converter: ie,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: ie
+	hasChanged: ae
 };
 Symbol.metadata ??= Symbol("metadata"), m.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var g = class extends HTMLElement {
+var h = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = ae) {
+	static createProperty(e, t = oe) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && l(this.prototype, e, r);
@@ -96,16 +96,16 @@ var g = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? ae;
+		return this.elementProperties.get(e) ?? oe;
 	}
 	static _$Ei() {
-		if (this.hasOwnProperty(h("elementProperties"))) return;
+		if (this.hasOwnProperty(re("elementProperties"))) return;
 		let e = p(this);
 		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
 	}
 	static finalize() {
-		if (this.hasOwnProperty(h("finalized"))) return;
-		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(h("properties"))) {
+		if (this.hasOwnProperty(re("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(re("properties"))) {
 			let e = this.properties, t = [...d(e), ...f(e)];
 			for (let n of t) this.createProperty(n, e[n]);
 		}
@@ -167,14 +167,14 @@ var g = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? re : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? ie : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? re : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? ie : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -183,7 +183,7 @@ var g = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ie)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ae)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -247,87 +247,87 @@ var g = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-g.elementStyles = [], g.shadowRootOptions = { mode: "open" }, g[h("elementProperties")] = /* @__PURE__ */ new Map(), g[h("finalized")] = /* @__PURE__ */ new Map(), ne?.({ ReactiveElement: g }), (m.reactiveElementVersions ??= []).push("2.1.2");
+h.elementStyles = [], h.shadowRootOptions = { mode: "open" }, h[re("elementProperties")] = /* @__PURE__ */ new Map(), h[re("finalized")] = /* @__PURE__ */ new Map(), ne?.({ ReactiveElement: h }), (m.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var oe = globalThis, se = (e) => e, ce = oe.trustedTypes, le = ce ? ce.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ue = "$lit$", _ = `lit$${Math.random().toFixed(9).slice(2)}$`, de = "?" + _, fe = `<${de}>`, v = document, y = () => v.createComment(""), b = (e) => e === null || typeof e != "object" && typeof e != "function", pe = Array.isArray, me = (e) => pe(e) || typeof e?.[Symbol.iterator] == "function", he = "[ 	\n\f\r]", x = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ge = /-->/g, _e = />/g, S = RegExp(`>|${he}(?:([^\\s"'>=/]+)(${he}*=${he}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ve = /'/g, ye = /"/g, be = /^(?:script|style|textarea|title)$/i, C = ((e) => (t, ...n) => ({
+var se = globalThis, ce = (e) => e, le = se.trustedTypes, ue = le ? le.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, de = "$lit$", g = `lit$${Math.random().toFixed(9).slice(2)}$`, fe = "?" + g, pe = `<${fe}>`, _ = document, v = () => _.createComment(""), y = (e) => e === null || typeof e != "object" && typeof e != "function", me = Array.isArray, he = (e) => me(e) || typeof e?.[Symbol.iterator] == "function", ge = "[ 	\n\f\r]", b = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, _e = /-->/g, ve = />/g, x = RegExp(`>|${ge}(?:([^\\s"'>=/]+)(${ge}*=${ge}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ye = /'/g, be = /"/g, xe = /^(?:script|style|textarea|title)$/i, S = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}))(1), w = Symbol.for("lit-noChange"), T = Symbol.for("lit-nothing"), xe = /* @__PURE__ */ new WeakMap(), E = v.createTreeWalker(v, 129);
-function Se(e, t) {
-	if (!pe(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return le === void 0 ? t : le.createHTML(t);
+}))(1), C = Symbol.for("lit-noChange"), w = Symbol.for("lit-nothing"), Se = /* @__PURE__ */ new WeakMap(), T = _.createTreeWalker(_, 129);
+function Ce(e, t) {
+	if (!me(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+	return ue === void 0 ? t : ue.createHTML(t);
 }
-var Ce = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = x;
+var we = (e, t) => {
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = b;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === x ? c[1] === "!--" ? o = ge : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = S) : (be.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = S) : o = _e : o === S ? c[0] === ">" ? (o = i ?? x, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? S : c[3] === "\"" ? ye : ve) : o === ye || o === ve ? o = S : o === ge || o === _e ? o = x : (o = S, i = void 0);
-		let d = o === S && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === x ? n + fe : l >= 0 ? (r.push(s), n.slice(0, l) + ue + n.slice(l) + _ + d) : n + _ + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === b ? c[1] === "!--" ? o = _e : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = x) : (xe.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = x) : o = ve : o === x ? c[0] === ">" ? (o = i ?? b, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? x : c[3] === "\"" ? be : ye) : o === be || o === ye ? o = x : o === _e || o === ve ? o = b : (o = x, i = void 0);
+		let d = o === x && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === b ? n + pe : l >= 0 ? (r.push(s), n.slice(0, l) + de + n.slice(l) + g + d) : n + g + (l === -2 ? t : d);
 	}
-	return [Se(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, we = class e {
+	return [Ce(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, Te = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = Ce(t, n);
-		if (this.el = e.createElement(l, r), E.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = we(t, n);
+		if (this.el = e.createElement(l, r), T.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = E.nextNode()) !== null && c.length < s;) {
+		for (; (i = T.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(ue)) {
-					let t = u[o++], n = i.getAttribute(e).split(_), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(de)) {
+					let t = u[o++], n = i.getAttribute(e).split(g), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? De : r[1] === "?" ? Oe : r[1] === "@" ? ke : O
+						ctor: r[1] === "." ? ke : r[1] === "?" ? Ae : r[1] === "@" ? je : Oe
 					}), i.removeAttribute(e);
-				} else e.startsWith(_) && (c.push({
+				} else e.startsWith(g) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (be.test(i.tagName)) {
-					let e = i.textContent.split(_), t = e.length - 1;
+				if (xe.test(i.tagName)) {
+					let e = i.textContent.split(g), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = ce ? ce.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], y()), E.nextNode(), c.push({
+						i.textContent = le ? le.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], v()), T.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
-						i.append(e[t], y());
+						i.append(e[t], v());
 					}
 				}
-			} else if (i.nodeType === 8) if (i.data === de) c.push({
+			} else if (i.nodeType === 8) if (i.data === fe) c.push({
 				type: 2,
 				index: a
 			});
 			else {
 				let e = -1;
-				for (; (e = i.data.indexOf(_, e + 1)) !== -1;) c.push({
+				for (; (e = i.data.indexOf(g, e + 1)) !== -1;) c.push({
 					type: 7,
 					index: a
-				}), e += _.length - 1;
+				}), e += g.length - 1;
 			}
 			a++;
 		}
 	}
 	static createElement(e, t) {
-		let n = v.createElement("template");
+		let n = _.createElement("template");
 		return n.innerHTML = e, n;
 	}
 };
-function D(e, t, n = e, r) {
-	if (t === w) return t;
-	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = b(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = D(e, i._$AS(e, t.values), i, r)), t;
+function E(e, t, n = e, r) {
+	if (t === C) return t;
+	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = y(t) ? void 0 : t._$litDirective$;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = E(e, i._$AS(e, t.values), i, r)), t;
 }
-var Te = class {
+var Ee = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -338,28 +338,28 @@ var Te = class {
 		return this._$AM._$AU;
 	}
 	u(e) {
-		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? v).importNode(t, !0);
-		E.currentNode = r;
-		let i = E.nextNode(), a = 0, o = 0, s = n[0];
+		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? _).importNode(t, !0);
+		T.currentNode = r;
+		let i = T.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new Ee(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new Ae(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new De(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new Me(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = E.nextNode(), a++);
+			a !== s?.index && (i = T.nextNode(), a++);
 		}
-		return E.currentNode = v, r;
+		return T.currentNode = _, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, Ee = class e {
+}, De = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = T, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = w, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -372,7 +372,7 @@ var Te = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = D(this, e, t), b(e) ? e === T || e == null || e === "" ? (this._$AH !== T && this._$AR(), this._$AH = T) : e !== this._$AH && e !== w && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? me(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = E(this, e, t), y(e) ? e === w || e == null || e === "" ? (this._$AH !== w && this._$AR(), this._$AH = w) : e !== this._$AH && e !== C && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? he(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -381,36 +381,36 @@ var Te = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== T && b(this._$AH) ? this._$AA.nextSibling.data = e : this.T(v.createTextNode(e)), this._$AH = e;
+		this._$AH !== w && y(this._$AH) ? this._$AA.nextSibling.data = e : this.T(_.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = we.createElement(Se(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = Te.createElement(Ce(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new Te(r, this), n = e.u(this.options);
+			let e = new Ee(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = xe.get(e.strings);
-		return t === void 0 && xe.set(e.strings, t = new we(e)), t;
+		let t = Se.get(e.strings);
+		return t === void 0 && Se.set(e.strings, t = new Te(e)), t;
 	}
 	k(t) {
-		pe(this._$AH) || (this._$AH = [], this._$AR());
+		me(this._$AH) || (this._$AH = [], this._$AR());
 		let n = this._$AH, r, i = 0;
-		for (let a of t) i === n.length ? n.push(r = new e(this.O(y()), this.O(y()), this, this.options)) : r = n[i], r._$AI(a), i++;
+		for (let a of t) i === n.length ? n.push(r = new e(this.O(v()), this.O(v()), this, this.options)) : r = n[i], r._$AI(a), i++;
 		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = se(e).nextSibling;
-			se(e).remove(), e = t;
+			let t = ce(e).nextSibling;
+			ce(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, O = class {
+}, Oe = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -418,47 +418,47 @@ var Te = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = T, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = T;
+		this.type = 1, this._$AH = w, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = w;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = D(this, e, t, 0), a = !b(e) || e !== this._$AH && e !== w, a && (this._$AH = e);
+		if (i === void 0) e = E(this, e, t, 0), a = !y(e) || e !== this._$AH && e !== C, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = D(this, r[n + o], t, o), s === w && (s = this._$AH[o]), a ||= !b(s) || s !== this._$AH[o], s === T ? e = T : e !== T && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = E(this, r[n + o], t, o), s === C && (s = this._$AH[o]), a ||= !y(s) || s !== this._$AH[o], s === w ? e = w : e !== w && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === T ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === w ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, De = class extends O {
+}, ke = class extends Oe {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === T ? void 0 : e;
+		this.element[this.name] = e === w ? void 0 : e;
 	}
-}, Oe = class extends O {
+}, Ae = class extends Oe {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== T);
+		this.element.toggleAttribute(this.name, !!e && e !== w);
 	}
-}, ke = class extends O {
+}, je = class extends Oe {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = D(this, e, t, 0) ?? T) === w) return;
-		let n = this._$AH, r = e === T && n !== T || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== T && (n === T || r);
+		if ((e = E(this, e, t, 0) ?? w) === C) return;
+		let n = this._$AH, r = e === w && n !== w || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== w && (n === w || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, Ae = class {
+}, Me = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -466,33 +466,33 @@ var Te = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		D(this, e);
+		E(this, e);
 	}
-}, je = {
-	M: ue,
-	P: _,
-	A: de,
+}, Ne = {
+	M: de,
+	P: g,
+	A: fe,
 	C: 1,
-	L: Ce,
-	R: Te,
-	D: me,
-	V: D,
-	I: Ee,
-	H: O,
-	N: Oe,
-	U: ke,
-	B: De,
-	F: Ae
-}, Me = oe.litHtmlPolyfillSupport;
-Me?.(we, Ee), (oe.litHtmlVersions ??= []).push("3.3.2");
-var Ne = (e, t, n) => {
+	L: we,
+	R: Ee,
+	D: he,
+	V: E,
+	I: De,
+	H: Oe,
+	N: Ae,
+	U: je,
+	B: ke,
+	F: Me
+}, Pe = se.litHtmlPolyfillSupport;
+Pe?.(Te, De), (se.litHtmlVersions ??= []).push("3.3.2");
+var Fe = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new Ee(t.insertBefore(y(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new De(t.insertBefore(v(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, Pe = globalThis, k = class extends g {
+}, Ie = globalThis, D = class extends h {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -502,7 +502,7 @@ var Ne = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Ne(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Fe(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -511,25 +511,25 @@ var Ne = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return w;
+		return C;
 	}
 };
-k._$litElement$ = !0, k.finalized = !0, Pe.litElementHydrateSupport?.({ LitElement: k });
-var Fe = Pe.litElementPolyfillSupport;
-Fe?.({ LitElement: k }), (Pe.litElementVersions ??= []).push("4.2.2");
+D._$litElement$ = !0, D.finalized = !0, Ie.litElementHydrateSupport?.({ LitElement: D });
+var Le = Ie.litElementPolyfillSupport;
+Le?.({ LitElement: D }), (Ie.litElementVersions ??= []).push("4.2.2");
 //#endregion
 //#region node_modules/@lit/reactive-element/decorators/custom-element.js
-var Ie = (e) => (t, n) => {
+var Re = (e) => (t, n) => {
 	n === void 0 ? customElements.define(e, t) : n.addInitializer(() => {
 		customElements.define(e, t);
 	});
-}, Le = {
+}, ze = {
 	attribute: !0,
 	type: String,
-	converter: re,
+	converter: ie,
 	reflect: !1,
-	hasChanged: ie
-}, Re = (e = Le, t, n) => {
+	hasChanged: ae
+}, Be = (e = ze, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
 		let { name: r } = n;
@@ -552,16 +552,16 @@ var Ie = (e) => (t, n) => {
 	}
 	throw Error("Unsupported decorator location: " + r);
 };
-function ze(e) {
-	return (t, n) => typeof n == "object" ? Re(e, t, n) : ((e, t, n) => {
+function O(e) {
+	return (t, n) => typeof n == "object" ? Be(e, t, n) : ((e, t, n) => {
 		let r = t.hasOwnProperty(n);
 		return t.constructor.createProperty(n, e), r ? Object.getOwnPropertyDescriptor(t, n) : void 0;
 	})(e, t, n);
 }
 //#endregion
 //#region node_modules/@lit/reactive-element/decorators/state.js
-function A(e) {
-	return ze({
+function k(e) {
+	return O({
 		...e,
 		state: !0,
 		attribute: !1
@@ -569,17 +569,17 @@ function A(e) {
 }
 //#endregion
 //#region node_modules/lit-html/directive.js
-var Be = {
+var Ve = {
 	ATTRIBUTE: 1,
 	CHILD: 2,
 	PROPERTY: 3,
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, Ve = (e) => (...t) => ({
+}, He = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), He = class {
+}), Ue = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -593,9 +593,9 @@ var Be = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, { I: Ue } = je, We = (e) => e, Ge = () => document.createComment(""), Ke = (e, t, n) => {
+}, { I: We } = Ne, Ge = (e) => e, Ke = () => document.createComment(""), A = (e, t, n) => {
 	let r = e._$AA.parentNode, i = t === void 0 ? e._$AB : t._$AA;
-	if (n === void 0) n = new Ue(r.insertBefore(Ge(), i), r.insertBefore(Ge(), i), e, e.options);
+	if (n === void 0) n = new We(r.insertBefore(Ke(), i), r.insertBefore(Ke(), i), e, e.options);
 	else {
 		let t = n._$AB.nextSibling, a = n._$AM, o = a !== e;
 		if (o) {
@@ -605,8 +605,8 @@ var Be = {
 		if (t !== i || o) {
 			let e = n._$AA;
 			for (; e !== t;) {
-				let t = We(e).nextSibling;
-				We(r).insertBefore(e, i), e = t;
+				let t = Ge(e).nextSibling;
+				Ge(r).insertBefore(e, i), e = t;
 			}
 		}
 	}
@@ -617,9 +617,9 @@ var Be = {
 	let r = /* @__PURE__ */ new Map();
 	for (let i = t; i <= n; i++) r.set(e[i], i);
 	return r;
-}, Qe = Ve(class extends He {
+}, Qe = He(class extends Ue {
 	constructor(e) {
-		if (super(e), e.type !== Be.CHILD) throw Error("repeat() can only be used in text expressions");
+		if (super(e), e.type !== Ve.CHILD) throw Error("repeat() can only be used in text expressions");
 	}
 	dt(e, t, n) {
 		let r;
@@ -642,26 +642,26 @@ var Be = {
 		else if (i[f] === null) f--;
 		else if (s[d] === o[p]) c[p] = j(i[d], a[p]), d++, p++;
 		else if (s[f] === o[m]) c[m] = j(i[f], a[m]), f--, m--;
-		else if (s[d] === o[m]) c[m] = j(i[d], a[m]), Ke(e, c[m + 1], i[d]), d++, m--;
-		else if (s[f] === o[p]) c[p] = j(i[f], a[p]), Ke(e, i[d], i[f]), f--, p++;
+		else if (s[d] === o[m]) c[m] = j(i[d], a[m]), A(e, c[m + 1], i[d]), d++, m--;
+		else if (s[f] === o[p]) c[p] = j(i[f], a[p]), A(e, i[d], i[f]), f--, p++;
 		else if (l === void 0 && (l = Ze(o, p, m), u = Ze(s, d, f)), l.has(s[d])) if (l.has(s[f])) {
 			let t = u.get(o[p]), n = t === void 0 ? null : i[t];
 			if (n === null) {
-				let t = Ke(e, i[d]);
+				let t = A(e, i[d]);
 				j(t, a[p]), c[p] = t;
-			} else c[p] = j(n, a[p]), Ke(e, i[d], n), i[t] = null;
+			} else c[p] = j(n, a[p]), A(e, i[d], n), i[t] = null;
 			p++;
 		} else Xe(i[f]), f--;
 		else Xe(i[d]), d++;
 		for (; p <= m;) {
-			let t = Ke(e, c[m + 1]);
+			let t = A(e, c[m + 1]);
 			j(t, a[p]), c[p++] = t;
 		}
 		for (; d <= f;) {
 			let e = i[d++];
 			e !== null && Xe(e);
 		}
-		return this.ut = o, Je(e, c), w;
+		return this.ut = o, Je(e, c), C;
 	}
 });
 //#endregion
@@ -1350,7 +1350,7 @@ function Lt(e) {
 //#region src/components/shared/toolbar.ts
 function Rt(e) {
 	let { weekStart: t, onShift: n, onRefresh: r, extras: i } = e;
-	return C`
+	return S`
     <div class="btn-toolbar srg-toolbar" role="toolbar">
       <div class="btn-group" role="group">
         <button class="btn btn-default btn-sm" @click=${() => n(-7)}>
@@ -1361,7 +1361,7 @@ function Rt(e) {
         </button>
       </div>
       <span class="srg-week-label">Week of ${t}</span>
-      ${i ?? T}
+      ${i ?? w}
       <div class="btn-group" role="group">
         <button class="btn btn-default btn-sm" @click=${() => r()}>
           <i class="fa fa-refresh" aria-hidden="true"></i> Refresh
@@ -1374,32 +1374,32 @@ function Rt(e) {
 //#region src/components/shared/toasts.ts
 function zt(e) {
 	let { successMsg: t, error: n, onDismissError: r } = e;
-	return !t && !n ? T : C`
-    ${t ? C`
+	return !t && !n ? w : S`
+    ${t ? S`
           <div class="srg-toast alert alert-success" role="status" aria-live="polite">
             <i class="fa fa-check" aria-hidden="true"></i>
             <span>${t}</span>
           </div>
-        ` : T}
-    ${n ? C`
+        ` : w}
+    ${n ? S`
           <div class="srg-toast alert alert-danger" role="alert" aria-live="assertive">
             <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
             <span>${n}</span>
-            ${r ? C`<button
+            ${r ? S`<button
                   type="button"
                   class="btn-close"
                   aria-label="Dismiss"
                   @click=${r}
-                ></button>` : T}
+                ></button>` : w}
           </div>
-        ` : T}
+        ` : w}
   `;
 }
 //#endregion
 //#region src/components/shared/modal.ts
 function Bt(e) {
 	let { title: t, body: n, footer: r, onCancel: i, dialogClass: a } = e;
-	return C`
+	return S`
     <div
       class="modal show staff-roster-modal-open"
       tabindex="-1"
@@ -1430,8 +1430,23 @@ function Bt(e) {
   `;
 }
 //#endregion
+//#region src/components/shared/escape-controller.ts
+var Y = class {
+	constructor(e, t, n) {
+		this.host = e, this.isActive = t, this.onEscape = n, this.onKey = (e) => {
+			e.key === "Escape" && this.isActive() && (e.preventDefault(), e.stopPropagation(), this.onEscape());
+		}, e.addController(this);
+	}
+	hostConnected() {
+		document.addEventListener("keydown", this.onKey);
+	}
+	hostDisconnected() {
+		document.removeEventListener("keydown", this.onKey);
+	}
+};
+//#endregion
 //#region \0@oxc-project+runtime@0.127.0/helpers/decorate.js
-function Y(e, t, n, r) {
+function X(e, t, n, r) {
 	var i = arguments.length, a = i < 3 ? t : r === null ? r = Object.getOwnPropertyDescriptor(t, n) : r, o;
 	if (typeof Reflect == "object" && typeof Reflect.decorate == "function") a = Reflect.decorate(e, t, n, r);
 	else for (var s = e.length - 1; s >= 0; s--) (o = e[s]) && (a = (i < 3 ? o(a) : i > 3 ? o(t, n, a) : o(t, n)) || a);
@@ -1447,7 +1462,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 	"Fri",
 	"Sat",
 	"Sun"
-], X = [
+], Wt = [
 	"Monday",
 	"Tuesday",
 	"Wednesday",
@@ -1455,7 +1470,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 	"Friday",
 	"Saturday",
 	"Sunday"
-], Wt = [
+], Gt = [
 	"MO",
 	"TU",
 	"WE",
@@ -1463,25 +1478,15 @@ var Vt = 5e3, Ht = 10, Ut = [
 	"FR",
 	"SA",
 	"SU"
-], Z = class extends k {
-	constructor(...e) {
-		super(...e), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.availableMeta = null, this.availableContextDay = null, this.staffQuery = "", this.error = "", this.dragging = null, this.pickedUp = null, this.pendingDelete = null, this.editing = null, this.editForm = {
+], Z = class extends D {
+	constructor() {
+		super(), this.rosterId = 0, this.weekStart = "", this.week = null, this.available = [], this.availableMeta = null, this.availableContextDay = null, this.staffQuery = "", this.error = "", this.dragging = null, this.pickedUp = null, this.pendingDelete = null, this.editing = null, this.editForm = {
 			status: "scheduled",
 			notes: "",
 			fields: {}
 		}, this.editOriginEl = null, this.liveMessage = "", this.focusedCellKey = "", this.focusedPillIdx = 0, this.undoStack = [], this.recentlyChanged = /* @__PURE__ */ new Set(), this.pickupOriginEl = null, this.deleteOriginEl = null, this.pendingFocusCellKey = null, this.pendingFocusPillIdx = null, this.pendingFocusModal = !1, this.onKeyDown = (e) => {
-			if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
-				e.preventDefault(), this.undo();
-				return;
-			}
-			if (e.key === "Escape") {
-				if (this.pendingDelete) {
-					e.preventDefault(), this.cancelDelete();
-					return;
-				}
-				this.pickedUp && (e.preventDefault(), this.cancelPickup());
-			}
-		};
+			(e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey && (e.preventDefault(), this.undo());
+		}, new Y(this, () => this.editing !== null, () => this.cancelEdit()), new Y(this, () => this.pendingDelete !== null, () => this.cancelDelete()), new Y(this, () => this.pickedUp !== null, () => this.cancelPickup());
 	}
 	setError(e) {
 		this.error = e, this.errorDismissTimer && clearTimeout(this.errorDismissTimer), e && (this.errorDismissTimer = setTimeout(() => this.error = "", 5e3));
@@ -1519,9 +1524,9 @@ var Vt = 5e3, Ht = 10, Ut = [
 	}
 	renderAvailableFilterHeader() {
 		let e = this.availableMeta;
-		if (!e) return T;
-		let t = e.filter, n = t.mode === "codes" ? t.codes.join(", ") : "category type S (any patron flagged staff)", r = t.branch_scope.mode === "group" ? `library group: ${t.branch_scope.label ?? "(unnamed)"}` : t.branch_scope.mode === "branch" ? `branch: ${t.branch_scope.label}` : "all branches", i = this.availableContextDay === null ? null : X[this.availableContextDay], a = t.slot, o = a ? `Free at ${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} on ${i ?? a.date}` : `Free on ${t.date}`, s = e.count >= e.limit, c = t.mode === "category_type_s";
-		return C`
+		if (!e) return w;
+		let t = e.filter, n = t.mode === "codes" ? t.codes.join(", ") : "category type S (any patron flagged staff)", r = t.branch_scope.mode === "group" ? `library group: ${t.branch_scope.label ?? "(unnamed)"}` : t.branch_scope.mode === "branch" ? `branch: ${t.branch_scope.label}` : "all branches", i = this.availableContextDay === null ? null : Wt[this.availableContextDay], a = t.slot, o = a ? `Free at ${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} on ${i ?? a.date}` : `Free on ${t.date}`, s = e.count >= e.limit, c = t.mode === "category_type_s";
+		return S`
       <div class="srg-avail-meta">
         <div class="srg-avail-context">${o}</div>
         <div class="srg-avail-filter" title="${n} · ${r}">
@@ -1531,9 +1536,9 @@ var Vt = 5e3, Ht = 10, Ut = [
         </div>
         <div class="srg-avail-counter">
           <strong>${e.count}</strong> of ${e.pool} eligible
-          ${s ? C`<span class="text-muted"> · capped at ${e.limit}</span>` : T}
+          ${s ? S`<span class="text-muted"> · capped at ${e.limit}</span>` : w}
         </div>
-        ${c ? C`
+        ${c ? S`
               <div class="srg-avail-warn text-muted">
                 <i class="fa fa-info-circle" aria-hidden="true"></i>
                 Showing all category-type-S patrons (incl. service accounts).
@@ -1541,7 +1546,7 @@ var Vt = 5e3, Ht = 10, Ut = [
                 <a href="?class=${Pt()}&method=configure">configuration</a>
                 to narrow.
               </div>
-            ` : T}
+            ` : w}
       </div>
     `;
 	}
@@ -1684,7 +1689,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 					status: e.status,
 					notes: e.notes ?? void 0
 				}
-			}), this.liveMessage = `Removed ${e.firstname} ${e.surname} from ${X[t]} ${e.assignment_date}.`, await this.refresh();
+			}), this.liveMessage = `Removed ${e.firstname} ${e.surname} from ${Wt[t]} ${e.assignment_date}.`, await this.refresh();
 		} catch (e) {
 			this.setError(e.message);
 		}
@@ -1697,7 +1702,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 		return [...this.week?.slots ?? []].sort((e, t) => e.start_time.localeCompare(t.start_time) || e.id - t.id);
 	}
 	cellApplies(e, t) {
-		return e.applies_on_dates ? e.applies_on_dates.includes(this.cellDate(t)) : e.days_of_week.includes(Wt[t]);
+		return e.applies_on_dates ? e.applies_on_dates.includes(this.cellDate(t)) : e.days_of_week.includes(Gt[t]);
 	}
 	firstApplicableCellKey() {
 		let e = this.sortedSlots();
@@ -1708,7 +1713,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 		return e.kind === "staff" ? `${e.staff.firstname} ${e.staff.surname}` : `${e.assignment.firstname} ${e.assignment.surname}`;
 	}
 	cellAriaLabel(e, t, n, r, i) {
-		let a = X[n], o = `${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}`;
+		let a = Wt[n], o = `${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}`;
 		if (r) return `${a} ${t}, ${o} slot, closed.`;
 		let s = i.length, c = `${a} ${t}, ${o} slot, ${s} of ${e.max_staff} staff assigned`;
 		return s === 0 ? `${c}.` : `${c}: ${i.map((e) => `${e.firstname} ${e.surname}`).join(", ")}.`;
@@ -1739,7 +1744,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 		let n = this.pickedUp, r = this.cargoName(n), i = e.start_time.slice(0, 5);
 		this.dragging = n, this.pickedUp = null, this.pickupOriginEl = null;
 		let a = this.error;
-		await this.dropOnCell(e, t), this.error && this.error !== a ? this.liveMessage = `Cannot drop here. ${this.error}` : this.liveMessage = `Moved ${r} to ${X[this.dayIdxForDate(t)]} ${t}, ${i} slot.`;
+		await this.dropOnCell(e, t), this.error && this.error !== a ? this.liveMessage = `Cannot drop here. ${this.error}` : this.liveMessage = `Moved ${r} to ${Wt[this.dayIdxForDate(t)]} ${t}, ${i} slot.`;
 		let o = `${e.id}-${this.dayIdxForDate(t)}`;
 		this.focusedCellKey = o, this.pendingFocusCellKey = o;
 	}
@@ -1851,9 +1856,9 @@ var Vt = 5e3, Ht = 10, Ut = [
 		}
 	}
 	render() {
-		if (!this.week) return C`<div class="text-center text-muted py-4">Loading…</div>`;
+		if (!this.week) return S`<div class="text-center text-muted py-4">Loading…</div>`;
 		let e = this.week.roster.type_color, t = this.sortedSlots(), n = this.pickedUp !== null;
-		return C`
+		return S`
       <div class="srg-sr-only" aria-live="polite" aria-atomic="true">${this.liveMessage}</div>
 
       ${zt({
@@ -1865,7 +1870,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 			weekStart: this.weekStart,
 			onShift: (e) => this.shiftWeek(e),
 			onRefresh: () => void this.refresh(),
-			extras: C`
+			extras: S`
           <div class="btn-group" role="group">
             <button
               class="btn btn-default btn-sm"
@@ -1897,7 +1902,7 @@ var Vt = 5e3, Ht = 10, Ut = [
           >
             ${Qe(this.available, (e) => e.borrowernumber, (e, t) => {
 			let n = this.pickedUp?.kind === "staff" && this.pickedUp.staff.borrowernumber === e.borrowernumber;
-			return C`
+			return S`
                   <li
                     class="list-group-item srg-staff-pill ${n ? "srg-picked-up" : ""}"
                     role="option"
@@ -1921,7 +1926,7 @@ var Vt = 5e3, Ht = 10, Ut = [
                   </li>
                 `;
 		})}
-            ${this.available.length === 0 && this.staffQuery ? C`<li class="list-group-item text-muted">No matches</li>` : T}
+            ${this.available.length === 0 && this.staffQuery ? S`<li class="list-group-item text-muted">No matches</li>` : w}
           </ul>
         </section>
 
@@ -1936,7 +1941,7 @@ var Vt = 5e3, Ht = 10, Ut = [
             <thead>
               <tr role="row" aria-rowindex="1">
                 <th class="srg-slot-col" role="columnheader" aria-colindex="1">Slot</th>
-                ${Ut.map((e, t) => C`
+                ${Ut.map((e, t) => S`
                     <th role="columnheader" aria-colindex=${t + 2}>
                       <span class="srg-day">${e}</span>
                       <small class="text-muted">${this.cellDate(t).slice(5)}</small>
@@ -1945,7 +1950,7 @@ var Vt = 5e3, Ht = 10, Ut = [
               </tr>
             </thead>
             <tbody>
-              ${t.length === 0 ? C`
+              ${t.length === 0 ? S`
                     <tr role="row">
                       <td colspan="8" class="srg-empty" role="gridcell">
                         <p>No time slots defined for this roster yet.</p>
@@ -1954,8 +1959,8 @@ var Vt = 5e3, Ht = 10, Ut = [
                         </a>
                       </td>
                     </tr>
-                  ` : T}
-              ${t.map((e, t) => C`
+                  ` : w}
+              ${t.map((e, t) => S`
                   <tr role="row" aria-rowindex=${t + 2}>
                     <th
                       scope="row"
@@ -1964,18 +1969,18 @@ var Vt = 5e3, Ht = 10, Ut = [
                       aria-colindex="1"
                     >
                       <span class="srg-slot-time">${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</span>
-                      ${e.location ? C`<small class="text-muted d-block">${e.location}</small>` : T}
+                      ${e.location ? S`<small class="text-muted d-block">${e.location}</small>` : w}
                     </th>
                     ${Ut.map((r, i) => {
 			let a = this.cellDate(i), o = this.cellApplies(e, i), s = this.exceptionFor(a), c = i + 2;
-			if (!o) return C`<td
+			if (!o) return S`<td
                           class="srg-cell-empty"
                           role="gridcell"
                           aria-colindex=${c}
                           aria-disabled="true"
                         ></td>`;
 			let l = `${e.id}-${i}`;
-			if (s) return C`<td
+			if (s) return S`<td
                           class="srg-cell-exception"
                           role="gridcell"
                           aria-colindex=${c}
@@ -1988,7 +1993,7 @@ var Vt = 5e3, Ht = 10, Ut = [
                           <small>closed</small>
                         </td>`;
 			let u = this.assignmentsFor(e.id, a), d = u.length;
-			return C`
+			return S`
                         <td
                           class="srg-cell ${n ? "srg-drop-target" : ""}"
                           role="gridcell"
@@ -2016,7 +2021,7 @@ var Vt = 5e3, Ht = 10, Ut = [
                         >
                           ${Qe(u, (e) => e.id, (e) => {
 				let t = this.pickedUp?.kind === "assignment" && this.pickedUp.assignment.id === e.id, n = this.recentlyChanged.has(e.id);
-				return C`
+				return S`
                                 <div
                                   class="srg-assignment srg-status-${e.status} ${t ? "srg-picked-up" : ""} ${n ? "srg-recent-update" : ""}"
                                   role="button"
@@ -2048,8 +2053,8 @@ var Vt = 5e3, Ht = 10, Ut = [
         </section>
       </div>
 
-      ${this.editing ? this.renderEditModal(this.editing) : T}
-      ${this.pendingDelete ? this.renderDeleteModal(this.pendingDelete) : T}
+      ${this.editing ? this.renderEditModal(this.editing) : w}
+      ${this.pendingDelete ? this.renderDeleteModal(this.pendingDelete) : w}
     `;
 	}
 	renderEditModal(e) {
@@ -2066,7 +2071,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 			cancelled: "Cancelled",
 			no_show: "No-show"
 		};
-		return C`
+		return S`
       <div
         class="modal show staff-roster-modal-open"
         tabindex="-1"
@@ -2086,7 +2091,7 @@ var Vt = 5e3, Ht = 10, Ut = [
             <div class="modal-body srg-edit-body">
               <p class="srg-edit-subject">
                 <strong>${e.surname}, ${e.firstname}</strong>
-                <span class="text-muted"> · ${X[this.dayIdxForDate(e.assignment_date)]} ${e.assignment_date}</span>
+                <span class="text-muted"> · ${Wt[this.dayIdxForDate(e.assignment_date)]} ${e.assignment_date}</span>
               </p>
               <div class="srg-edit-grid">
                 <div class="srg-edit-row">
@@ -2100,7 +2105,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 			status: e.target.value
 		}}
                   >
-                    ${n.map((e) => C`<option value=${e} ?selected=${e === this.editForm.status}>${r[e]}</option>`)}
+                    ${n.map((e) => S`<option value=${e} ?selected=${e === this.editForm.status}>${r[e]}</option>`)}
                   </select>
                 </div>
                 <div class="srg-edit-row">
@@ -2147,7 +2152,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 		};
 		if (e.av_options && e.av_options.length) {
 			let i = n[0] ?? "";
-			return C`
+			return S`
         <div class="srg-edit-row">
           <label for=${t}>${e.name}</label>
           <select
@@ -2160,13 +2165,13 @@ var Vt = 5e3, Ht = 10, Ut = [
 			}}
           >
             <option value="">— None —</option>
-            ${e.av_options.map((e) => C`<option value=${e.value} ?selected=${e.value === i}>${e.lib || e.value}</option>`)}
+            ${e.av_options.map((e) => S`<option value=${e.value} ?selected=${e.value === i}>${e.lib || e.value}</option>`)}
           </select>
         </div>
       `;
 		}
 		let i = n.join(", ");
-		return C`
+		return S`
       <div class="srg-edit-row">
         <label for=${t}>${e.name}</label>
         <input
@@ -2187,11 +2192,11 @@ var Vt = 5e3, Ht = 10, Ut = [
 		return Bt({
 			title: "Remove assignment?",
 			onCancel: () => this.cancelDelete(),
-			body: C`
+			body: S`
         <p>Remove <strong>${e.surname}, ${e.firstname}</strong> from this slot on ${e.assignment_date}?</p>
         <p class="text-muted">You can undo with Cmd-Z (or the Undo button) if this was a mistake.</p>
       `,
-			footer: C`
+			footer: S`
         <button type="button" class="btn btn-danger" @click=${() => void this.confirmDelete()}>
           <i class="fa fa-trash"></i> Remove
         </button>
@@ -2202,16 +2207,16 @@ var Vt = 5e3, Ht = 10, Ut = [
 		});
 	}
 };
-Y([ze({
+X([O({
 	type: Number,
 	attribute: "roster-id"
-})], Z.prototype, "rosterId", void 0), Y([ze({
+})], Z.prototype, "rosterId", void 0), X([O({
 	type: String,
 	attribute: "week-start"
-})], Z.prototype, "weekStart", void 0), Y([A()], Z.prototype, "week", void 0), Y([A()], Z.prototype, "available", void 0), Y([A()], Z.prototype, "availableMeta", void 0), Y([A()], Z.prototype, "availableContextDay", void 0), Y([A()], Z.prototype, "staffQuery", void 0), Y([A()], Z.prototype, "error", void 0), Y([A()], Z.prototype, "dragging", void 0), Y([A()], Z.prototype, "pickedUp", void 0), Y([A()], Z.prototype, "pendingDelete", void 0), Y([A()], Z.prototype, "editing", void 0), Y([A()], Z.prototype, "editForm", void 0), Y([A()], Z.prototype, "liveMessage", void 0), Y([A()], Z.prototype, "focusedCellKey", void 0), Y([A()], Z.prototype, "focusedPillIdx", void 0), Y([A()], Z.prototype, "recentlyChanged", void 0), Z = Y([Ie("staff-roster-grid")], Z);
+})], Z.prototype, "weekStart", void 0), X([k()], Z.prototype, "week", void 0), X([k()], Z.prototype, "available", void 0), X([k()], Z.prototype, "availableMeta", void 0), X([k()], Z.prototype, "availableContextDay", void 0), X([k()], Z.prototype, "staffQuery", void 0), X([k()], Z.prototype, "error", void 0), X([k()], Z.prototype, "dragging", void 0), X([k()], Z.prototype, "pickedUp", void 0), X([k()], Z.prototype, "pendingDelete", void 0), X([k()], Z.prototype, "editing", void 0), X([k()], Z.prototype, "editForm", void 0), X([k()], Z.prototype, "liveMessage", void 0), X([k()], Z.prototype, "focusedCellKey", void 0), X([k()], Z.prototype, "focusedPillIdx", void 0), X([k()], Z.prototype, "recentlyChanged", void 0), Z = X([Re("staff-roster-grid")], Z);
 //#endregion
 //#region src/components/shared/day-groups.ts
-function Gt(e, t) {
+function Kt(e, t) {
 	let n = /* @__PURE__ */ new Map();
 	for (let r of e) {
 		let e = t(r), i = n.get(e);
@@ -2222,13 +2227,13 @@ function Gt(e, t) {
 		items: t
 	}));
 }
-function Kt(e) {
+function qt(e) {
 	let { groups: t, emptyText: n, renderItem: r } = e;
-	return C`
+	return S`
     <section class="page-section">
-      ${t.length === 0 ? C`<p class="text-muted">${n}</p>` : C`
+      ${t.length === 0 ? S`<p class="text-muted">${n}</p>` : S`
             <ul class="list-group">
-              ${Qe(t, (e) => e.date, (e) => C`
+              ${Qe(t, (e) => e.date, (e) => S`
                   <li class="list-group-item">
                     <h4 class="srg-day-heading">${Lt(e.date)}</h4>
                     <ul class="list-unstyled">
@@ -2243,15 +2248,15 @@ function Kt(e) {
 }
 //#endregion
 //#region src/components/my-shifts-list.ts
-var qt = {
+var Jt = {
 	scheduled: "Scheduled",
 	confirmed: "Confirmed",
 	completed: "Completed",
 	cancelled: "Cancelled",
 	no_show: "No-show"
-}, Q = class extends k {
-	constructor(...e) {
-		super(...e), this.weekStart = "", this.week = null, this.error = "", this.loading = !1, this.dropping = null, this.successMsg = "", this.pendingDrop = null;
+}, Q = class extends D {
+	constructor() {
+		super(), this.weekStart = "", this.week = null, this.error = "", this.loading = !1, this.dropping = null, this.successMsg = "", this.pendingDrop = null, new Y(this, () => this.pendingDrop !== null, () => this.cancelDrop());
 	}
 	createRenderRoot() {
 		return this;
@@ -2295,9 +2300,9 @@ var qt = {
 		}
 	}
 	render() {
-		if (this.loading && !this.week) return C`<div class="text-center text-muted py-4">Loading…</div>`;
-		let e = Gt(this.week?.shifts ?? [], (e) => e.assignment_date);
-		return C`
+		if (this.loading && !this.week) return S`<div class="text-center text-muted py-4">Loading…</div>`;
+		let e = Kt(this.week?.shifts ?? [], (e) => e.assignment_date);
+		return S`
       ${zt({
 			successMsg: this.successMsg,
 			error: this.error,
@@ -2310,18 +2315,18 @@ var qt = {
 			onRefresh: () => void this.refresh()
 		})}
 
-      ${Kt({
+      ${qt({
 			groups: e,
 			emptyText: "No shifts scheduled this week.",
 			renderItem: (e) => this.renderShift(e)
 		})}
 
-      ${this.pendingDrop ? this.renderDropModal(this.pendingDrop) : T}
+      ${this.pendingDrop ? this.renderDropModal(this.pendingDrop) : w}
     `;
 	}
 	renderShift(e) {
 		let t = this.rosterById(e.roster_id);
-		return C`
+		return S`
       <li class="srg-my-shift">
         <span
           class="staff-roster-type-swatch"
@@ -2337,12 +2342,12 @@ var qt = {
           >
             ${t?.name ?? "Roster #" + e.roster_id}
           </a>
-          ${t?.branch_name ? C`<small class="text-muted"> · ${t.branch_name}</small>` : T}
+          ${t?.branch_name ? S`<small class="text-muted"> · ${t.branch_name}</small>` : w}
         </span>
-        ${e.location ? C`<span class="srg-my-shift-location text-muted">
+        ${e.location ? S`<span class="srg-my-shift-location text-muted">
               <i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}
-            </span>` : T}
-        <span class="srg-my-shift-status badge">${qt[e.status] ?? e.status}</span>
+            </span>` : w}
+        <span class="srg-my-shift-status badge">${Jt[e.status] ?? e.status}</span>
         <a
           class="btn btn-default btn-xs"
           href="?class=${Pt()}&method=tool&op=manage_swaps&roster_id=${e.roster_id}"
@@ -2368,7 +2373,7 @@ var qt = {
 		return Bt({
 			title: "Drop this shift?",
 			onCancel: () => this.cancelDrop(),
-			body: C`
+			body: S`
         <p>
           Drop your shift on
           <strong>${Lt(e.assignment_date)}</strong>,
@@ -2380,7 +2385,7 @@ var qt = {
           one-for-one trade instead, use Swap.
         </p>
       `,
-			footer: C`
+			footer: S`
         <button type="button" class="btn btn-danger" @click=${() => void this.confirmDrop()}>
           <i class="fa fa-times"></i> Drop shift
         </button>
@@ -2391,15 +2396,15 @@ var qt = {
 		});
 	}
 };
-Y([ze({
+X([O({
 	type: String,
 	attribute: "week-start"
-})], Q.prototype, "weekStart", void 0), Y([A()], Q.prototype, "week", void 0), Y([A()], Q.prototype, "error", void 0), Y([A()], Q.prototype, "loading", void 0), Y([A()], Q.prototype, "dropping", void 0), Y([A()], Q.prototype, "successMsg", void 0), Y([A()], Q.prototype, "pendingDrop", void 0), Q = Y([Ie("my-shifts-list")], Q);
+})], Q.prototype, "weekStart", void 0), X([k()], Q.prototype, "week", void 0), X([k()], Q.prototype, "error", void 0), X([k()], Q.prototype, "loading", void 0), X([k()], Q.prototype, "dropping", void 0), X([k()], Q.prototype, "successMsg", void 0), X([k()], Q.prototype, "pendingDrop", void 0), Q = X([Re("my-shifts-list")], Q);
 //#endregion
 //#region src/components/open-shifts-list.ts
-var $ = class extends k {
-	constructor(...e) {
-		super(...e), this.weekStart = "", this.data = null, this.error = "", this.loading = !1, this.claiming = null, this.successMsg = "", this.pendingClaim = null;
+var $ = class extends D {
+	constructor() {
+		super(), this.weekStart = "", this.data = null, this.error = "", this.loading = !1, this.claiming = null, this.successMsg = "", this.pendingClaim = null, new Y(this, () => this.pendingClaim !== null, () => this.cancelClaim());
 	}
 	createRenderRoot() {
 		return this;
@@ -2450,9 +2455,9 @@ var $ = class extends k {
 		return Number(e.replaceAll("-", ""));
 	}
 	render() {
-		if (this.loading && !this.data) return C`<div class="text-center text-muted py-4">Loading…</div>`;
-		let e = Gt(this.data?.openings ?? [], (e) => e.assignment_date);
-		return C`
+		if (this.loading && !this.data) return S`<div class="text-center text-muted py-4">Loading…</div>`;
+		let e = Kt(this.data?.openings ?? [], (e) => e.assignment_date);
+		return S`
       ${zt({
 			successMsg: this.successMsg,
 			error: this.error,
@@ -2465,33 +2470,33 @@ var $ = class extends k {
 			onRefresh: () => void this.refresh()
 		})}
 
-      ${Kt({
+      ${qt({
 			groups: e,
 			emptyText: "No open shifts available this week.",
 			renderItem: (e) => this.renderOpening(e)
 		})}
 
-      ${this.pendingClaim ? this.renderClaimModal(this.pendingClaim) : T}
+      ${this.pendingClaim ? this.renderClaimModal(this.pendingClaim) : w}
     `;
 	}
 	renderClaimModal(e) {
 		return Bt({
 			title: "Claim this shift?",
 			onCancel: () => this.cancelClaim(),
-			body: C`
+			body: S`
         <p>
           Claim
           <strong>${Lt(e.assignment_date)}</strong>,
           <strong>${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</strong>
           on <strong>${e.roster_name}</strong>?
         </p>
-        ${e.location ? C`<p class="text-muted"><i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}</p>` : T}
+        ${e.location ? S`<p class="text-muted"><i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}</p>` : w}
         <p class="text-muted">
           You'll be added to the roster immediately. Drop the shift later from
           "My shifts" if plans change.
         </p>
       `,
-			footer: C`
+			footer: S`
         <button type="button" class="btn btn-primary" @click=${() => void this.confirmClaim()}>
           <i class="fa fa-hand-paper-o"></i> Claim shift
         </button>
@@ -2503,7 +2508,7 @@ var $ = class extends k {
 	}
 	renderOpening(e) {
 		let t = this.openingKey(e), n = this.claiming === t;
-		return C`
+		return S`
       <li class="srg-my-shift">
         <span
           class="staff-roster-type-swatch"
@@ -2515,11 +2520,11 @@ var $ = class extends k {
         </span>
         <span class="srg-my-shift-roster">
           ${e.roster_name}
-          ${e.branch_name ? C`<small class="text-muted"> · ${e.branch_name}</small>` : T}
+          ${e.branch_name ? S`<small class="text-muted"> · ${e.branch_name}</small>` : w}
         </span>
-        ${e.location ? C`<span class="srg-my-shift-location text-muted">
+        ${e.location ? S`<span class="srg-my-shift-location text-muted">
               <i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}
-            </span>` : T}
+            </span>` : w}
         <span class="srg-my-shift-status badge">${e.capacity_remaining} open</span>
         <button
           type="button"
@@ -2534,8 +2539,8 @@ var $ = class extends k {
     `;
 	}
 };
-Y([ze({
+X([O({
 	type: String,
 	attribute: "week-start"
-})], $.prototype, "weekStart", void 0), Y([A()], $.prototype, "data", void 0), Y([A()], $.prototype, "error", void 0), Y([A()], $.prototype, "loading", void 0), Y([A()], $.prototype, "claiming", void 0), Y([A()], $.prototype, "successMsg", void 0), Y([A()], $.prototype, "pendingClaim", void 0), $ = Y([Ie("open-shifts-list")], $);
+})], $.prototype, "weekStart", void 0), X([k()], $.prototype, "data", void 0), X([k()], $.prototype, "error", void 0), X([k()], $.prototype, "loading", void 0), X([k()], $.prototype, "claiming", void 0), X([k()], $.prototype, "successMsg", void 0), X([k()], $.prototype, "pendingClaim", void 0), $ = X([Re("open-shifts-list")], $);
 //#endregion
