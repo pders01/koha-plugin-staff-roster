@@ -127,22 +127,23 @@ jobs:
       - name: Start koha-testing-docker
         run: docker compose -p koha up --detach
 
-      - name: Wait for Koha plack
+      - name: Wait for Koha DB
         run: |
-          # Plack boots after koha-create finishes seeding the test
-          # database. Poll the koha service for "Listening on" instead
-          # of fixed-sleep.
-          for i in $(seq 1 90); do
-            if docker compose -p koha logs koha 2>&1 | grep -q "Listening on"; then
-              echo "Koha plack up after ${i} polls"
+          # The prove suite only needs MariaDB + the kohadev schema +
+          # the plugins dir. Plack/Starman boots later (~2 extra min)
+          # but we don't depend on it for prove. Poll koha-mysql at
+          # 2s intervals — fires the moment the DB accepts SELECT 1.
+          for i in $(seq 1 180); do
+            if docker exec koha-koha-1 koha-mysql kohadev -e 'SELECT 1' >/dev/null 2>&1; then
+              echo "Koha DB up after ${i} polls (~$((i*2))s)"
               break
             fi
-            if [ "$i" = "90" ]; then
-              echo "Timed out waiting for Koha"
+            if [ "$i" = "180" ]; then
+              echo "Timed out waiting for Koha DB"
               docker compose -p koha logs koha
               exit 1
             fi
-            sleep 5
+            sleep 2
           done
 
       - name: Sync plugin into the container
