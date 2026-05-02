@@ -1393,7 +1393,7 @@ var wt = class {
 	"staffroster_view permission required": "Berechtigung staffroster_view erforderlich",
 	"target must include slot_id, patron_id, or assignment_date": "Ziel muss slot_id, patron_id oder assignment_date enthalten",
 	"target required for move": "Ziel für Verschieben erforderlich",
-	"Staff already assigned to overlapping slot that day": "Personal bereits einer überlappenden Schicht an diesem Tag zugewiesen",
+	"Staff already assigned to overlapping slot that day": "Mitarbeiter ist an diesem Tag bereits einer überlappenden Schicht zugewiesen",
 	"Staff rosters": "Dienstpläne",
 	"No rosters found.": "Keine Dienstpläne gefunden.",
 	"Create your first roster": "Erstellen Sie Ihren ersten Dienstplan",
@@ -1573,7 +1573,11 @@ var wt = class {
 	"You'll be added to the roster immediately. Drop the shift later from My shifts if plans change.": "Sie werden sofort zum Dienstplan hinzugefügt. Geben Sie die Schicht später unter 'Meine Schichten' auf, wenn sich Ihre Pläne ändern.",
 	"Claim shift": "Schicht übernehmen",
 	open: "offen",
-	"Claiming…": "Wird übernommen…"
+	"Claiming…": "Wird übernommen…",
+	"Slot full ({filled}/{max})": "Schicht voll ({filled}/{max})",
+	"Self-unclaim closed: must drop at least {hours}h before the shift": "Selbst-Aufgabe gesperrt: Schicht muss mindestens {hours} Std. vorher abgegeben werden",
+	"Slot not found": "Schicht nicht gefunden",
+	"Slot does not run on that day": "Schicht findet an diesem Tag nicht statt"
 } };
 function Et() {
 	return (typeof document < "u" && document.documentElement.lang || "en").toLowerCase().split(/[-_]/)[0] ?? "en";
@@ -1630,8 +1634,13 @@ var K = "/api/v1/contrib/staffroster", q = new wt(K, {
 });
 async function J(e) {
 	if (!e.ok) {
-		let t = (await e.json().catch(() => ({}))).error ?? `HTTP ${e.status}`, n = Error(G(t));
-		throw n.status = e.status, n;
+		let t = await e.json().catch(() => ({})), n;
+		n = t.template ? G(t.template).replace(/\{(\w+)\}/g, (e, n) => {
+			let r = t.template_args?.[n];
+			return r === void 0 ? e : String(r);
+		}) : G(t.error ?? `HTTP ${e.status}`);
+		let r = Error(n);
+		throw r.status = e.status, r;
 	}
 	if (e.status !== 204) return await e.json();
 }

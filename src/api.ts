@@ -91,14 +91,28 @@ export type RosterWeek = {
 
 async function asJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    // Run the server-supplied error string through the translation
-    // shim so a German user gets the German variant for messages we
-    // have keys for. Strings the dict doesn't know fall through
-    // unchanged; the same shim handles "Slot full (X/Y)" by matching
-    // the literal pattern, so add those entries to de.json verbatim.
-    const raw = body.error ?? `HTTP ${res.status}`;
-    const err = new Error(__(raw)) as Error & { status: number };
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      template?: string;
+      template_args?: Record<string, string | number>;
+    };
+    // Two-tier error rendering: when the server emits a `template`
+    // field plus `template_args`, look the English template up in the
+    // current-locale dict and substitute {placeholders}. Falls back to
+    // the literal `error` string (also run through __()) for static
+    // messages and for clients/locales that don't know the template.
+    let message: string;
+    if (body.template) {
+      const translated = __(body.template);
+      message = translated.replace(/\{(\w+)\}/g, (match, key) => {
+        const value = body.template_args?.[key];
+        return value === undefined ? match : String(value);
+      });
+    } else {
+      const raw = body.error ?? `HTTP ${res.status}`;
+      message = __(raw);
+    }
+    const err = new Error(message) as Error & { status: number };
     err.status = res.status;
     throw err;
   }

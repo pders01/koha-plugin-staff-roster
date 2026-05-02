@@ -4,26 +4,24 @@ Open work items, grouped by priority. Items get crossed off as commits land.
 
 ## Now (small, cohesive)
 
-The architectural-review punch list landed (2026-05-02). What's still
-open here is the original Now-candidates plus follow-up work the sweep
-touched but didn't finish:
+The architectural-review punch list landed (2026-05-02). The
+follow-up sweep below cleared every original Now-candidate except
+the French translation:
 
-- **Add a French (or other) translation**. Infrastructure is in place;
-  `docs/wiki/Translation-Guide.md` walks through the steps end-to-end.
-  Pure additive work — no risk to existing surfaces.
-- **Wire the cron runner into the kohadev container** so reminder
-  emails fire in dev, not just in unit tests. Touches
-  `cron/staff_roster_nightly.pl`, `docs/wiki/Installation.md`,
-  possibly a Makefile target.
-- **Templated REST error strings** — the static strings now translate
-  via `__()` in `src/api.ts`'s `asJson`, but interpolated ones like
-  `"Slot full (1/4)"` and `"Self-unclaim closed: must drop at least
-  24h before the shift"` still ship verbatim. Plan: have the
-  controllers return `{ error: "code", details: { filled, max_staff } }`
-  and translate templates client-side; or have the server build the
-  full localized string via `Lib::I18N::tr()`.
-- **Per-page bundle entry points** — see Next bucket; small enough
-  to live here once the module reorg lands.
+- **Add a French (or other) translation**. Infrastructure is in
+  place; `docs/wiki/Translation-Guide.md` walks through the steps
+  end-to-end. Pure additive work — no risk to existing surfaces.
+  Needs a native speaker; the templated error strings (Now follow-up
+  below) shipped with German keys only.
+- [x] **Wire the cron runner into the kohadev container** —
+  `just cron-nightly` syncs + fires `staff_roster_nightly.pl` via
+  `koha-shell` so reminder emails verify in dev. Cron script now
+  self-bootstraps the plugins dir via `FindBin`.
+- [x] **Templated REST error strings** — `_conflict_check` and
+  `self_delete`'s lockout 403 emit `{ error, template, template_args }`
+  envelopes; `src/api.ts` `asJson` substitutes `{filled}/{max}` /
+  `{hours}` against the localized template from `de.json`.
+- **Per-page bundle entry points** — see Next bucket.
 
 ## Next (single-feature batches)
 
@@ -99,34 +97,32 @@ Both items below need an external decision before any code lands.
       page; roster delete uses a separate `delete_confirm` op + page.
       Two patterns for destructive actions. Trade-off: per-slot
       full-page round-trips would feel heavy. Revisit only on feedback.
-- [ ] **CGI tool views not gated by `staffroster_view`** sub-perm
-      (only by Koha's generic `tools` flag). The REST layer enforces
-      it; the rendered HTML shell does not. Add `_gate('staffroster_view',
-      \@messages)` at the top of the `tool` dispatcher's roster-scoped
-      op gate (around `StaffRoster.pm:1090`). Same evaluation for
-      `manage_swaps` / `manage_exceptions` against
-      `staffroster_manage_rosters`.
-- [ ] **Mutual-swap (two-assignment) approval has no prove test**.
-      `t/swap_ownership.t` covers the request side; `_tool_respond_swap`'s
-      hot path that swaps two assignments inside `_txn` with
-      `FOR UPDATE` locking is not exercised. Add `t/swap_respond.t`.
-- [ ] **409 conflict rejections never reach `action_logs`**. An admin
-      cannot reconstruct "who tried to assign whom and why it was
-      blocked" from the audit trail. Consider an
-      `_audit('CONFLICT_REJECTED', ...)` call in `_conflict_check`'s
-      caller path with slot_id, date, borrowernumber.
-- [ ] **`uninstall` drops six tables + the admin-edited
-      `STAFFROSTER`/`REMINDER` letter** unconditionally
-      (`StaffRoster.pm:561`). `_register_notice_templates` uses
-      `INSERT IGNORE` to protect admin edits on install/upgrade, but
-      uninstall destroys them. Either leave the letter row, or
-      surface a confirmation that lists "you are about to delete N
-      assignments + your edited reminder template".
+- [x] **CGI tool views gated by sub-permissions** (`b37240c`).
+      `tool()` now applies a per-op required-perm gate
+      (`staffroster_view` / `staffroster_manage_rosters` /
+      `staffroster_self_assign`) before the view renderer; failures
+      drop back to list with `access_denied`. Superlibs bypass.
+- [x] **Mutual-swap prove coverage** (`1dd4a8e`). `t/swap_respond.t`
+      runs three subtests: mutual approve swaps borrowers, second
+      approve loses the FOR UPDATE race → `swap_not_pending`, reject
+      leaves both assignments untouched. Prove rose to 67/67.
+- [x] **409 conflict rejections audit** (`f965c38`). Each
+      `_conflict_check` call site (create / update / bulk_move /
+      self_claim, plus the closure 409) emits a `CONFLICT_REJECTED`
+      action_logs row before rendering 409, with slot_id, borrower,
+      date, reason.
+- [x] **`uninstall` preserves admin-edited letter** (`425e41e`).
+      Schema::uninstall no longer wipes the STAFFROSTER letter rows;
+      this matches `_register_notice_templates`'s INSERT IGNORE
+      contract on the install path. POD documents the explicit
+      DELETE for sites that do want a wipe.
 
 ## Pointers for the next agent
 
-- **Current state (2026-05-02)**: prove suite **57/57**, cypress
-  **27/27** across 7 specs (`assignment_crud`, `get_week`,
+- **Current state (2026-05-02)**: prove suite **67/67** (added
+  `t/swap_respond.t` + new Lib/Schema + Controllers/Tool/* swept by
+  `t/00-load.t`), cypress **27/27** across 7 specs
+  (`assignment_crud`, `get_week`,
   `grid_columns`, `integrations`, `manage_slots`, `self_service`,
   `swap_workflow`). Bundle ≈ 110 KB / 30 KB gzip.
 - **Lib::* layout**: I18N, DateUtils, Audit, Permissions,

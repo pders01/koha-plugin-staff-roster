@@ -112,8 +112,8 @@ sub create {
 
         my $conflict = _conflict_check( $dbh, $slot_id, $borrowernumber, $date );
         if ($conflict) {
-            _audit_conflict( 'create', $slot_id, $borrowernumber, $date, $conflict );
-            return $c->render( status => 409, openapi => { error => $conflict } );
+            _audit_conflict( 'create', $slot_id, $borrowernumber, $date, $conflict->{error} );
+            return $c->render( status => 409, openapi => $conflict );
         }
 
         my $assigned_by = $c->stash('koha.user') ? $c->stash('koha.user')->borrowernumber : undef;
@@ -178,8 +178,8 @@ sub update {
             my $conflict
                 = _conflict_check( $dbh, $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $id );
             if ($conflict) {
-                _audit_conflict( 'update', $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $conflict );
-                return $c->render( status => 409, openapi => { error => $conflict } );
+                _audit_conflict( 'update', $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $conflict->{error} );
+                return $c->render( status => 409, openapi => $conflict );
             }
         }
 
@@ -330,8 +330,8 @@ sub bulk {
                 my $conflict
                     = _conflict_check( $dbh, $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $id, );
                 if ($conflict) {
-                    _audit_conflict( 'bulk_move', $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $conflict );
-                    $error = { status => 409, body => { error => $conflict, id => $id + 0 } };
+                    _audit_conflict( 'bulk_move', $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $conflict->{error} );
+                    $error = { status => 409, body => { %{$conflict}, id => $id + 0 } };
                     last;
                 }
 
@@ -423,8 +423,8 @@ sub self_create {
 
         my $conflict = _conflict_check( $dbh, $slot_id, $borrowernumber, $date );
         if ($conflict) {
-            _audit_conflict( 'self_claim', $slot_id, $borrowernumber, $date, $conflict );
-            return $c->render( status => 409, openapi => { error => $conflict } );
+            _audit_conflict( 'self_claim', $slot_id, $borrowernumber, $date, $conflict->{error} );
+            return $c->render( status => 409, openapi => $conflict );
         }
 
         $dbh->do(
@@ -504,6 +504,8 @@ sub self_delete {
                         status  => 403,
                         openapi => {
                             error             => "Self-unclaim closed: must drop at least ${lockout}h before the shift",
+                            template          => 'Self-unclaim closed: must drop at least {hours}h before the shift',
+                            template_args     => { hours => $lockout },
                             hours_until_shift => sprintf( '%.2f', $hours_until ),
                             lockout_hours     => $lockout,
                         },
@@ -573,10 +575,10 @@ sub _conflict_check {
           WHERE s.id = ?},
         undef, $slot_id
     );
-    return 'Slot not found' if !defined $max_staff;
+    return { error => 'Slot not found' } if !defined $max_staff;
 
     if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on( $rrule, $date, $anchor ) ) {
-        return 'Slot does not run on that day';
+        return { error => 'Slot does not run on that day' };
     }
 
     my $filled;
@@ -594,7 +596,17 @@ sub _conflict_check {
             undef, $slot_id, $date,
         );
     }
-    return "Slot full ($filled/$max_staff)" if $filled >= $max_staff;
+    if ( $filled >= $max_staff ) {
+        # Server still renders the human English string so curl /
+        # legacy clients see something readable; the localized client
+        # picks `template` + `template_args` and re-renders against the
+        # current locale.
+        return {
+            error         => "Slot full ($filled/$max_staff)",
+            template      => 'Slot full ({filled}/{max})',
+            template_args => { filled => $filled + 0, max => $max_staff + 0 },
+        };
+    }
 
     my $double;
     if ($exclude_id) {
@@ -622,7 +634,7 @@ sub _conflict_check {
             undef, $slot_id, $borrowernumber, $date,
         );
     }
-    return 'Staff already assigned to overlapping slot that day' if $double > 0;
+    return { error => 'Staff already assigned to overlapping slot that day' } if $double > 0;
 
     return;
 }

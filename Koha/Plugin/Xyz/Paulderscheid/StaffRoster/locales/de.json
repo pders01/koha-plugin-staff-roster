@@ -388,5 +388,11 @@
   "You'll be added to the roster immediately. Drop the shift later from My shifts if plans change.": "Sie werden sofort zum Dienstplan hinzugefügt. Geben Sie die Schicht später unter 'Meine Schichten' auf, wenn sich Ihre Pläne ändern.",
   "Claim shift": "Schicht übernehmen",
   "open": "offen",
-  "Claiming…": "Wird übernommen…"
+  "Claiming…": "Wird übernommen…",
+
+  "Slot full ({filled}/{max})": "Schicht voll ({filled}/{max})",
+  "Self-unclaim closed: must drop at least {hours}h before the shift": "Selbst-Aufgabe gesperrt: Schicht muss mindestens {hours} Std. vorher abgegeben werden",
+  "Slot not found": "Schicht nicht gefunden",
+  "Slot does not run on that day": "Schicht findet an diesem Tag nicht statt",
+  "Staff already assigned to overlapping slot that day": "Mitarbeiter ist an diesem Tag bereits einer überlappenden Schicht zugewiesen"
 }

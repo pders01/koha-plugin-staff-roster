@@ -96,14 +96,18 @@ subtest 'slot full: third borrower rejected' => sub {
     clean();
     seat($bn_a);
     seat($bn_b);
-    like( $cc->( $dbh, $slot_id, $bn_c, $applies_date ), qr/Slot full \(2\/2\)/, 'reports full with N/M shape' );
+    my $r = $cc->( $dbh, $slot_id, $bn_c, $applies_date );
+    like( $r->{error}, qr/Slot full \(2\/2\)/, 'reports full with N/M shape in error string' );
+    is( $r->{template}, 'Slot full ({filled}/{max})', 'template emitted for client localization' );
+    is( $r->{template_args}{filled}, 2, 'filled arg' );
+    is( $r->{template_args}{max},    2, 'max arg' );
 };
 
 subtest 'overlap: same borrower already assigned to this slot/date' => sub {
     clean();
     seat($bn_a);
-    is( $cc->( $dbh, $slot_id, $bn_a, $applies_date ),
-        'Staff already assigned to overlapping slot that day',
+    is_deeply( $cc->( $dbh, $slot_id, $bn_a, $applies_date ),
+        { error => 'Staff already assigned to overlapping slot that day' },
         'self-overlap caught (slot overlaps with itself in the time check)'
     );
 };
@@ -122,20 +126,21 @@ subtest 'exclude_id still counts other rows toward capacity' => sub {
     my $own_id = seat($bn_c);    # would be over capacity, but exclude removes it
                                  # Wait — seat() above already inserted a 3rd. Recount: capacity=2, 3 rows.
                                  # Excluding own_id leaves 2 rows → still full when checking a 4th.
-    like( $cc->( $dbh, $slot_id, $bn_c, $applies_date, $own_id ),
-        qr/Slot full/, 'exclude removes own row but the other two still fill it' );
+    my $r = $cc->( $dbh, $slot_id, $bn_c, $applies_date, $own_id );
+    like( $r->{error}, qr/Slot full/, 'exclude removes own row but the other two still fill it' );
 };
 
 subtest 'slot not found' => sub {
-    is( $cc->( $dbh, 999_999_999, $bn_a, $applies_date ), 'Slot not found', 'returns canonical not-found message' );
+    is_deeply( $cc->( $dbh, 999_999_999, $bn_a, $applies_date ),
+        { error => 'Slot not found' }, 'returns canonical not-found envelope' );
 };
 
 SKIP: {
     skip 'no skipped date in window (slot runs every day)', 1 if !$skips_date;
     subtest 'date does not apply per the recurrence rule' => sub {
         clean();
-        is( $cc->( $dbh, $slot_id, $bn_a, $skips_date ),
-            'Slot does not run on that day',
+        is_deeply( $cc->( $dbh, $slot_id, $bn_a, $skips_date ),
+            { error => 'Slot does not run on that day' },
             'RRule guard rejects off-day claims'
         );
     };
