@@ -665,7 +665,7 @@ var Ve = {
 	}
 });
 //#endregion
-//#region ../../../pers/web/lit-stack/dist/utilities-BUI2aO8f.js
+//#region node_modules/@jpahd/lit-stack/dist/utilities-BUI2aO8f.js
 async function $e(e) {
 	try {
 		return [null, await e];
@@ -674,7 +674,7 @@ async function $e(e) {
 	}
 }
 //#endregion
-//#region ../../../pers/web/lit-stack/node_modules/ts-pattern/dist/index.js
+//#region node_modules/ts-pattern/dist/index.js
 var M = Symbol.for("@ts-pattern/matcher"), et = Symbol.for("@ts-pattern/isVariadic"), tt = "@ts-pattern/anonymous-select-key", nt = (e) => !!(e && typeof e == "object"), rt = (e) => e && !!e[M], N = (e, t, n) => {
 	if (rt(e)) {
 		let { matched: r, selections: i } = e[M]().match(t);
@@ -1060,7 +1060,7 @@ function Ct(e) {
 	throw new yt(e);
 }
 //#endregion
-//#region ../../../pers/web/lit-stack/dist/http-CJJa-frZ.js
+//#region node_modules/@jpahd/lit-stack/dist/http-CJJa-frZ.js
 var wt = class {
 	constructor(e, t, n) {
 		this.interceptors = [], this.inflight = /* @__PURE__ */ new Map(), this.basePath = e, this.endpoints = t, this.retry = n ?? { maxRetries: 0 };

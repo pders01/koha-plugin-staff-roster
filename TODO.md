@@ -58,10 +58,9 @@ _Empty — pick the next batch._
 
 Both items below need an external decision before any code lands.
 
-- [ ] **`@jpahd/lit-stack` distribution.** Currently `file:..` path —
-      works locally only. Pick: publish to npm, vendor `dist/` into
-      the plugin, or git submodule. Same question applies to
-      `@jpahd/kalendus` whenever the patron view lands.
+- [ ] **`@jpahd/kalendus` distribution.** Same question whenever the
+      OPAC patron view lands; pick npm publish (matching lit-stack)
+      or vendor `dist/` into the plugin.
 - [ ] **Force-push origin** once we're ready to publish. Origin is
       still at the original POC commit; main now has 200+ commits
       including the scaffold reset + this entire feature buildout.
@@ -105,6 +104,10 @@ Both items below need an external decision before any code lands.
 
 ## Done (recent — older entries pruned 2026-05-02)
 
+- [x] **`@jpahd/lit-stack` published to npm**: `0.1.0-alpha.0`.
+      package.json now references the registry version instead of
+      the `file:..` path. Plugin is now installable from a fresh
+      checkout without the personal lit-stack workspace.
 - [x] **Cypress regression for `cellDate` column derivation**:
       `cypress/integration/staffroster/grid_columns_spec.ts` loads
       `view_assignments` with `week_start=2026-05-04` (Monday) and

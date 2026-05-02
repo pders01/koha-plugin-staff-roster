@@ -1,7 +1,7 @@
 {
     "author": "Paul Derscheid",
     "dependencies": {
-        "@jpahd/lit-stack": "file:../../../pers/web/lit-stack",
+        "@jpahd/lit-stack": "0.1.0-alpha.0",
         "@lit/context": "~1.1.6",
         "lit": "~3.3.2"
     },
