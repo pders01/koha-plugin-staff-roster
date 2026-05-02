@@ -18,12 +18,6 @@ Candidates worth picking up first (any of them is a clean ~1-day commit):
   `STAFFROSTER`/`REMINDER` letter substitution against real Koha
   notice-rendering quirks. Touches `cron/staff_roster_nightly.pl`,
   `docs/wiki/Installation.md`, possibly a Makefile target.
-- **Backfill the remaining tool.tt deep strings into the i18n
-  dictionary.** A handful of form labels, modal copy, and JS-only
-  DataTable strings still fall through to English (they're fine but
-  inconsistent next to the rest of the page in German). Grep for raw
-  English in `tool.tt` and `staff-roster-grid.ts` and add the keys to
-  `locales/de.json`.
 
 Avoid the Distribution items (need external decisions) and the
 Phase 2 features (need design sign-off) for a quick win.
@@ -118,6 +112,16 @@ Both items below need an external decision before any code lands.
 
 ## Done (recent — older entries pruned 2026-05-02)
 
+- [x] **Backfill remaining tool.tt + Lit grid i18n strings**: wrapped
+      raw English in tool.tt (exception-row Delete button + 5 jQuery
+      `.text(...)` legend strings) and in `staff-roster-grid.ts`
+      (Loading placeholder + assignment chip aria-label / title that
+      previously leaked the raw `a.status` value and English action
+      hint). Hoisted `STATUS_LABELS` to module scope so the chip and
+      the edit-modal `<select>` share one translation map. Added 3
+      new keys to `locales/de.json` (`Delete exception for DATE?`,
+      `Press Enter to move, …`, `Click to edit.`); JSON now ships
+      ~273 entries. Bundle unchanged at 107.81 KB / 29.65 KB gzip.
 - [x] **Documentation overhaul** (1cfb5ba): scaffold-leftover
       `README.md` + 6 stray docs replaced with a plugin-specific
       README, a refreshed `CLAUDE.md`, and `docs/wiki/` (8 pages

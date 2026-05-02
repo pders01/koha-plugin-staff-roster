@@ -28,6 +28,13 @@ const FULL_DAYS = () => [
   __("Monday"), __("Tuesday"), __("Wednesday"), __("Thursday"),
   __("Friday"), __("Saturday"), __("Sunday"),
 ];
+const STATUS_LABELS = (): Record<Assignment["status"], string> => ({
+  scheduled: __("Scheduled"),
+  confirmed: __("Confirmed"),
+  completed: __("Completed"),
+  cancelled: __("Cancelled"),
+  no_show: __("No-show"),
+});
 
 // iCal BYDAY codes per Monday-anchored column index.
 const ICAL_FOR_COLUMN = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
@@ -672,7 +679,7 @@ export class StaffRosterGrid extends LitElement {
   }
 
   override render() {
-    if (!this.week) return html`<div class="text-center text-muted py-4">Loading…</div>`;
+    if (!this.week) return html`<div class="text-center text-muted py-4">${__("Loading…")}</div>`;
 
     const color = this.week.roster.type_color;
     const slotsByTime = this.sortedSlots();
@@ -875,8 +882,8 @@ export class StaffRosterGrid extends LitElement {
                                   role="button"
                                   tabindex="0"
                                   draggable="true"
-                                  aria-label="${a.firstname} ${a.surname}, ${a.status}. Press Enter to move, Delete to remove. Click to edit."
-                                  title="${a.firstname} ${a.surname} (${a.status}). Click to edit."
+                                  aria-label="${a.firstname} ${a.surname}, ${STATUS_LABELS()[a.status]}. ${__("Press Enter to move, Delete to remove. Click to edit.")}"
+                                  title="${a.firstname} ${a.surname} (${STATUS_LABELS()[a.status]}). ${__("Click to edit.")}"
                                   @dragstart=${(e: DragEvent) => {
                                     this.dragging = { kind: "assignment", assignment: a };
                                     e.dataTransfer?.setData("text/plain", String(a.id));
@@ -909,13 +916,7 @@ export class StaffRosterGrid extends LitElement {
   private renderEditModal(a: Assignment) {
     const fields = this.week?.assignment_fields ?? [];
     const STATUSES: Assignment["status"][] = ["scheduled", "confirmed", "completed", "cancelled", "no_show"];
-    const STATUS_LABELS: Record<Assignment["status"], string> = {
-      scheduled: __("Scheduled"),
-      confirmed: __("Confirmed"),
-      completed: __("Completed"),
-      cancelled: __("Cancelled"),
-      no_show: __("No-show"),
-    };
+    const labels = STATUS_LABELS();
     return html`
       <div
         class="modal show staff-roster-modal-open"
@@ -947,7 +948,7 @@ export class StaffRosterGrid extends LitElement {
                     .value=${this.editForm.status}
                     @change=${(e: Event) => (this.editForm = { ...this.editForm, status: (e.target as HTMLSelectElement).value })}
                   >
-                    ${STATUSES.map((s) => html`<option value=${s} ?selected=${s === this.editForm.status}>${STATUS_LABELS[s]}</option>`)}
+                    ${STATUSES.map((s) => html`<option value=${s} ?selected=${s === this.editForm.status}>${labels[s]}</option>`)}
                   </select>
                 </div>
                 <div class="srg-edit-row">
