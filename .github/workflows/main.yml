@@ -15,8 +15,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: bun run build
       - run: bun run check
+      - run: bun run build
       - uses: actions/upload-artifact@v4
         with:
           name: built-bundle
@@ -32,10 +32,45 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: plugin
       - uses: actions/download-artifact@v4
         with:
           name: built-bundle
-          path: Koha/Plugin/Xyz/Paulderscheid/StaffRoster/
+          path: plugin/Koha/Plugin/Xyz/Paulderscheid/StaffRoster/
+
+      # Koha source clone is the "SYNC_REPO" mounted by koha-testing-docker
+      # at /kohadevbox/koha. Cache it across runs keyed by the week so we
+      # don't re-clone ~50 MB on every push, but still refresh weekly to
+      # follow main. Cache miss falls back to a fresh shallow clone.
+      - name: Compute Koha cache key
+        id: cache-key
+        run: |
+          WEEK=$(date -u +%Y-%U)
+          echo "week=$WEEK" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Koha clone
+        id: koha-cache
+        uses: actions/cache@v4
+        with:
+          path: kohaclone
+          key: koha-main-${{ steps.cache-key.outputs.week }}
+          restore-keys: |
+            koha-main-
+
+      - name: Clone Koha main (cache miss / refresh)
+        if: steps.koha-cache.outputs.cache-hit != 'true'
+        run: |
+          rm -rf kohaclone
+          git clone --branch main --single-branch --depth 1 \
+            https://github.com/Koha-Community/Koha.git kohaclone
+
+      - name: Refresh shallow clone (cache hit, but pull main tip)
+        if: steps.koha-cache.outputs.cache-hit == 'true'
+        working-directory: kohaclone
+        run: |
+          git fetch --depth 1 origin main
+          git reset --hard origin/main
 
       - name: Stand up koha-testing-docker against main
         run: |
@@ -46,21 +81,41 @@ jobs:
           wget -q -O env/defaults.env \
             https://gitlab.com/koha-community/koha-testing-docker/raw/main/env/defaults.env
           cp env/defaults.env .env
-          echo "KOHA_IMAGE=main" >> .env
+          # ktd's compose template reads these from the env; without them
+          # the koha service tries to bind-mount empty paths and exits
+          # with "invalid spec: :/kohadevbox/koha".
+          {
+            echo "SYNC_REPO=${GITHUB_WORKSPACE}/kohaclone"
+            echo "LOCAL_USER_ID=$(id -u)"
+            echo "KOHA_IMAGE=main"
+            echo "KOHA_INTRANET_URL=http://127.0.0.1:8081"
+            echo "KOHA_MARC_FLAVOUR=marc21"
+            echo "RUN_TESTS_AND_EXIT=no"
+          } >> .env
+
           docker compose -p koha pull --quiet
           docker compose -p koha up --detach
-          # Wait for the Koha container to finish koha-create + plack boot.
-          # Poll instead of a fixed sleep so the action exits as soon as
-          # the plugins dir is ready.
-          for i in $(seq 1 60); do
-            if docker exec koha-koha-1 test -d /var/lib/koha/kohadev/plugins; then
-              echo "Koha ready after ${i} polls"
+
+      - name: Wait for Koha plack
+        run: |
+          # Plack boots after koha-create finishes seeding the test
+          # database. Poll the koha service for "Listening on" instead
+          # of fixed-sleep.
+          for i in $(seq 1 90); do
+            if docker compose -p koha logs koha 2>&1 | grep -q "Listening on"; then
+              echo "Koha plack up after ${i} polls"
               break
+            fi
+            if [ "$i" = "90" ]; then
+              echo "Timed out waiting for Koha"
+              docker compose -p koha logs koha
+              exit 1
             fi
             sleep 5
           done
 
       - name: Sync plugin into the container
+        working-directory: plugin
         run: |
           docker exec koha-koha-1 rm -rf /var/lib/koha/kohadev/plugins/Koha /var/lib/koha/kohadev/plugins/t
           docker cp Koha koha-koha-1:/var/lib/koha/kohadev/plugins/Koha
