@@ -55,7 +55,7 @@ my $today_dt = Koha::DateUtils::dt_from_string()->truncate( to => 'day' );
 my $test_date;
 for my $i ( 1 .. 30 ) {
     my $candidate = $today_dt->clone->add( days => $i )->ymd;
-    if ( Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $rrule, $candidate, $anchor ) ) {
+    if ( Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on( $rrule, $candidate, $anchor ) ) {
         $test_date = $candidate;
         last;
     }

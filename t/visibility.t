@@ -21,7 +21,7 @@ unshift @INC, '/kohadevbox/koha/t/lib/';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster; 1 }
     or plan skip_all => 'plugin module did not load';
 
-my $ugi = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_user_group_ids;
+my $ugi = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::user_group_ids;
 
 # Stub Koha::Library::Groups so search() returns leaves bound to a
 # branchcode and find() climbs the parent chain by id.
@@ -74,7 +74,7 @@ sub graph {
     # Same branchcode appears in successive subtests with different
     # graphs; clear the per-process memoization in StaffRoster.pm so
     # the second subtest doesn't read the first subtest's answer.
-    Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_clear_user_group_cache();
+    Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::clear_user_group_cache();
 }
 
 subtest 'walks up parent chain, returns every ancestor id' => sub {

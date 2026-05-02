@@ -57,6 +57,7 @@ use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Schema;
 
 # Recurrence helpers; pulled in early so the slot save path doesn't pay the
 # require cost on first request.
@@ -141,225 +142,17 @@ Boolean (true on success, false on failure)
 
 =cut
 
-sub install() {
+sub install {
     my ( $self, $args ) = @_;
-
-    my $dbh = C4::Context->dbh;
-
-    # Table 1: Roster Types (categories of duties)
-    $dbh->do(
-        q{
-        CREATE TABLE IF NOT EXISTS staff_roster_types (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            code VARCHAR(50) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            description TEXT,
-            color VARCHAR(7) DEFAULT '#3498db',
-            is_active TINYINT(1) DEFAULT 1,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL,
-            UNIQUE KEY unique_code (code)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    }
-    );
-
-    # Table 2: Rosters (schedule definitions)
-    # branch_id and library_group_id are mutually exclusive (enforced in app):
-    # both NULL = all branches; branch_id set = single branch; library_group_id set = group.
-    $dbh->do(
-        q{
-        CREATE TABLE IF NOT EXISTS staff_roster (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            roster_type_id INT NOT NULL,
-            branch_id VARCHAR(10),
-            library_group_id INT,
-            name VARCHAR(255) NOT NULL,
-            description TEXT,
-            effective_from DATE NOT NULL,
-            effective_to DATE,
-            is_active TINYINT(1) DEFAULT 1,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL,
-            KEY idx_roster_branch_active (branch_id, is_active, effective_from, effective_to),
-            KEY idx_roster_group (library_group_id),
-            CONSTRAINT fk_roster_type FOREIGN KEY (roster_type_id)
-                REFERENCES staff_roster_types(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-            CONSTRAINT fk_roster_branch FOREIGN KEY (branch_id)
-                REFERENCES branches(branchcode) ON DELETE SET NULL ON UPDATE CASCADE,
-            CONSTRAINT fk_roster_group FOREIGN KEY (library_group_id)
-                REFERENCES library_groups(id) ON DELETE SET NULL ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    }
-    );
-
-    # Table 3: Roster Slots (time slots with iCal RRULE recurrence)
-    # recurrence_rule stores an RFC 5545 RRULE subset, e.g.
-    #   FREQ=WEEKLY;BYDAY=MO,WE,FR
-    # The plugin currently only parses FREQ=WEEKLY + BYDAY; richer rules
-    # (INTERVAL, BYSETPOS, UNTIL, monthly patterns) are forward-compatible
-    # because we keep the column wide.
-    $dbh->do(
-        q{
-        CREATE TABLE IF NOT EXISTS staff_roster_slots (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            roster_id INT NOT NULL,
-            recurrence_rule VARCHAR(512) NOT NULL,
-            start_time TIME NOT NULL,
-            end_time TIME NOT NULL,
-            min_staff INT DEFAULT 1,
-            max_staff INT DEFAULT 1,
-            location VARCHAR(255),
-            notes TEXT,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL,
-            KEY idx_slots_roster (roster_id),
-            CONSTRAINT fk_slot_roster FOREIGN KEY (roster_id)
-                REFERENCES staff_roster(id) ON DELETE CASCADE ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    }
-    );
-
-    # Table 4: Roster Assignments (staff assigned to slots on specific dates)
-    $dbh->do(
-        q{
-        CREATE TABLE IF NOT EXISTS staff_roster_assignments (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            slot_id INT NOT NULL,
-            borrowernumber INT NOT NULL,
-            assignment_date DATE NOT NULL,
-            status ENUM('scheduled', 'confirmed', 'completed', 'cancelled', 'no_show') DEFAULT 'scheduled',
-            assigned_by INT,
-            notes TEXT,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL,
-            UNIQUE KEY unique_assignment (slot_id, borrowernumber, assignment_date),
-            KEY idx_assignments_date (assignment_date),
-            KEY idx_assignments_staff (borrowernumber, assignment_date),
-            CONSTRAINT fk_assignment_slot FOREIGN KEY (slot_id)
-                REFERENCES staff_roster_slots(id) ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT fk_assignment_staff FOREIGN KEY (borrowernumber)
-                REFERENCES borrowers(borrowernumber) ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT fk_assignment_assigned_by FOREIGN KEY (assigned_by)
-                REFERENCES borrowers(borrowernumber) ON DELETE SET NULL ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    }
-    );
-
-    # Table 5: Roster Exceptions (holidays, closures, special events)
-    $dbh->do(
-        q{
-        CREATE TABLE IF NOT EXISTS staff_roster_exceptions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            roster_id INT NOT NULL,
-            exception_date DATE NOT NULL,
-            exception_type ENUM('closed', 'holiday', 'special', 'reduced_hours') NOT NULL,
-            reason VARCHAR(255),
-            created_by INT,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL,
-            KEY idx_exceptions_roster_date (roster_id, exception_date),
-            CONSTRAINT fk_exception_roster FOREIGN KEY (roster_id)
-                REFERENCES staff_roster(id) ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT fk_exception_created_by FOREIGN KEY (created_by)
-                REFERENCES borrowers(borrowernumber) ON DELETE SET NULL ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    }
-    );
-
-    # Table 6: Swap Requests (shift swap management)
-    $dbh->do(
-        q{
-        CREATE TABLE IF NOT EXISTS staff_roster_swap_requests (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            from_assignment_id INT NOT NULL,
-            to_borrowernumber INT NOT NULL,
-            to_assignment_id INT,
-            status ENUM('pending', 'approved', 'rejected', 'cancelled') DEFAULT 'pending',
-            request_message TEXT,
-            response_message TEXT,
-            requested_at DATETIME NOT NULL,
-            responded_at DATETIME,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL,
-            KEY idx_swap_status (status, requested_at),
-            CONSTRAINT fk_swap_from_assignment FOREIGN KEY (from_assignment_id)
-                REFERENCES staff_roster_assignments(id) ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT fk_swap_to_staff FOREIGN KEY (to_borrowernumber)
-                REFERENCES borrowers(borrowernumber) ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT fk_swap_to_assignment FOREIGN KEY (to_assignment_id)
-                REFERENCES staff_roster_assignments(id) ON DELETE SET NULL ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    }
-    );
-
-    # Insert default roster types
-    $dbh->do(
-        q{
-        INSERT IGNORE INTO staff_roster_types (code, name, description, color, is_active, created_at, updated_at) VALUES
-        ('CIRC', 'Circulation Desk', 'Front desk checkout and returns', '#3498db', 1, NOW(), NOW()),
-        ('REF', 'Reference Desk', 'Reference and research assistance', '#9b59b6', 1, NOW(), NOW()),
-        ('CHILD', 'Children''s Section', 'Children''s library services', '#2ecc71', 1, NOW(), NOW()),
-        ('INFO', 'Information Desk', 'General information and directions', '#e74c3c', 1, NOW(), NOW()),
-        ('TECH', 'Technology Help', 'Computer and technology assistance', '#f39c12', 1, NOW(), NOW())
-    }
-    );
-
-    _register_permissions($dbh);
-    _register_notice_templates($dbh);
-    return 1;
+    return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Schema::install($self);
 }
 
-# Notice template for the nightly reminder. INSERT IGNORE keeps any
-# admin-edited copy in the letter table intact across upgrades while still
-# seeding fresh installs. Token syntax matches Koha core's <<...>> markers
-# resolved by C4::Letters::_substitute_tables / GetPreparedLetter.
-my %NOTICE_TEMPLATES = (
-    REMINDER => {
-        title   => 'Reminder: roster shift on <<assignment_date>>',
-        content => <<'HTML',
-Hi <<patron_firstname>>,
-
-Reminder of your upcoming roster shift:
-
-  Roster:   <<roster_name>>
-  Date:     <<assignment_date>>
-  Time:     <<start_time>> - <<end_time>>
-  Location: <<location>>
-
-Thanks.
-HTML
-    },
-);
-
-sub _register_notice_templates {
-    my ($dbh) = @_;
-    for my $code ( sort keys %NOTICE_TEMPLATES ) {
-        my $tpl = $NOTICE_TEMPLATES{$code};
-        $dbh->do(
-            q{INSERT IGNORE INTO letter
-                (module, code, branchcode, name, is_html, title, content,
-                 message_transport_type, lang)
-              VALUES ('STAFFROSTER', ?, '', ?, 0, ?, ?, 'email', 'default')},
-            undef, $code, "Staff Roster: $code", $tpl->{title}, $tpl->{content},
-        );
-    }
-    return;
-}
-
-# Granular sub-permissions registered under Koha's plugins module (bit 19).
-# Sites that grant 'plugins' wholesale get them all automatically; sites that
-# grant plugins in limited mode can hand out exactly the slice each tier of
-# staff needs. Superlibrarians always pass every check via the bypass in
-# _has_perm. Re-run on every install + upgrade so descriptions can evolve.
-# Backwards-compat shims: the actual logic lives in Lib::Permissions /
-# Lib::Audit. Existing call sites use these private names; future
-# commits will migrate them to the public Lib::* APIs.
-sub _txn               { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::txn(@_); }
-sub _has_perm          { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm(@_); }
-sub _gate              { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::gate(@_); }
-sub _is_superlib       { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::is_superlib(); }
-sub _register_permissions   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::register(@_); }
-sub _unregister_permissions { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::unregister(@_); }
+# Backwards-compat shims for the _tool_* dispatcher in this module
+# (controllers were migrated off these in commit 372e043). Drop the
+# rest once the Tool/* split lands.
+sub _txn      { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::txn(@_); }
+sub _has_perm { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm(@_); }
+sub _gate     { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::gate(@_); }
 
 =head3 upgrade
 
@@ -399,44 +192,7 @@ Boolean - true if the upgrade succeeded
 
 sub upgrade {
     my ( $self, $args ) = @_;
-
-    my $dbh = C4::Context->dbh;
-
-    my $installed_version = $self->retrieve_data('__INSTALLED_VERSION__') // '0.0.0';
-
-    # Version-based migrations
-    # Add new migration blocks here as the schema evolves
-    #
-    # if ( _version_compare($installed_version, '0.0.2') < 0 ) {
-    #     $dbh->do(q{
-    #         ALTER TABLE staff_roster_assignments
-    #         ADD COLUMN reminder_sent TINYINT(1) DEFAULT 0 AFTER notes
-    #     });
-    # }
-
-    # Always re-register sub-permissions on upgrade so existing installs pick
-    # up new codes + description tweaks without manual intervention.
-    _register_permissions($dbh);
-    _register_notice_templates($dbh);
-
-    $self->store_data( { '__INSTALLED_VERSION__' => $self->get_metadata->{version} } );
-
-    return 1;
-}
-
-sub _version_compare {
-    my ( $v1, $v2 ) = @_;
-
-    my @v1_parts = split /\./smx, $v1;
-    my @v2_parts = split /\./smx, $v2;
-
-    for my $i ( 0 .. 2 ) {
-        my $p1 = $v1_parts[$i] // 0;
-        my $p2 = $v2_parts[$i] // 0;
-        return $p1 <=> $p2 if $p1 != $p2;
-    }
-
-    return 0;
+    return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Schema::upgrade($self);
 }
 
 =head3 uninstall
@@ -478,21 +234,7 @@ Void
 
 sub uninstall {
     my ( $self, $args ) = @_;
-
-    my $dbh = C4::Context->dbh;
-
-    # Drop tables in reverse order of creation (respecting foreign key constraints)
-    $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_swap_requests });
-    $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_exceptions });
-    $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_assignments });
-    $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_slots });
-    $dbh->do(q{ DROP TABLE IF EXISTS staff_roster });
-    $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_types });
-
-    _unregister_permissions($dbh);
-    $dbh->do(q{DELETE FROM letter WHERE module = 'STAFFROSTER'});
-
-    return 1;
+    return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Schema::uninstall($self);
 }
 
 =head2 admin

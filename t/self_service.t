@@ -66,7 +66,7 @@ my $today_dt = Koha::DateUtils::dt_from_string()->truncate( to => 'day' );
 my $test_date;
 for my $i ( 0 .. 30 ) {
     my $candidate = $today_dt->clone->add( days => $i )->ymd;
-    if ( Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $rrule, $candidate, $anchor ) ) {
+    if ( Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on( $rrule, $candidate, $anchor ) ) {
         $test_date = $candidate;
         last;
     }
@@ -294,7 +294,7 @@ SKIP: {
 };
 
 subtest 'staffroster_self_assign sub-perm registers in permissions table' => sub {
-    Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_register_permissions($dbh);
+    Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::register($dbh);
     my ($n) = $dbh->selectrow_array( q{SELECT COUNT(*) FROM permissions WHERE module_bit = 19 AND code = ?},
         undef, 'staffroster_self_assign', );
     is( $n, 1, 'row inserted under plugins module_bit' );

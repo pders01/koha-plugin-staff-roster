@@ -53,7 +53,7 @@ my $today_dt = Koha::DateUtils::dt_from_string()->truncate( to => 'day' );
 my ( $applies_date, $skips_date );
 for my $i ( 0 .. 30 ) {
     my $cand = $today_dt->clone->add( days => $i )->ymd;
-    my $hits = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $rrule, $cand, $anchor );
+    my $hits = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on( $rrule, $cand, $anchor );
     $applies_date //= $cand if $hits;
     $skips_date   //= $cand if !$hits;
     last if $applies_date && $skips_date;
