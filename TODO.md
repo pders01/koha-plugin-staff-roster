@@ -27,30 +27,18 @@ touched but didn't finish:
 
 ## Next (single-feature batches)
 
-- [ ] **Module reorganization — phase 2 + finish line.** The Lib::*
-      extraction is mostly done; the remaining work is:
-      - **Lib::Schema** (install + upgrade + uninstall DDL): the
-        install body still lives inline at ~165 lines on the main
-        module. Move into `Lib/Schema.pm` and introduce a numbered
-        migration registry so `upgrade()` walks an ordered list of
-        closures keyed by schema version, gated by a stored
-        `__SCHEMA_VERSION__` plugin_data row. Replaces the
-        imperative `if version < X` chain.
-      - **Migrate the controllers off the private `_*` shims**: the
-        backwards-compat shims on the main module
-        (`_audit` / `_txn` / `_has_perm` / `_gate` / `_can_view_roster`
-        / `_slot_applies_on` / `_load_additional_fields` / etc.) all
-        delegate to the new `Lib::*` packages. Migrate the call sites
-        in `AssignmentController.pm`, `RosterController.pm`,
-        `StaffController.pm` to use the public `Lib::*` names; once
-        every caller is gone the shims can be deleted.
-      - **`Controllers/Tool/{List,Form,Slots,Exceptions,Swaps,SelfService}.pm`**
-        — split the `_tool_view_*` + `_tool_*_handler` chunks out of
-        the main module's `tool` dispatcher. The dispatcher map stays
-        small.
-      Already shipped Lib modules: I18N, DateUtils, Audit,
-      Permissions, Visibility, Rrule, AdditionalFields. Main module
-      shrunk from ~2400 to ~2240 lines so far.
+- [x] **Module reorganization — phase 2 + finish line.** Three commits
+      land the rest of the split (2026-05-02):
+      - `refactor(perl): migrate REST controllers off Lib::* shims`
+        (AssignmentController, RosterController, StaffController now
+        call public `Lib::*` names directly).
+      - `refactor(perl): extract Lib::Schema with numbered migration
+        registry` (install/upgrade/uninstall collapse to thin wrappers;
+        `@MIGRATIONS` walks against `__SCHEMA_VERSION__`).
+      - `refactor(perl): split tool dispatcher into Controllers/Tool/*
+        packages` (List, Form, Slots, Exceptions, Swaps, SelfService).
+      Every `_*` shim on the main module is gone. Main module shrunk
+      from ~2240 to ~1122 lines. prove 64/64.
 - [ ] **Per-component bundle entry points**: `src/grid.ts`,
       `src/my-shifts.ts`, `src/open-shifts.ts` so each TT op only
       ships the component it actually mounts (currently every op
@@ -142,11 +130,12 @@ Both items below need an external decision before any code lands.
   `grid_columns`, `integrations`, `manage_slots`, `self_service`,
   `swap_workflow`). Bundle ≈ 110 KB / 30 KB gzip.
 - **Lib::* layout**: I18N, DateUtils, Audit, Permissions,
-  Visibility, Rrule, AdditionalFields are split out under
-  `Koha/Plugin/Xyz/Paulderscheid/StaffRoster/Lib/`. Main module
-  keeps thin `_*` shims that delegate to the new packages so every
-  existing call site stays green; migrating the controllers off the
-  shims is the Next-bucket task.
+  Visibility, Rrule, AdditionalFields, Schema are split out under
+  `Koha/Plugin/Xyz/Paulderscheid/StaffRoster/Lib/`. Tool dispatcher
+  bodies live under `Controllers/Tool/{List,Form,Slots,Exceptions,
+  Swaps,SelfService}.pm`. The main module no longer ships `_*`
+  shims — every caller goes through the public `Lib::*` /
+  `Controllers::Tool::*` API. Main module is ~1122 lines.
 - **No SQL string interpolation**: every `$dbh->{do,select*}` site
   uses fully static SQL with bind params; variable IN-lists run as
   `prepare` + `execute` loops. Don't reintroduce concat patterns.

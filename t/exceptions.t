@@ -49,8 +49,9 @@ package main;
 
 # Reach the handlers through their package since they are called via the
 # dispatcher in production; here we exercise them directly for isolation.
-my $save_handler = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_tool_save_exception;
-my $del_handler  = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_tool_delete_exception;
+require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Exceptions;
+my $save_handler = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Exceptions::save_exception;
+my $del_handler  = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Exceptions::delete_exception;
 
 # Wipe any existing exceptions for this roster so test rows are isolated.
 $dbh->do( q{DELETE FROM staff_roster_exceptions WHERE roster_id = ?}, undef, $rid );

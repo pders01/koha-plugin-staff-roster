@@ -28,14 +28,12 @@ END {
     eval { $dbh->rollback } if $dbh;
 }
 
-my $NS = 'Koha::Plugin::Xyz::Paulderscheid::StaffRoster::';
-no strict 'refs';
-my $load     = \&{"${NS}_load_additional_fields"};
-my $save_cgi = \&{"${NS}_save_additional_fields"};
-my $save_map = \&{"${NS}_save_additional_fields_from_map"};
-my $del      = \&{"${NS}_delete_additional_fields"};
-my $bulk     = \&{"${NS}_bulk_additional_field_values"};
-use strict 'refs';
+require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields;
+my $load     = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::load;
+my $save_cgi = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::save;
+my $save_map = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::save_from_map;
+my $del      = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::remove;
+my $bulk     = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::bulk_values;
 
 # A minimal CGI stand-in with the only method the helper uses.
 package StubCGI;

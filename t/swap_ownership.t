@@ -87,7 +87,8 @@ package main;
 
 subtest 'forged from_assignment_id is rejected with swap_not_your_shift' => sub {
     my @messages;
-    Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_tool_request_swap(
+    require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Swaps;
+    Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Swaps::request_swap(
         $plugin, $dbh,
         StubCGI->new(
             {   roster_id          => $rid,

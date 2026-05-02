@@ -25,15 +25,13 @@ use_ok('Koha::Plugin::Xyz::Paulderscheid::StaffRoster')
     or BAIL_OUT('plugin module did not load');
 
 # Pull the file-scoped subs by name; they are intentionally not methods.
-no strict 'refs';
-my $NS         = 'Koha::Plugin::Xyz::Paulderscheid::StaffRoster::';
-my $build      = \&{"${NS}_rrule_from_params"};
-my $parse      = \&{"${NS}_parsed_rrule"};
-my $dows_from  = \&{"${NS}_dows_from_rrule"};
-my $byday_from = \&{"${NS}_byday_from_rrule"};
-my $label      = \&{"${NS}_rrule_label"};
-my $applies    = \&{"${NS}_slot_applies_on"};
-use strict 'refs';
+require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule;
+my $build      = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::rrule_from_params;
+my $parse      = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::parsed_rrule;
+my $dows_from  = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::dows_from_rrule;
+my $byday_from = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::byday_from_rrule;
+my $label      = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::rrule_label;
+my $applies    = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on;
 
 subtest '_rrule_from_params builds canonical RRULE strings' => sub {
     is( $build->( freq => 'WEEKLY', dows => [ 1, 3, 5 ] ), 'FREQ=WEEKLY;BYDAY=MO,WE,FR', 'plain weekly multi-day' );

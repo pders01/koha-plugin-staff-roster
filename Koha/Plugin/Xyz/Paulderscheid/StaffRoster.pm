@@ -59,16 +59,17 @@ use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Schema;
 
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::List;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Form;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Slots;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Exceptions;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Swaps;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::SelfService;
+
 # Recurrence helpers; pulled in early so the slot save path doesn't pay the
 # require cost on first request.
 use DateTime::Event::ICal;
 use DateTime::Format::ICal;
-
-# Backwards-compat shims: existing internal call sites stayed on _audit /
-# _txn after the helpers moved into Lib::Audit. Migrate one mutation
-# handler at a time when refactoring continues; keep these around as
-# trivial delegations so the diff stays small.
-sub _audit { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit(@_); }
 
 our $metadata = {
     'author'           => 'Paul Derscheid',
@@ -146,13 +147,6 @@ sub install {
     my ( $self, $args ) = @_;
     return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Schema::install($self);
 }
-
-# Backwards-compat shims for the _tool_* dispatcher in this module
-# (controllers were migrated off these in commit 372e043). Drop the
-# rest once the Tool/* split lands.
-sub _txn      { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::txn(@_); }
-sub _has_perm { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm(@_); }
-sub _gate     { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::gate(@_); }
 
 =head3 upgrade
 
@@ -320,7 +314,7 @@ sub admin {
 
 sub _admin_save_type {
     my ( $dbh, $cgi, $id, $messages ) = @_;
-    return if !_gate( 'staffroster_manage_types', $messages );
+    return if !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::gate( 'staffroster_manage_types', $messages );
 
     my @fields = (
         uc( $cgi->param('code') // q{} ),
@@ -354,7 +348,7 @@ sub _admin_save_type {
     if ($ok) {
         $id ||= $dbh->last_insert_id( undef, undef, 'staff_roster_types', undef );
         my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
-        _audit(
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit(
             $verb eq 'insert' ? 'CREATE' : 'MODIFY',
             $id,
             { entity => 'roster_type', %{ $after // {} } },
@@ -370,7 +364,7 @@ sub _admin_save_type {
 
 sub _admin_delete_type {
     my ( $dbh, $cgi, $id, $messages ) = @_;
-    return if !_gate( 'staffroster_manage_types', $messages );
+    return if !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::gate( 'staffroster_manage_types', $messages );
 
     my ($count) = $dbh->selectrow_array( q{SELECT COUNT(*) FROM staff_roster WHERE roster_type_id = ?}, undef, $id );
 
@@ -381,7 +375,7 @@ sub _admin_delete_type {
 
     my $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
     my $ok       = $dbh->do( q{DELETE FROM staff_roster_types WHERE id = ?}, undef, $id );
-    _audit( 'DELETE', $id, { entity => 'roster_type' }, $original ) if $ok;
+    Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit( 'DELETE', $id, { entity => 'roster_type' }, $original ) if $ok;
     push @{$messages}, $ok
         ? { type => 'success', code => 'success_on_delete' }
         : { type => 'danger',  code => 'error_on_delete' };
@@ -421,7 +415,7 @@ sub _aside_context {
 
     my @visible;
     for my $r ( @{$rows} ) {
-        next if !$self->_can_view_roster($r);
+        next if !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::can_view_roster( $self, $r );
         my $location = $r->{branch_name} // $r->{group_name} // q{};
         push @visible,
             {
@@ -502,7 +496,7 @@ sub configure {
     my $template = $self->get_template( { file => 'configure.tt' } );
 
     if ( $op eq 'cud-save' ) {
-        if ( !_has_perm('staffroster_configure') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_configure') ) {
             $template->param( denied => 1 );
             return $self->output_html( $template->output );
         }
@@ -698,28 +692,28 @@ Void (HTML output via output_html)
 =cut
 
 my %TOOL_ACTIONS = (
-    'cud-save_roster'      => { handler => \&_tool_save_roster,      next => 'list' },
-    'cud-delete_roster'    => { handler => \&_tool_delete_roster,    next => 'list' },
-    'cud-save_slot'        => { handler => \&_tool_save_slot,        next => 'manage_slots' },
-    'cud-delete_slot'      => { handler => \&_tool_delete_slot,      next => 'manage_slots' },
-    'cud-save_exception'   => { handler => \&_tool_save_exception,   next => 'manage_exceptions' },
-    'cud-delete_exception' => { handler => \&_tool_delete_exception, next => 'manage_exceptions' },
-    'cud-request_swap'     => { handler => \&_tool_request_swap,     next => 'manage_swaps' },
-    'cud-respond_swap'     => { handler => \&_tool_respond_swap,     next => 'manage_swaps' },
-    'cud-cancel_swap'      => { handler => \&_tool_cancel_swap,      next => 'manage_swaps' },
+    'cud-save_roster'      => { handler => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Form::save_roster,           next => 'list' },
+    'cud-delete_roster'    => { handler => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Form::delete_roster,         next => 'list' },
+    'cud-save_slot'        => { handler => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Slots::save_slot,            next => 'manage_slots' },
+    'cud-delete_slot'      => { handler => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Slots::delete_slot,          next => 'manage_slots' },
+    'cud-save_exception'   => { handler => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Exceptions::save_exception,  next => 'manage_exceptions' },
+    'cud-delete_exception' => { handler => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Exceptions::delete_exception,next => 'manage_exceptions' },
+    'cud-request_swap'     => { handler => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Swaps::request_swap,         next => 'manage_swaps' },
+    'cud-respond_swap'     => { handler => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Swaps::respond_swap,         next => 'manage_swaps' },
+    'cud-cancel_swap'      => { handler => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Swaps::cancel_swap,          next => 'manage_swaps' },
 );
 
 my %TOOL_VIEWS = (
-    list              => \&_tool_view_list,
-    add_roster        => \&_tool_view_roster_form,
-    edit_roster       => \&_tool_view_roster_form,
-    delete_confirm    => \&_tool_view_delete_confirm,
-    manage_slots      => \&_tool_view_manage_slots,
-    view_assignments  => \&_tool_view_assignments,
-    manage_exceptions => \&_tool_view_manage_exceptions,
-    manage_swaps      => \&_tool_view_manage_swaps,
-    my_shifts         => \&_tool_view_my_shifts,
-    open_shifts       => \&_tool_view_open_shifts,
+    list              => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::List::view_list,
+    add_roster        => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Form::view_roster_form,
+    edit_roster       => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Form::view_roster_form,
+    delete_confirm    => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Form::view_delete_confirm,
+    manage_slots      => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Slots::view_manage_slots,
+    view_assignments  => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Slots::view_assignments,
+    manage_exceptions => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Exceptions::view_manage_exceptions,
+    manage_swaps      => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Swaps::view_manage_swaps,
+    my_shifts         => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::SelfService::view_my_shifts,
+    open_shifts       => \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::SelfService::view_open_shifts,
 );
 
 sub tool {
@@ -749,7 +743,7 @@ sub tool {
         = { map { $_ => 1 } qw(edit_roster manage_slots manage_exceptions manage_swaps view_assignments delete_confirm) };
     if ( $roster_scoped_ops->{$op} && ( my $rid = $cgi->param('roster_id') ) ) {
         my $roster = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $rid );
-        if ( !$self->_can_view_roster($roster) ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::can_view_roster( $self, $roster ) ) {
             push @messages, { type => 'danger', code => 'access_denied' };
             $op = 'list';
         }
@@ -776,751 +770,6 @@ sub tool {
     return $self->output_html( $template->output );
 }
 
-sub _tool_save_roster {
-    my ( $self, $dbh, $cgi, $messages ) = @_;
-    return if !_gate( 'staffroster_manage_rosters', $messages );
-
-    my $target = $cgi->param('target') // 'all';
-    my ( $branch_id, $group_id );
-    if ( $target =~ /^branch:(.+)$/ ) {
-        $branch_id = $1;
-    }
-    elsif ( $target =~ /^group:(\d+)$/ ) {
-        $group_id = $1;
-    }
-
-    my @fields = (
-        $cgi->param('roster_type_id'),
-        $branch_id, $group_id, $cgi->param('name'),
-        $cgi->param('description'),
-        $cgi->param('effective_from'),
-        $cgi->param('effective_to') || undef,
-        $cgi->param('is_active') // 1,
-    );
-
-    my $roster_id = $cgi->param('roster_id');
-    my ( $sql, @params, $verb, $original );
-    if ($roster_id) {
-        $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
-        $sql      = q{
-            UPDATE staff_roster
-            SET roster_type_id = ?, branch_id = ?, library_group_id = ?, name = ?, description = ?,
-                effective_from = ?, effective_to = ?, is_active = ?, updated_at = NOW()
-            WHERE id = ?
-        };
-        @params = ( @fields, $roster_id );
-        $verb   = 'update';
-    }
-    else {
-        $sql = q{
-            INSERT INTO staff_roster
-            (roster_type_id, branch_id, library_group_id, name, description,
-             effective_from, effective_to, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-        };
-        @params = @fields;
-        $verb   = 'insert';
-    }
-
-    my $ok = eval {
-        _txn(
-            $dbh,
-            sub {
-                $dbh->do( $sql, undef, @params ) or die "roster save failed\n";
-                $roster_id ||= $dbh->last_insert_id( undef, undef, 'staff_roster', undef );
-                _save_additional_fields( $dbh, 'staff_roster', $roster_id, $cgi );
-            }
-        );
-        my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
-        _audit(
-            $verb eq 'insert' ? 'CREATE' : 'MODIFY',
-            $roster_id,
-            { entity => 'roster', %{ $after // {} } },
-            $verb eq 'insert' ? $after : $original,
-        );
-        1;
-    };
-    if ( !$ok ) {
-        warn "StaffRoster: $verb roster failed: $@";
-    }
-    push @{$messages}, $ok
-        ? { type => 'success', code => "success_on_$verb" }
-        : { type => 'danger',  code => "error_on_$verb" };
-
-    return;
-}
-
-sub _tool_delete_roster {
-    my ( $self, $dbh, $cgi, $messages ) = @_;
-    return if !_gate( 'staffroster_manage_rosters', $messages );
-    my $roster_id = $cgi->param('roster_id');
-    my $original  = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
-    _delete_additional_fields( $dbh, 'staff_roster', $roster_id );
-    my $ok = $dbh->do( q{DELETE FROM staff_roster WHERE id = ?}, undef, $roster_id );
-    if ($ok) {
-        _audit( 'DELETE', $roster_id, { entity => 'roster' }, $original );
-    }
-    push @{$messages}, $ok
-        ? { type => 'success', code => 'success_on_delete' }
-        : { type => 'danger',  code => 'error_on_delete' };
-    return;
-}
-
-sub _tool_save_slot {
-    my ( $self, $dbh, $cgi, $messages ) = @_;
-    return if !_gate( 'staffroster_manage_rosters', $messages );
-
-    my @dows = sort { $a <=> $b } grep {/^[0-6]$/sm} $cgi->multi_param('day_of_week');
-
-    my $freq = $cgi->param('freq') // 'WEEKLY';
-    $freq = 'WEEKLY' if $freq ne 'MONTHLY';
-    my $interval = $cgi->param('interval') // 1;
-    $interval = ( $interval =~ /^\d+$/sm && $interval > 0 ) ? int $interval : 1;
-    my $ordinal = $cgi->param('ordinal');
-    $ordinal = ( defined $ordinal && $ordinal =~ /^-?\d+$/sm ) ? int $ordinal : undef;
-    my $until_date = $cgi->param('until_date');
-    $until_date = undef if !$until_date || $until_date !~ /^\d{4}-\d{2}-\d{2}$/sm;
-
-    my $rrule = _rrule_from_params(
-        freq       => $freq,
-        dows       => \@dows,
-        ordinal    => $ordinal,
-        interval   => $interval,
-        until_date => $until_date,
-    );
-
-    if ( !$rrule ) {
-        push @{$messages}, { type => 'danger', code => 'slot_no_days_selected' };
-        return;
-    }
-
-    my $location = $cgi->param('location');
-    if ( $self->retrieve_data('use_authorised_value_locations') && defined $location && length $location ) {
-        my $cat = $self->retrieve_data('authorised_value_location_category')
-            || 'STAFFROSTER_LOCATION';
-        my $match = Koha::AuthorisedValues->search( { category => $cat, authorised_value => $location } )->count;
-        if ( !$match ) {
-            push @{$messages}, { type => 'danger', code => 'slot_location_not_in_av', value => $location, category => $cat };
-            return;
-        }
-    }
-
-    my @fields = (
-        $rrule,
-        $cgi->param('start_time'),
-        $cgi->param('end_time'),
-        $cgi->param('min_staff') // 1,
-        $cgi->param('max_staff') // 1,
-        $location, $cgi->param('slot_notes'),
-    );
-
-    my $slot_id = $cgi->param('slot_id');
-    if ($slot_id) {
-        my $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
-        $dbh->do(
-            q{
-            UPDATE staff_roster_slots
-            SET recurrence_rule = ?, start_time = ?, end_time = ?,
-                min_staff = ?, max_staff = ?, location = ?, notes = ?, updated_at = NOW()
-            WHERE id = ?
-        }, undef, @fields, $slot_id
-        );
-        my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
-        _audit( 'MODIFY', $slot_id, { entity => 'slot', %{ $after // {} } }, $original );
-    }
-    else {
-        $dbh->do(
-            q{
-            INSERT INTO staff_roster_slots
-            (roster_id, recurrence_rule, start_time, end_time, min_staff, max_staff, location, notes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-        }, undef, $cgi->param('roster_id'), @fields
-        );
-        my $new_id = $dbh->last_insert_id( undef, undef, 'staff_roster_slots', undef );
-        my $after  = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $new_id );
-        _audit( 'CREATE', $new_id, { entity => 'slot', %{ $after // {} } }, $after );
-    }
-    push @{$messages}, { type => 'success', code => 'slot_saved' };
-    return;
-}
-
-sub _tool_delete_slot {
-    my ( $self, $dbh, $cgi, $messages ) = @_;
-    return if !_gate( 'staffroster_manage_rosters', $messages );
-    my $slot_id  = $cgi->param('slot_id');
-    my $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
-    my $ok       = $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
-    if ( $ok && $ok ne '0E0' ) {
-        _audit( 'DELETE', $slot_id, { entity => 'slot' }, $original );
-        push @{$messages}, { type => 'success', code => 'slot_deleted' };
-    }
-    else {
-        push @{$messages}, { type => 'danger', code => 'error_on_delete' };
-    }
-    return;
-}
-
-# Allowed exception_type ENUM values from the schema. Anything else is rejected
-# rather than silently coerced to keep the column tight.
-my %EXCEPTION_TYPES = map { $_ => 1 } qw( closed holiday special reduced_hours );
-
-sub _tool_save_exception {
-    my ( $self, $dbh, $cgi, $messages ) = @_;
-    return if !_gate( 'staffroster_manage_rosters', $messages );
-
-    my $roster_id      = $cgi->param('roster_id');
-    my $exception_date = $cgi->param('exception_date') // q{};
-    my $exception_type = $cgi->param('exception_type') // q{};
-    my $reason         = $cgi->param('reason');
-
-    if ( $exception_date !~ /^\d{4}-\d{2}-\d{2}$/sm ) {
-        push @{$messages}, { type => 'danger', code => 'exception_bad_date' };
-        return;
-    }
-    if ( !$EXCEPTION_TYPES{$exception_type} ) {
-        push @{$messages}, { type => 'danger', code => 'exception_bad_type' };
-        return;
-    }
-
-    my $env          = C4::Context->userenv;
-    my $created_by   = $env ? $env->{number} : undef;
-    my $exception_id = $cgi->param('exception_id');
-
-    if ($exception_id) {
-        my $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
-            undef, $exception_id, $roster_id );
-        $dbh->do(
-            q{UPDATE staff_roster_exceptions
-              SET exception_date = ?, exception_type = ?, reason = ?, updated_at = NOW()
-              WHERE id = ? AND roster_id = ?},
-            undef, $exception_date, $exception_type, $reason, $exception_id, $roster_id
-        );
-        my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_exceptions WHERE id = ?}, undef, $exception_id );
-        _audit( 'MODIFY', $exception_id, { entity => 'exception', %{ $after // {} } }, $original );
-    }
-    else {
-        $dbh->do(
-            q{INSERT INTO staff_roster_exceptions
-              (roster_id, exception_date, exception_type, reason, created_by, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, NOW(), NOW())},
-            undef, $roster_id, $exception_date, $exception_type, $reason, $created_by
-        );
-        my $new_id = $dbh->last_insert_id( undef, undef, 'staff_roster_exceptions', undef );
-        my $after  = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_exceptions WHERE id = ?}, undef, $new_id );
-        _audit( 'CREATE', $new_id, { entity => 'exception', %{ $after // {} } }, $after );
-    }
-    push @{$messages}, { type => 'success', code => 'exception_saved' };
-    return;
-}
-
-sub _tool_delete_exception {
-    my ( $self, $dbh, $cgi, $messages ) = @_;
-    return if !_gate( 'staffroster_manage_rosters', $messages );
-    my $roster_id    = $cgi->param('roster_id');
-    my $exception_id = $cgi->param('exception_id');
-    my $original     = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
-        undef, $exception_id, $roster_id );
-    my $count = $dbh->do( q{DELETE FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
-        undef, $exception_id, $roster_id );
-    if ( $count && $count ne '0E0' ) {
-        _audit( 'DELETE', $exception_id, { entity => 'exception', roster_id => $roster_id }, $original );
-        push @{$messages}, { type => 'success', code => 'exception_deleted' };
-    }
-    else {
-        push @{$messages}, { type => 'danger', code => 'error_on_delete' };
-    }
-    return;
-}
-
-# ---------------------------------------------------------------------------
-# Shift swap workflow
-# ---------------------------------------------------------------------------
-# Lifecycle:
-#   pending -> approved : the from_assignment is reassigned to the target
-#                         staff member; if a to_assignment_id was given, the
-#                         two assignments swap borrowers
-#   pending -> rejected : no reassignment, status set, responded_at stamped
-#   pending -> cancelled : same shape but only the requester can cancel
-#
-# Approval gate:
-#   When require_swap_approval='1', only superlibrarians can approve. The
-#   target can still reject. When the setting is '0', the target also gets
-#   the approve button (covers the small-team case where double approval is
-#   bureaucratic overhead).
-
-sub _tool_request_swap {
-    my ( $self, $dbh, $cgi, $messages ) = @_;
-    return if !_gate( 'staffroster_swap_request', $messages );
-
-    my $roster_id          = $cgi->param('roster_id');
-    my $from_assignment_id = $cgi->param('from_assignment_id');
-    my $to_borrowernumber  = $cgi->param('to_borrowernumber');
-    my $to_assignment_id   = $cgi->param('to_assignment_id') || undef;
-    my $request_message    = $cgi->param('request_message');
-
-    if ( !$from_assignment_id || !$to_borrowernumber ) {
-        push @{$messages}, { type => 'danger', code => 'swap_missing_fields' };
-        return;
-    }
-
-    # Sanity-check that from_assignment belongs to the roster being viewed so
-    # a forged roster_id can't reach across rosters in the manage_swaps view.
-    my ($belongs) = $dbh->selectrow_array(
-        q{SELECT 1 FROM staff_roster_assignments a
-            JOIN staff_roster_slots s ON a.slot_id = s.id
-           WHERE a.id = ? AND s.roster_id = ?},
-        undef, $from_assignment_id, $roster_id
-    );
-    if ( !$belongs ) {
-        push @{$messages}, { type => 'danger', code => 'swap_assignment_mismatch' };
-        return;
-    }
-
-    # Ownership check: the requester can only surrender their own shift. The
-    # dropdown is server-filtered to own_assignments, so this guards against a
-    # forged from_assignment_id post.
-    my $env          = C4::Context->userenv;
-    my $current_bn   = $env ? $env->{number} : undef;
-    my ($from_owner) = $dbh->selectrow_array( q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
-        undef, $from_assignment_id );
-    if ( !defined $from_owner || !defined $current_bn || $from_owner != $current_bn ) {
-        push @{$messages}, { type => 'danger', code => 'swap_not_your_shift' };
-        return;
-    }
-
-    $dbh->do(
-        q{INSERT INTO staff_roster_swap_requests
-          (from_assignment_id, to_borrowernumber, to_assignment_id, status,
-           request_message, requested_at, created_at, updated_at)
-          VALUES (?, ?, ?, 'pending', ?, NOW(), NOW(), NOW())},
-        undef, $from_assignment_id, $to_borrowernumber, $to_assignment_id, $request_message
-    );
-    my $swap_id = $dbh->last_insert_id( undef, undef, 'staff_roster_swap_requests', undef );
-    my $after   = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
-    _audit( 'CREATE', $swap_id, { entity => 'swap_request', %{ $after // {} } }, $after, );
-    push @{$messages}, { type => 'success', code => 'swap_requested' };
-    return;
-}
-
-sub _tool_respond_swap {
-    my ( $self, $dbh, $cgi, $messages ) = @_;
-
-    my $swap_id  = $cgi->param('swap_id');
-    my $decision = $cgi->param('decision') // q{};
-    my $response = $cgi->param('response_message');
-
-    if ( $decision !~ /^(approve|reject)$/sm ) {
-        push @{$messages}, { type => 'danger', code => 'swap_bad_decision' };
-        return;
-    }
-
-    my $swap = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
-    if ( !$swap || $swap->{status} ne 'pending' ) {
-        push @{$messages}, { type => 'danger', code => 'swap_not_pending' };
-        return;
-    }
-
-    # Approve gating: when require_swap_approval is on, only the manager perm
-    # may approve. When off, the target staff member may also approve via
-    # staffroster_swap_respond. Reject only requires the respond perm (or
-    # manager). Superlibs always pass via _has_perm.
-    my $env            = C4::Context->userenv;
-    my $is_target      = $env && $env->{number} && $swap->{to_borrowernumber} == $env->{number};
-    my $approval_gated = ( $self->retrieve_data('require_swap_approval') // '1' ) eq '1';
-
-    if ( $decision eq 'approve' ) {
-        my $ok = _has_perm('staffroster_swap_approve');
-        $ok ||= ( !$approval_gated && $is_target && _has_perm('staffroster_swap_respond') );
-        if ( !$ok ) {
-            push @{$messages}, { type => 'danger', code => 'swap_needs_manager' };
-            return;
-        }
-    }
-    else {    # reject
-        my $ok = _has_perm('staffroster_swap_approve')
-            || ( $is_target && _has_perm('staffroster_swap_respond') );
-        if ( !$ok ) {
-            push @{$messages}, { type => 'danger', code => 'swap_not_authorised' };
-            return;
-        }
-    }
-
-    my $new_status = $decision eq 'approve' ? 'approved' : 'rejected';
-
-    # Wrap the approve path: a mutual swap touches three rows (from, to,
-    # status). Without the txn, a deadlock between (1) and (2) would leave
-    # one assignment already mutated while the swap still reads pending; the
-    # next approver would re-read the wrong from_borrower and double-swap.
-    # Re-check status under the lock to close the TOCTOU window between two
-    # concurrent approves.
-    my $ok = eval {
-        _txn(
-            $dbh,
-            sub {
-                my ($current_status)
-                    = $dbh->selectrow_array( q{SELECT status FROM staff_roster_swap_requests WHERE id = ? FOR UPDATE},
-                    undef, $swap_id );
-                die "swap_no_longer_pending\n" if !$current_status || $current_status ne 'pending';
-
-                if ( $decision eq 'approve' ) {
-
-                    # Capture from_borrower before mutating the from_assignment so a
-                    # later mutual update doesn't pick up the just-written value.
-                    my $from_borrower;
-                    if ( $swap->{to_assignment_id} ) {
-                        ($from_borrower)
-                            = $dbh->selectrow_array( q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
-                            undef, $swap->{from_assignment_id} );
-                    }
-                    $dbh->do(
-                        q{UPDATE staff_roster_assignments SET borrowernumber = ?, updated_at = NOW() WHERE id = ?},
-                        undef,
-                        $swap->{to_borrowernumber},
-                        $swap->{from_assignment_id}
-                    );
-                    if ( $swap->{to_assignment_id} && $from_borrower ) {
-                        $dbh->do( q{UPDATE staff_roster_assignments SET borrowernumber = ?, updated_at = NOW() WHERE id = ?},
-                            undef, $from_borrower, $swap->{to_assignment_id} );
-                    }
-                }
-
-                $dbh->do(
-                    q{UPDATE staff_roster_swap_requests
-                    SET status = ?, response_message = ?, responded_at = NOW(), updated_at = NOW()
-                  WHERE id = ?},
-                    undef, $new_status, $response, $swap_id
-                );
-            }
-        );
-        1;
-    };
-    if ( !$ok ) {
-        my $err = $@ // 'unknown';
-        if ( $err =~ /swap_no_longer_pending/ ) {
-            push @{$messages}, { type => 'danger', code => 'swap_not_pending' };
-        }
-        else {
-            warn "StaffRoster: swap respond txn failed: $err";
-            push @{$messages}, { type => 'danger', code => 'swap_txn_failed' };
-        }
-        return;
-    }
-
-    my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
-    _audit(
-        'MODIFY', $swap_id,
-        {   entity   => 'swap_request',
-            decision => $new_status,
-            actor    => $env ? $env->{number} : undef,
-            %{ $after // {} },
-        },
-        $swap,
-    );
-
-    push @{$messages}, { type => 'success', code => $decision eq 'approve' ? 'swap_approved' : 'swap_rejected' };
-    return;
-}
-
-sub _tool_cancel_swap {
-    my ( $self, $dbh, $cgi, $messages ) = @_;
-    return if !_gate( 'staffroster_swap_request', $messages );
-    my $swap_id = $cgi->param('swap_id');
-    my $env     = C4::Context->userenv;
-
-    my $swap = $dbh->selectrow_hashref(
-        q{SELECT s.*, a.borrowernumber AS from_borrowernumber
-            FROM staff_roster_swap_requests s
-            JOIN staff_roster_assignments  a ON s.from_assignment_id = a.id
-           WHERE s.id = ?},
-        undef, $swap_id
-    );
-    if ( !$swap || $swap->{status} ne 'pending' ) {
-        push @{$messages}, { type => 'danger', code => 'swap_not_pending' };
-        return;
-    }
-
-    # The requester can always cancel their own pending swap (provided they
-    # still hold staffroster_swap_request); managers can cancel anyone's.
-    my $is_owner = $env && $env->{number} && $swap->{from_borrowernumber} == $env->{number};
-    my $ok       = _has_perm('staffroster_swap_approve')
-        || ( $is_owner && _has_perm('staffroster_swap_request') );
-    if ( !$ok ) {
-        push @{$messages}, { type => 'danger', code => 'swap_not_authorised' };
-        return;
-    }
-
-    my $txn_ok = eval {
-        _txn(
-            $dbh,
-            sub {
-                $dbh->do(
-                    q{UPDATE staff_roster_swap_requests
-                        SET status = 'cancelled', responded_at = NOW(), updated_at = NOW()
-                      WHERE id = ? AND status = 'pending'},
-                    undef, $swap_id
-                );
-                my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
-                _audit( 'MODIFY', $swap_id, { entity => 'swap_request', decision => 'cancelled', %{ $after // {} } }, $swap, );
-            }
-        );
-        1;
-    };
-    if ( !$txn_ok ) {
-        warn "StaffRoster: swap cancel txn failed: " . ( $@ // 'unknown' );
-        push @{$messages}, { type => 'danger', code => 'swap_txn_failed' };
-        return;
-    }
-    push @{$messages}, { type => 'success', code => 'swap_cancelled' };
-    return;
-}
-
-sub _tool_view_list {
-    my ( $self, $dbh, $cgi, $template ) = @_;
-
-    my $filter_branch = $cgi->param('filter_branch');
-    my $filter_type   = $cgi->param('filter_type');
-    my $filter_status = $cgi->param('filter_status');
-
-    my $sql = q{
-        SELECT r.*,
-               rt.name AS type_name, rt.color AS type_color,
-               b.branchname AS branch_name,
-               lg.title AS group_name,
-               (SELECT COUNT(*) FROM staff_roster_slots WHERE roster_id = r.id) AS slot_count
-        FROM staff_roster r
-        JOIN staff_roster_types rt ON r.roster_type_id = rt.id
-        LEFT JOIN branches b ON r.branch_id = b.branchcode
-        LEFT JOIN library_groups lg ON r.library_group_id = lg.id
-        WHERE 1=1
-    };
-    my @params;
-
-    if ($filter_branch) {
-        $sql .= q{ AND r.branch_id = ?};
-        push @params, $filter_branch;
-    }
-    if ($filter_type) {
-        $sql .= q{ AND r.roster_type_id = ?};
-        push @params, $filter_type;
-    }
-    if ( defined $filter_status && $filter_status ne q{} ) {
-        $sql .= q{ AND r.is_active = ?};
-        push @params, $filter_status;
-    }
-
-    my ( $vis_clause, $vis_params ) = $self->_visibility_clause;
-    if ($vis_clause) {
-        $sql .= " $vis_clause";
-        push @params, @{$vis_params};
-    }
-    $sql .= q{ ORDER BY r.name};
-
-    my $rosters = $dbh->selectall_arrayref( $sql, { Slice => {} }, @params );
-
-    # Post-filter: _visibility_clause returns a superset (any group_id rather
-    # than IN(?,?,?)) to avoid embedding a variable-length IN list in the SQL.
-    # Reject rows whose group is outside the user's allowed set.
-    $rosters = [ grep { $self->_can_view_roster($_) } @{$rosters} ];
-
-    # Decorate rosters with their additional-field summaries (one query for the page).
-    my $af_defs = $dbh->selectall_arrayref(
-        q{SELECT id, name FROM additional_fields WHERE tablename = ? ORDER BY id},
-        { Slice => {} },
-        'staff_roster'
-    ) || [];
-    if ( @{$af_defs} && @{$rosters} ) {
-        my %name_for = map { $_->{id} => $_->{name} } @{$af_defs};
-        my $bulk     = _bulk_additional_field_values( $dbh, 'staff_roster', [ map { $_->{id} } @{$rosters} ] );
-        for my $r ( @{$rosters} ) {
-            my $vals = $bulk->{ $r->{id} } || {};
-            my @summary;
-            for my $fid ( sort { $a <=> $b } keys %{$vals} ) {
-                push @summary, { name => $name_for{$fid}, value => join q{, }, @{ $vals->{$fid} } };
-            }
-            $r->{additional_field_summary} = \@summary;
-        }
-    }
-
-    $template->param(
-        rosters       => $rosters,
-        filter_branch => $filter_branch,
-        filter_type   => $filter_type,
-        filter_status => $filter_status,
-    );
-    return;
-}
-
-sub _tool_view_roster_form {
-    my ( $self, $dbh, $cgi, $template ) = @_;
-
-    my $root_groups = Koha::Library::Groups->get_root_groups;
-    $template->param( library_groups => _flatten_groups( $root_groups, 0 ) );
-
-    my $roster_id = $cgi->param('roster_id');
-    my $roster;
-    if ($roster_id) {
-        $roster = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
-        $template->param( roster => $roster );
-    }
-
-    my $af = _load_additional_fields( $dbh, 'staff_roster', $roster_id );
-    $template->param(
-        additional_fields_table     => 'staff_roster',
-        additional_fields_available => $af->{available},
-        additional_fields_values    => $af->{values},
-    );
-    return;
-}
-
-sub _tool_view_delete_confirm {
-    my ( $self, $dbh, $cgi, $template ) = @_;
-    my $roster = $dbh->selectrow_hashref(
-        q{
-        SELECT r.*, rt.name AS type_name, b.branchname AS branch_name,
-               (SELECT COUNT(*) FROM staff_roster_slots WHERE roster_id = r.id) AS slot_count
-        FROM staff_roster r
-        JOIN staff_roster_types rt ON r.roster_type_id = rt.id
-        LEFT JOIN branches b ON r.branch_id = b.branchcode
-        WHERE r.id = ?
-    }, undef, $cgi->param('roster_id')
-    );
-    $template->param( roster => $roster );
-    return;
-}
-
-sub _tool_view_manage_slots {
-    my ( $self, $dbh, $cgi, $template ) = @_;
-    my $roster_id = $cgi->param('roster_id');
-    my $roster    = $dbh->selectrow_hashref(
-        q{
-        SELECT r.*, rt.name AS type_name, rt.color AS type_color, b.branchname AS branch_name
-        FROM staff_roster r
-        JOIN staff_roster_types rt ON r.roster_type_id = rt.id
-        LEFT JOIN branches b ON r.branch_id = b.branchcode
-        WHERE r.id = ?
-    }, undef, $roster_id
-    );
-
-    my $slots = $dbh->selectall_arrayref(
-        q{
-        SELECT * FROM staff_roster_slots
-        WHERE roster_id = ?
-        ORDER BY start_time, recurrence_rule
-    }, { Slice => {} }, $roster_id
-    );
-
-    # Decorate slots with derived recurrence info for the template
-    for my $slot ( @{$slots} ) {
-        my $parsed = _parsed_rrule( $slot->{recurrence_rule} );
-        $slot->{days_of_week_set} = { map { $_ => 1 } @{ $parsed->{dows} } };
-        $slot->{days_label}       = _rrule_label( $slot->{recurrence_rule} );
-        $slot->{rrule_freq}       = $parsed->{freq};
-        $slot->{rrule_interval}   = $parsed->{interval};
-        $slot->{rrule_ordinal}    = $parsed->{ordinal};
-        $slot->{rrule_until}      = $parsed->{until_date};
-    }
-
-    # Optional Koha desks for the location field, when enabled and the roster
-    # targets a single branch.
-    my @desks;
-    if ( $self->retrieve_data('use_koha_desks') && $roster && $roster->{branch_id} ) {
-        @desks = Koha::Desks->search( { branchcode => $roster->{branch_id} }, { order_by => 'desk_name' } )->as_list;
-    }
-
-    # Optional authorised-value-backed location list. When enabled, this takes
-    # precedence over the desks datalist in the slot form.
-    my @av_locations;
-    if ( $self->retrieve_data('use_authorised_value_locations') ) {
-        my $cat = $self->retrieve_data('authorised_value_location_category')
-            || 'STAFFROSTER_LOCATION';
-        @av_locations = map { { value => $_->authorised_value, lib => $_->lib } }
-            Koha::AuthorisedValues->search( { category => $cat }, { order_by => [ 'lib', 'authorised_value' ] } )->as_list;
-    }
-
-    $template->param(
-        roster       => $roster,
-        slots        => $slots,
-        desks        => \@desks,
-        av_locations => \@av_locations,
-    );
-    return;
-}
-
-sub _tool_view_assignments {
-    my ( $self, $dbh, $cgi, $template ) = @_;
-    my $roster_id  = $cgi->param('roster_id');
-    my $week_start = $cgi->param('week_start') // Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils::current_week_start();
-
-    my $roster = $dbh->selectrow_hashref(
-        q{
-        SELECT r.*, rt.name AS type_name, rt.color AS type_color, b.branchname AS branch_name
-        FROM staff_roster r
-        JOIN staff_roster_types rt ON r.roster_type_id = rt.id
-        LEFT JOIN branches b ON r.branch_id = b.branchcode
-        WHERE r.id = ?
-    }, undef, $roster_id
-    );
-
-    my $slots = $dbh->selectall_arrayref(
-        q{
-        SELECT * FROM staff_roster_slots
-        WHERE roster_id = ?
-        ORDER BY start_time, recurrence_rule
-    }, { Slice => {} }, $roster_id
-    );
-
-    $template->param( roster => $roster, slots => $slots, week_start => $week_start );
-    return;
-}
-
-sub _tool_view_my_shifts {
-    my ( $self, $dbh, $cgi, $template ) = @_;
-    my $week_start = $cgi->param('week_start') // Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils::current_week_start();
-    $template->param( week_start => $week_start );
-    return;
-}
-
-sub _tool_view_open_shifts {
-    my ( $self, $dbh, $cgi, $template ) = @_;
-    my $week_start = $cgi->param('week_start') // Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils::current_week_start();
-    $template->param(
-        week_start            => $week_start,
-        staff_can_self_assign => $self->retrieve_data('staff_can_self_assign') ? 1 : 0,
-        has_self_assign_perm  => _has_perm('staffroster_self_assign')          ? 1 : 0,
-    );
-    return;
-}
-
-sub _tool_view_manage_exceptions {
-    my ( $self, $dbh, $cgi, $template ) = @_;
-    my $roster_id = $cgi->param('roster_id');
-    my $roster    = $dbh->selectrow_hashref(
-        q{SELECT r.*, rt.name AS type_name, rt.color AS type_color, b.branchname AS branch_name
-          FROM staff_roster r
-          JOIN staff_roster_types rt ON r.roster_type_id = rt.id
-          LEFT JOIN branches b ON r.branch_id = b.branchcode
-          WHERE r.id = ?},
-        undef, $roster_id
-    );
-    my $exceptions = $dbh->selectall_arrayref(
-        q{SELECT id, exception_date, exception_type, reason, created_by, created_at, updated_at
-          FROM staff_roster_exceptions
-          WHERE roster_id = ?
-          ORDER BY exception_date DESC},
-        { Slice => {} }, $roster_id
-    );
-    $template->param(
-        roster          => $roster,
-        exceptions      => $exceptions,
-        exception_types => [
-            { code => 'closed',        label => 'Closed' },
-            { code => 'holiday',       label => 'Holiday' },
-            { code => 'special',       label => 'Special event' },
-            { code => 'reduced_hours', label => 'Reduced hours' },
-        ],
-    );
-    return;
-}
 
 =head3 cronjob_nightly
 
@@ -1591,7 +840,7 @@ sub cronjob_nightly {
         if ( !$letter ) {
             $failed++;
             warn "StaffRoster: REMINDER letter not found in notice templates (assignment $a->{id})";
-            _audit(
+            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit(
                 'NOTICE_FAILED',
                 $a->{id},
                 {   entity         => 'reminder',
@@ -1612,7 +861,7 @@ sub cronjob_nightly {
         };
         if ($message_id) {
             $sent++;
-            _audit(
+            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit(
                 'NOTICE',
                 $a->{id},
                 {   entity         => 'reminder',
@@ -1626,7 +875,7 @@ sub cronjob_nightly {
             $failed++;
             my $err = $@ || 'EnqueueLetter returned undef';
             warn "StaffRoster: reminder enqueue failed for assignment $a->{id} (borrower $a->{borrowernumber}): $err";
-            _audit(
+            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit(
                 'NOTICE_FAILED',
                 $a->{id},
                 {   entity         => 'reminder',
@@ -1639,116 +888,6 @@ sub cronjob_nightly {
     return wantarray ? ( $sent, $failed ) : $sent;
 }
 
-sub _tool_view_manage_swaps {
-    my ( $self, $dbh, $cgi, $template ) = @_;
-    my $roster_id = $cgi->param('roster_id');
-
-    my $roster = $dbh->selectrow_hashref(
-        q{SELECT r.*, rt.name AS type_name, rt.color AS type_color, b.branchname AS branch_name
-            FROM staff_roster r
-            JOIN staff_roster_types rt ON r.roster_type_id = rt.id
-       LEFT JOIN branches b ON r.branch_id = b.branchcode
-           WHERE r.id = ?},
-        undef, $roster_id
-    );
-
-    my $swaps = $dbh->selectall_arrayref(
-        q{SELECT sr.*, a.assignment_date AS from_date, a.borrowernumber AS from_borrowernumber,
-                 sl.start_time AS from_start, sl.end_time AS from_end, sl.location AS from_location,
-                 fp.firstname AS from_firstname, fp.surname AS from_surname,
-                 tp.firstname AS to_firstname,   tp.surname AS to_surname
-            FROM staff_roster_swap_requests sr
-            JOIN staff_roster_assignments a  ON sr.from_assignment_id = a.id
-            JOIN staff_roster_slots       sl ON a.slot_id = sl.id
-            JOIN borrowers fp ON a.borrowernumber = fp.borrowernumber
-            JOIN borrowers tp ON sr.to_borrowernumber = tp.borrowernumber
-           WHERE sl.roster_id = ?
-        ORDER BY (sr.status = 'pending') DESC, sr.requested_at DESC},
-        { Slice => {} }, $roster_id
-    );
-
-    my $env_user   = C4::Context->userenv;
-    my $current_bn = $env_user ? $env_user->{number} : undef;
-
-    # Upcoming assignments on this roster, joined with borrower for the
-    # "In exchange for" dropdown. Filtered client-side to the selected
-    # to_borrowernumber so the requester only sees that staffer's shifts.
-    my $assignments = $dbh->selectall_arrayref(
-        q{SELECT a.id, a.borrowernumber, a.assignment_date,
-                 p.firstname, p.surname,
-                 sl.start_time, sl.end_time
-            FROM staff_roster_assignments a
-            JOIN staff_roster_slots       sl ON a.slot_id = sl.id
-            JOIN borrowers                p  ON a.borrowernumber = p.borrowernumber
-           WHERE sl.roster_id = ?
-             AND a.assignment_date >= CURRENT_DATE()
-             AND a.status IN ('scheduled', 'confirmed')
-        ORDER BY a.assignment_date, sl.start_time},
-        { Slice => {} }, $roster_id
-    );
-
-    # Own upcoming shifts populate the "Give up shift" dropdown. Server-side
-    # filter so users can't surrender someone else's shift even with a forged
-    # form post (handler also enforces the same invariant).
-    my @own_assignments
-        = defined $current_bn
-        ? grep { $_->{borrowernumber} == $current_bn } @{ $assignments || [] }
-        : ();
-
-    my @categorycodes = $self->_staff_categorycodes;
-    my $staff_sql     = q{SELECT borrowernumber, firstname, surname, cardnumber FROM borrowers};
-    my @staff_params;
-    if (@categorycodes) {
-        $staff_sql .= ' WHERE categorycode IN (' . join( q{,}, ('?') x @categorycodes ) . ')';
-        @staff_params = @categorycodes;
-    }
-    else {
-        $staff_sql .= q{ JOIN categories c ON borrowers.categorycode = c.categorycode WHERE c.category_type = 'S'};
-    }
-    $staff_sql .= q{ ORDER BY surname, firstname LIMIT 500};
-    my $staff = $dbh->selectall_arrayref( $staff_sql, { Slice => {} }, @staff_params );
-
-    my $is_superlib    = $env_user && ( ( $env_user->{flags} // 0 ) == 1 || ( ( $env_user->{flags} // 0 ) & 1 ) );
-    my $approval_gated = ( $self->retrieve_data('require_swap_approval') // '1' ) eq '1';
-
-    $template->param(
-        roster                 => $roster,
-        swaps                  => $swaps,
-        roster_assignments     => $assignments,
-        own_assignments        => \@own_assignments,
-        candidate_staff        => $staff,
-        current_borrowernumber => $current_bn,
-        is_superlib            => $is_superlib    ? 1 : 0,
-        approval_gated         => $approval_gated ? 1 : 0,
-    );
-    return;
-}
-
-# Backwards-compat shims. Real logic in Lib::Visibility.
-sub _user_branch              { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::user_branch(); }
-sub _clear_user_group_cache   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::clear_user_group_cache(); }
-sub _user_group_ids           { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::user_group_ids(@_); }
-sub _visibility_clause        { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::visibility_clause(@_); }
-sub _can_view_roster          { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::can_view_roster(@_); }
-sub _branchcodes_for_roster   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::branchcodes_for_roster(@_); }
-sub _is_closed_for_roster     { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::is_closed_for_roster(@_); }
-
-# RRule helpers — actual logic in Lib::Rrule. Backwards-compat shims.
-sub _rrule_from_params { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::rrule_from_params(@_); }
-sub _parsed_rrule      { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::parsed_rrule(@_); }
-sub _dows_from_rrule   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::dows_from_rrule(@_); }
-sub _byday_from_rrule  { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::byday_from_rrule(@_); }
-sub _rrule_label       { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::rrule_label(@_); }
-sub _slot_applies_on   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on(@_); }
-sub _slot_anchor       { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_anchor(@_); }
-
-# Additional fields helpers — actual logic in Lib::AdditionalFields.
-# Backwards-compat shims preserved for existing callers.
-sub _load_additional_fields           { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::load(@_); }
-sub _save_additional_fields           { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::save(@_); }
-sub _save_additional_fields_from_map  { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::save_from_map(@_); }
-sub _delete_additional_fields         { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::remove(@_); }
-sub _bulk_additional_field_values     { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::bulk_values(@_); }
 
 
 =head3 api_namespace
