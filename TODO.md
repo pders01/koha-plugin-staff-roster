@@ -4,97 +4,26 @@ Open work items, grouped by priority. Items get crossed off as commits land.
 
 ## Now (small, cohesive)
 
-Architectural sweep findings (2026-05-02). Real bugs first, then i18n
-gaps, then perf/observability nits, then cleanup. Each line is a
-one-commit-sized change.
-
-### Real bugs
-
-- [ ] **`Lib/I18N.pm` `tr` `state` cache binds the locale forever per
-      Plack worker** (`Lib/I18N.pm:87`). Drop the `state` so each
-      request resolves the active language fresh; `state` is fine in
-      `load()` (file-level cache) but not in the per-request dispatch.
-- [ ] **`_tool_delete_slot` + `_tool_delete_exception` discard
-      `$dbh->do` return** (`StaffRoster.pm:1287, 1351`); a no-op
-      delete still pushes the success flash. Capture `$ok`, branch on
-      it, push `error_on_delete` when false (mirror
-      `_admin_delete_type`).
-- [ ] **`_tool_respond_swap` catch-all maps real DB errors to
-      `swap_not_pending`** (`StaffRoster.pm:1535`). Add a separate
-      `swap_txn_failed` message code so a deadlock or constraint
-      violation no longer silently looks like a stale-state race to
-      the user.
-- [ ] **`_tool_cancel_swap` not wrapped in `_txn`**
-      (`StaffRoster.pm:1590`); the audit row can race the DELETE.
-      Wrap the `$dbh->do` + `_audit` pair like `_tool_respond_swap`
-      already does.
-- [ ] **`renderModalShell` aria-label="Close" hardcoded English**
-      (`src/components/shared/modal.ts:39`). Swap for
-      `${__('Close')}`; the dictionary already has the key.
-
-### i18n gaps
-
-- [ ] **REST controller error strings never translated**
-      (every controller returns prose like "Slot full ($filled/$max_staff)",
-      "Date is closed per Koha calendar", "Self-unclaim closed: must
-      drop at least Xh"). The TT side translates everything; the REST
-      toast path is a parallel English channel. Either return
-      machine-readable error codes and translate in the Lit toast
-      layer, or wrap each error string through `tr()` and seed
-      `de.json`.
-- [ ] **`exception_types` labels hard-coded English**
-      (`StaffRoster.pm:1828` — Closed / Holiday / Special event /
-      Reduced hours). Pass codes to the TT and let the template
-      translate, or wrap via `Lib::I18N::tr()` before stuffing into
-      the template.
-
-### Performance / observability
-
-- [ ] **`_user_group_ids` N+1 ancestor walk** runs once per visible
-      roster on every page load via `_aside_context` ->
-      `_can_view_roster` (`StaffRoster.pm:2057`). Memoize per request
-      keyed by `(borrowernumber, branch)` so the sidebar dropdown
-      doesn't issue O(rosters × tree_depth) queries.
-- [ ] **Bulk audit lacks actor**
-      (`AssignmentController.pm:250, 307`). Add
-      `actor => $c->stash('koha.user')->borrowernumber` to the
-      `_audit` info blob in both `clear` and `move` branches.
-- [ ] **`availableStaff` re-fetches on every keystroke**
-      (`src/api.ts:11` plus the search debounce already in the grid).
-      Drop `ignoreCache: true` so the browser dedups duplicate
-      requests, and verify the existing 300ms staffDebounce is wired
-      correctly. Same evaluation for `rosterWeek` / `myWeek` /
-      `myOpenSlots` — short TTL probably safer than no cache.
-
-### Cleanup
-
-- [ ] **Dead jQuery week-nav block in `tool.tt:1172-1187`** (binds
-      `#prev_week` / `#next_week` / `#go_to_week` which no longer
-      exist; superseded by `renderWeekToolbar` in the Lit grid).
-      Delete.
-- [ ] **`bulk` endpoint declared but never called** (`api.ts:16`).
-      Either remove it from `ENDPOINTS` or wire a
-      `bulkAssignments(...)` helper if the bulk-import feature is
-      planned.
-- [ ] **Stray `.staff-roster-menu h5` rule in `src/styles.css:361`**
-      (the file's stated boundary is "Lit-component styles only";
-      sidebar lives in `staff-roster-plugin.css`). Move it.
-- [ ] **`src/i18n/de.ts` sync comment lies** — the file already
-      imports `de.json` directly so it auto-syncs at build time. The
-      hand-sync warning is misleading; replace with a comment about
-      adding a TT-side key-coverage check instead.
-- [ ] **`_current_week_start` duplicated three times**
-      (`StaffRoster.pm:2445`, `RosterController.pm:216`,
-      `StaffController.pm:526`). Hoist to `Lib::DateUtils` (or the
-      `Lib::Business` module that the next batch creates).
-
-Earlier "Now" candidates (still open):
+The architectural-review punch list landed (2026-05-02). What's still
+open here is the original Now-candidates plus follow-up work the sweep
+touched but didn't finish:
 
 - **Add a French (or other) translation**. Infrastructure is in place;
   `docs/wiki/Translation-Guide.md` walks through the steps end-to-end.
+  Pure additive work — no risk to existing surfaces.
 - **Wire the cron runner into the kohadev container** so reminder
-  emails fire in dev. Touches `cron/staff_roster_nightly.pl`,
-  `docs/wiki/Installation.md`.
+  emails fire in dev, not just in unit tests. Touches
+  `cron/staff_roster_nightly.pl`, `docs/wiki/Installation.md`,
+  possibly a Makefile target.
+- **Templated REST error strings** — the static strings now translate
+  via `__()` in `src/api.ts`'s `asJson`, but interpolated ones like
+  `"Slot full (1/4)"` and `"Self-unclaim closed: must drop at least
+  24h before the shift"` still ship verbatim. Plan: have the
+  controllers return `{ error: "code", details: { filled, max_staff } }`
+  and translate templates client-side; or have the server build the
+  full localized string via `Lib::I18N::tr()`.
+- **Per-page bundle entry points** — see Next bucket; small enough
+  to live here once the module reorg lands.
 
 ## Next (single-feature batches)
 
@@ -208,6 +137,24 @@ Both items below need an external decision before any code lands.
 
 ## Pointers for the next agent
 
+- **Current state (2026-05-02)**: prove suite **57/57**, cypress
+  **27/27** across 7 specs (`assignment_crud`, `get_week`,
+  `grid_columns`, `integrations`, `manage_slots`, `self_service`,
+  `swap_workflow`). Bundle ≈ 110 KB / 30 KB gzip.
+- **Lib::* layout**: I18N, DateUtils, Audit, Permissions,
+  Visibility, Rrule, AdditionalFields are split out under
+  `Koha/Plugin/Xyz/Paulderscheid/StaffRoster/Lib/`. Main module
+  keeps thin `_*` shims that delegate to the new packages so every
+  existing call site stays green; migrating the controllers off the
+  shims is the Next-bucket task.
+- **No SQL string interpolation**: every `$dbh->{do,select*}` site
+  uses fully static SQL with bind params; variable IN-lists run as
+  `prepare` + `execute` loops. Don't reintroduce concat patterns.
+- **Backup branches**: `backup/pre-squash-2026-05-02`,
+  `backup/post-squash-pre-reword`, `backup/pre-fix-squash`,
+  `backup/pre-sidebar-squash`. Tag `pre-squash-2026-05-02` is the
+  214-commit pre-squash tip. Origin is still at the POC commit;
+  force-push when ready to publish (Distribution bucket).
 - **Manual + wiki source**: `docs/wiki/` ships eight pages
   (Home, Installation, Configuration, Permissions, User-Manual,
   Self-Service, Architecture, Translation-Guide, Database-Schema).
@@ -237,6 +184,29 @@ Both items below need an external decision before any code lands.
 
 ## Done (recent — older entries pruned 2026-05-02)
 
+- [x] **Architectural sweep**: 9 commits land the review punch list.
+      Real bugs: `Lib::I18N::tr` no longer pins the locale to the
+      first request on a Plack worker; `_tool_delete_slot` /
+      `_tool_delete_exception` now branch on the `$dbh->do` return;
+      `_tool_respond_swap` distinguishes a real DB failure from a
+      stale-state race (new `swap_txn_failed` code); `_tool_cancel_swap`
+      is `_txn`-wrapped; `renderModalShell`'s aria-label runs through
+      `__()`. SQL: every `$dbh` query is now static — `_conflict_check`
+      branches on `exclude_id`, `bulk` clear/move use prepare+execute
+      loops, `_visibility_clause` returns a static superset that the
+      caller post-filters via `_can_view_roster`. `_user_group_ids`
+      memoizes per-process (kills the sidebar's N+1 ancestor walk).
+      i18n: `exception_types` German keys, REST 4xx error toasts run
+      through `__()` in `asJson` with seeded keys for the static
+      strings, `swap_txn_failed` translated. Cleanup: dead
+      `#prev_week` / `#next_week` / `#go_to_week` jQuery removed,
+      unused `bulk` POST endpoint dropped from `api.ts`, stray
+      sidebar rule moved out of `src/styles.css`, `de.ts` comment
+      fixed. Plus the seven `Lib::*` extractions:
+      DateUtils, Audit, Permissions, Visibility, Rrule,
+      AdditionalFields (I18N pre-existed). Main module shrunk from
+      ~2400 to ~2240 lines; prove rose 51 → 57 because `00-load.t`
+      walks every new `.pm` via `use_ok`.
 - [x] **Cypress coverage for the TT-form workflows**:
       - `manage_slots_spec.ts` (3): create slot via add-slot form,
         no-day-of-week validation, delete slot via inline confirm
