@@ -569,8 +569,10 @@ sub _admin_save_type {
         $cgi->param('is_active') // 1,
     );
 
-    my ( $sql, @params, $verb );
+    my ( $sql, @params, $verb, $original );
     if ($id) {
+        $original = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
         $sql = q{
             UPDATE staff_roster_types
             SET code = ?, name = ?, description = ?, color = ?, is_active = ?, updated_at = NOW()
@@ -591,10 +593,13 @@ sub _admin_save_type {
     my $ok = $dbh->do( $sql, undef, @params );
     if ($ok) {
         $id ||= $dbh->last_insert_id( undef, undef, 'staff_roster_types', undef );
+        my $after = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
         _audit(
             $verb eq 'insert' ? 'CREATE' : 'MODIFY',
             $id,
-            { entity => 'roster_type', code => $fields[0], name => $fields[1] }
+            { entity => 'roster_type', %{ $after // {} } },
+            $verb eq 'insert' ? $after : $original,
         );
     }
     push @{$messages}, $ok
@@ -615,8 +620,10 @@ sub _admin_delete_type {
         return;
     }
 
+    my $original = $dbh->selectrow_hashref(
+        q{SELECT * FROM staff_roster_types WHERE id = ?}, undef, $id );
     my $ok = $dbh->do( q{DELETE FROM staff_roster_types WHERE id = ?}, undef, $id );
-    _audit( 'DELETE', $id, { entity => 'roster_type' } ) if $ok;
+    _audit( 'DELETE', $id, { entity => 'roster_type' }, $original ) if $ok;
     push @{$messages}, $ok
         ? { type => 'success', code => 'success_on_delete' }
         : { type => 'danger',  code => 'error_on_delete' };
@@ -968,8 +975,10 @@ sub _tool_save_roster {
     );
 
     my $roster_id = $cgi->param('roster_id');
-    my ( $sql, @params, $verb );
+    my ( $sql, @params, $verb, $original );
     if ($roster_id) {
+        $original = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
         $sql = q{
             UPDATE staff_roster
             SET roster_type_id = ?, branch_id = ?, library_group_id = ?, name = ?, description = ?,
@@ -999,10 +1008,13 @@ sub _tool_save_roster {
                 _save_additional_fields( $dbh, 'staff_roster', $roster_id, $cgi );
             }
         );
+        my $after = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
         _audit(
             $verb eq 'insert' ? 'CREATE' : 'MODIFY',
             $roster_id,
-            { entity => 'roster', name => $cgi->param('name'), branch_id => $branch_id, group_id => $group_id }
+            { entity => 'roster', %{ $after // {} } },
+            $verb eq 'insert' ? $after : $original,
         );
         1;
     };
@@ -1020,10 +1032,12 @@ sub _tool_delete_roster {
     my ( $self, $dbh, $cgi, $messages ) = @_;
     return if !_gate( 'staffroster_manage_rosters', $messages );
     my $roster_id = $cgi->param('roster_id');
+    my $original  = $dbh->selectrow_hashref(
+        q{SELECT * FROM staff_roster WHERE id = ?}, undef, $roster_id );
     _delete_additional_fields( $dbh, 'staff_roster', $roster_id );
     my $ok = $dbh->do( q{DELETE FROM staff_roster WHERE id = ?}, undef, $roster_id );
     if ($ok) {
-        _audit( 'DELETE', $roster_id, { entity => 'roster' } );
+        _audit( 'DELETE', $roster_id, { entity => 'roster' }, $original );
     }
     push @{$messages}, $ok
         ? { type => 'success', code => 'success_on_delete' }
@@ -1085,6 +1099,8 @@ sub _tool_save_slot {
 
     my $slot_id = $cgi->param('slot_id');
     if ($slot_id) {
+        my $original = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
         $dbh->do(
             q{
             UPDATE staff_roster_slots
@@ -1093,8 +1109,10 @@ sub _tool_save_slot {
             WHERE id = ?
         }, undef, @fields, $slot_id
         );
+        my $after = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
         _audit( 'MODIFY', $slot_id,
-            { entity => 'slot', roster_id => $cgi->param('roster_id'), recurrence_rule => $rrule } );
+            { entity => 'slot', %{ $after // {} } }, $original );
     }
     else {
         $dbh->do(
@@ -1105,8 +1123,10 @@ sub _tool_save_slot {
         }, undef, $cgi->param('roster_id'), @fields
         );
         my $new_id = $dbh->last_insert_id( undef, undef, 'staff_roster_slots', undef );
+        my $after  = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $new_id );
         _audit( 'CREATE', $new_id,
-            { entity => 'slot', roster_id => $cgi->param('roster_id'), recurrence_rule => $rrule } );
+            { entity => 'slot', %{ $after // {} } }, $after );
     }
     push @{$messages}, { type => 'success', code => 'slot_saved' };
     return;
@@ -1115,9 +1135,11 @@ sub _tool_save_slot {
 sub _tool_delete_slot {
     my ( $self, $dbh, $cgi, $messages ) = @_;
     return if !_gate( 'staffroster_manage_rosters', $messages );
-    my $slot_id = $cgi->param('slot_id');
+    my $slot_id  = $cgi->param('slot_id');
+    my $original = $dbh->selectrow_hashref(
+        q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
     $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
-    _audit( 'DELETE', $slot_id, { entity => 'slot' } );
+    _audit( 'DELETE', $slot_id, { entity => 'slot' }, $original );
     push @{$messages}, { type => 'success', code => 'slot_deleted' };
     return;
 }
@@ -1149,14 +1171,19 @@ sub _tool_save_exception {
     my $exception_id = $cgi->param('exception_id');
 
     if ($exception_id) {
+        my $original = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
+            undef, $exception_id, $roster_id );
         $dbh->do(
             q{UPDATE staff_roster_exceptions
               SET exception_date = ?, exception_type = ?, reason = ?, updated_at = NOW()
               WHERE id = ? AND roster_id = ?},
             undef, $exception_date, $exception_type, $reason, $exception_id, $roster_id
         );
+        my $after = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_exceptions WHERE id = ?}, undef, $exception_id );
         _audit( 'MODIFY', $exception_id,
-            { entity => 'exception', roster_id => $roster_id, date => $exception_date, type => $exception_type } );
+            { entity => 'exception', %{ $after // {} } }, $original );
     }
     else {
         $dbh->do(
@@ -1166,8 +1193,10 @@ sub _tool_save_exception {
             undef, $roster_id, $exception_date, $exception_type, $reason, $created_by
         );
         my $new_id = $dbh->last_insert_id( undef, undef, 'staff_roster_exceptions', undef );
+        my $after  = $dbh->selectrow_hashref(
+            q{SELECT * FROM staff_roster_exceptions WHERE id = ?}, undef, $new_id );
         _audit( 'CREATE', $new_id,
-            { entity => 'exception', roster_id => $roster_id, date => $exception_date, type => $exception_type } );
+            { entity => 'exception', %{ $after // {} } }, $after );
     }
     push @{$messages}, { type => 'success', code => 'exception_saved' };
     return;
@@ -1178,11 +1207,14 @@ sub _tool_delete_exception {
     return if !_gate( 'staffroster_manage_rosters', $messages );
     my $roster_id    = $cgi->param('roster_id');
     my $exception_id = $cgi->param('exception_id');
+    my $original = $dbh->selectrow_hashref(
+        q{SELECT * FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
+        undef, $exception_id, $roster_id );
     my $count = $dbh->do(
         q{DELETE FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
         undef, $exception_id, $roster_id
     );
-    _audit( 'DELETE', $exception_id, { entity => 'exception', roster_id => $roster_id } )
+    _audit( 'DELETE', $exception_id, { entity => 'exception', roster_id => $roster_id }, $original )
         if $count && $count ne '0E0';
     push @{$messages}, { type => 'success', code => 'exception_deleted' };
     return;
@@ -1254,13 +1286,12 @@ sub _tool_request_swap {
         undef, $from_assignment_id, $to_borrowernumber, $to_assignment_id, $request_message
     );
     my $swap_id = $dbh->last_insert_id( undef, undef, 'staff_roster_swap_requests', undef );
+    my $after = $dbh->selectrow_hashref(
+        q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
     _audit(
         'CREATE', $swap_id,
-        {   entity             => 'swap_request',
-            from_assignment_id => $from_assignment_id,
-            to_borrowernumber  => $to_borrowernumber,
-            to_assignment_id   => $to_assignment_id,
-        }
+        { entity => 'swap_request', %{ $after // {} } },
+        $after,
     );
     push @{$messages}, { type => 'success', code => 'swap_requested' };
     return;
@@ -1374,12 +1405,16 @@ sub _tool_respond_swap {
         return;
     }
 
+    my $after = $dbh->selectrow_hashref(
+        q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
     _audit(
         'MODIFY', $swap_id,
         {   entity   => 'swap_request',
             decision => $new_status,
             actor    => $env ? $env->{number} : undef,
-        }
+            %{ $after // {} },
+        },
+        $swap,
     );
 
     push @{$messages},
@@ -1421,7 +1456,13 @@ sub _tool_cancel_swap {
           WHERE id = ?},
         undef, $swap_id
     );
-    _audit( 'MODIFY', $swap_id, { entity => 'swap_request', decision => 'cancelled' } );
+    my $after = $dbh->selectrow_hashref(
+        q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
+    _audit(
+        'MODIFY', $swap_id,
+        { entity => 'swap_request', decision => 'cancelled', %{ $after // {} } },
+        $swap,
+    );
     push @{$messages}, { type => 'success', code => 'swap_cancelled' };
     return;
 }
