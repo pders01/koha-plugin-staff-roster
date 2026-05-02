@@ -69,13 +69,6 @@ Both items below need an external decision before any code lands.
 
 ## Backlog
 
-- [ ] **Lit `cellDate` regression test**: cypress integration covers
-      `get_week` end-to-end (see Done) but the column-header date
-      derivation in `staff-roster-grid.ts` (`cellDate(dayIdx)`) is
-      still untested. A 30-line cypress spec that loads
-      `view_assignments` against a known week_start and asserts each
-      `<th aria-colindex>` shows the right `MM-DD` would lock it in.
-      Defer until the helper or weekStart wiring actually breaks.
 - [ ] **Slot delete confirm**: uses inline modal on the manage_slots
       page; roster delete uses a separate `delete_confirm` op + page.
       Two patterns for destructive actions. Trade-off: per-slot
@@ -112,6 +105,14 @@ Both items below need an external decision before any code lands.
 
 ## Done (recent — older entries pruned 2026-05-02)
 
+- [x] **Cypress regression for `cellDate` column derivation**:
+      `cypress/integration/staffroster/grid_columns_spec.ts` loads
+      `view_assignments` with `week_start=2026-05-04` (Monday) and
+      asserts the seven day-column headers render the right
+      `Mon..Sun` label + `MM-DD` suffix in column order. Locks in
+      the Monday-anchored mapping in `staff-roster-grid.ts` so a
+      future regression in `cellDate(dayIdx)` or the `weekStart`
+      attribute wiring fails fast. Cypress count: 6.
 - [x] **Mobile grid polish**: slot column is now `position: sticky;
       left: 0` so the time anchor stays visible while day cells scroll
       horizontally. The table also picks up `min-width: 720px` so
