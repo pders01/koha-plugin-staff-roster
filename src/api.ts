@@ -230,16 +230,41 @@ export async function selfUnclaim(assignmentId: number): Promise<void> {
   await asJson<void>(res);
 }
 
+export type AvailableFilter = {
+  mode: "codes" | "category_type_s";
+  codes: string[];
+  branch_scope: {
+    mode: "all" | "branch" | "group";
+    label: string | null;
+    branches: string[];
+  };
+  slot: {
+    slot_id: number;
+    date: string;
+    start_time: string;
+    end_time: string;
+  } | null;
+  date: string;
+};
+
+export type AvailableStaffResponse = {
+  staff: Staff[];
+  count: number;
+  pool: number;
+  limit: number;
+  filter: AvailableFilter;
+};
+
 export async function fetchAvailableStaff(params: {
   date: string;
   slot_id?: number;
   branch?: string;
   q?: string;
-}): Promise<Staff[]> {
+}): Promise<AvailableStaffResponse> {
   const query: Record<string, string> = { date: params.date };
   if (params.slot_id) query.slot_id = String(params.slot_id);
   if (params.branch) query.branch = params.branch;
   if (params.q) query.q = params.q;
   const res = await api.get({ endpoint: "availableStaff", query });
-  return asJson<Staff[]>(res);
+  return asJson<AvailableStaffResponse>(res);
 }

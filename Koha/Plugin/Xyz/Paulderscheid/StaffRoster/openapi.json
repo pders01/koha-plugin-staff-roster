@@ -904,12 +904,9 @@
             ],
             "responses": {
                 "200": {
-                    "description": "List available staff for a slot/date",
+                    "description": "List available staff for a slot/date with filter context",
                     "schema": {
-                        "items": {
-                            "type": "object"
-                        },
-                        "type": "array"
+                        "type": "object"
                     }
                 },
                 "403": {

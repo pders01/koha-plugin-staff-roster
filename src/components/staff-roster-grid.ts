@@ -8,6 +8,7 @@ import {
   updateAssignment,
   deleteAssignment,
   type Assignment,
+  type AvailableFilter,
   type RosterWeek,
   type Slot,
   type Staff,
@@ -40,6 +41,8 @@ export class StaffRosterGrid extends LitElement {
 
   @state() private week: RosterWeek | null = null;
   @state() private available: Staff[] = [];
+  @state() private availableMeta: { count: number; pool: number; limit: number; filter: AvailableFilter } | null = null;
+  @state() private availableContextDay: number | null = null;
   @state() private staffQuery = "";
   @state() private error = "";
   @state() private dragging: Cargo | null = null;
@@ -156,10 +159,75 @@ export class StaffRosterGrid extends LitElement {
     return `${a.id}`;
   }
 
-  private async loadAvailable(): Promise<void> {
+  private renderAvailableFilterHeader() {
+    const meta = this.availableMeta;
+    if (!meta) return nothing;
+
+    const f = meta.filter;
+    const codesLabel =
+      f.mode === "codes"
+        ? f.codes.join(", ")
+        : "category type S (any patron flagged staff)";
+    const branchLabel =
+      f.branch_scope.mode === "group"
+        ? `library group: ${f.branch_scope.label ?? "(unnamed)"}`
+        : f.branch_scope.mode === "branch"
+          ? `branch: ${f.branch_scope.label}`
+          : "all branches";
+
+    const dayName = this.availableContextDay !== null ? FULL_DAYS[this.availableContextDay] : null;
+    const slot = f.slot;
+    const contextLine = slot
+      ? `Free at ${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)} on ${dayName ?? slot.date}`
+      : `Free on ${f.date}`;
+
+    const truncated = meta.count >= meta.limit;
+    const fallbackWarn = f.mode === "category_type_s";
+
+    return html`
+      <div class="srg-avail-meta">
+        <div class="srg-avail-context">${contextLine}</div>
+        <div class="srg-avail-filter" title="${codesLabel} · ${branchLabel}">
+          <i class="fa fa-filter" aria-hidden="true"></i>
+          <span>${codesLabel}</span>
+          <span class="text-muted"> · ${branchLabel}</span>
+        </div>
+        <div class="srg-avail-counter">
+          <strong>${meta.count}</strong> of ${meta.pool} eligible
+          ${truncated ? html`<span class="text-muted"> · capped at ${meta.limit}</span>` : nothing}
+        </div>
+        ${fallbackWarn
+          ? html`
+              <div class="srg-avail-warn text-muted">
+                <i class="fa fa-info-circle" aria-hidden="true"></i>
+                Showing all category-type-S patrons (incl. service accounts).
+                Set <em>staff_categorycodes</em> in plugin
+                <a href="?class=${getClass()}&method=configure">configuration</a>
+                to narrow.
+              </div>
+            `
+          : nothing}
+      </div>
+    `;
+  }
+
+  private async loadAvailable(opts?: { slotId?: number; date?: string; dayIdx?: number }): Promise<void> {
     if (!this.week) return;
     try {
-      this.available = await fetchAvailableStaff({ date: this.weekStart, q: this.staffQuery || undefined });
+      const date = opts?.date ?? this.weekStart;
+      const res = await fetchAvailableStaff({
+        date,
+        slot_id: opts?.slotId,
+        q: this.staffQuery || undefined,
+      });
+      this.available = res.staff;
+      this.availableMeta = {
+        count: res.count,
+        pool: res.pool,
+        limit: res.limit,
+        filter: res.filter,
+      };
+      this.availableContextDay = opts?.dayIdx ?? null;
     } catch (err) {
       this.setError((err as Error).message);
     }
@@ -642,6 +710,7 @@ export class StaffRosterGrid extends LitElement {
       <div class="srg-layout" style=${`--srg-type-color: ${color}`}>
         <section class="page-section srg-staff-panel">
           <h3 class="srg-panel-title" id="srg-staff-list-label">Available staff</h3>
+          ${this.renderAvailableFilterHeader()}
           <input
             type="search"
             class="form-control input-sm"
@@ -791,7 +860,10 @@ export class StaffRosterGrid extends LitElement {
                             await this.dropOnCell(slot, date);
                           }}
                           @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, slot, date, slotIdx, day)}
-                          @focus=${() => (this.focusedCellKey = cellKey)}
+                          @focus=${() => {
+                            this.focusedCellKey = cellKey;
+                            void this.loadAvailable({ slotId: slot.id, date, dayIdx: day });
+                          }}
                         >
                           ${repeat(
                             assignments,

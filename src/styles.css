@@ -429,3 +429,35 @@
     color: #495057;
 }
 
+.srg-avail-meta {
+    margin: 0.4rem 0 0.6rem;
+    padding: 0.5rem 0.6rem;
+    background: #f6f8fa;
+    border-radius: 4px;
+    font-size: 0.85em;
+    line-height: 1.4;
+}
+
+.srg-avail-context {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.15rem;
+}
+
+.srg-avail-filter,
+.srg-avail-counter {
+    color: #495057;
+}
+
+.srg-avail-filter .fa,
+.srg-avail-warn .fa {
+    margin-right: 0.25rem;
+    color: #6c757d;
+}
+
+.srg-avail-warn {
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
+    border-top: 1px dashed rgba(0, 0, 0, 0.1);
+    font-size: 0.95em;
+}

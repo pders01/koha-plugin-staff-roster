@@ -43,13 +43,17 @@ sub available {
         my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
         my @staff_categories = $plugin->_staff_categorycodes;
 
+        my %slot_context;
         # If slot_id given, scope staff to the parent roster's branches in strict group mode.
         my @group_branches;
+        my $group_label;
         if ($slot_id) {
             my $roster = $dbh->selectrow_hashref(
                 q{
-                SELECT r.* FROM staff_roster r
+                SELECT r.*, lg.title AS group_title
+                FROM staff_roster r
                 JOIN staff_roster_slots s ON s.roster_id = r.id
+                LEFT JOIN library_groups lg ON r.library_group_id = lg.id
                 WHERE s.id = ?
             }, undef, $slot_id
             );
@@ -61,8 +65,19 @@ sub available {
                     && $roster->{library_group_id} )
                 {
                     @group_branches = $plugin->_branchcodes_for_roster($roster);
+                    $group_label = $roster->{group_title};
                 }
             }
+            my ($s_start, $s_end) = $dbh->selectrow_array(
+                q{SELECT start_time, end_time FROM staff_roster_slots WHERE id = ?},
+                undef, $slot_id,
+            );
+            %slot_context = (
+                slot_id    => $slot_id + 0,
+                date       => $date,
+                start_time => $s_start,
+                end_time   => $s_end,
+            ) if $s_start;
         }
 
         my $sql = q{
@@ -120,16 +135,70 @@ sub available {
             push @params, $date;
         }
 
-        $sql .= q{ ORDER BY p.surname, p.firstname LIMIT 200};
+        my $limit = 200;
+        $sql .= " ORDER BY p.surname, p.firstname LIMIT $limit";
 
         my $rows = $dbh->selectall_arrayref( $sql, { Slice => {} }, @params );
 
-        return $c->render( status => 200, openapi => $rows );
+        # Build a "matches at all" baseline (no busy-on-this-date exclusion) so
+        # the UI can show "free N of M staff". Run a parallel COUNT(*) with the
+        # same category/branch filters but without the NOT IN exclusion.
+        my $base_sql = q{
+            SELECT COUNT(*)
+            FROM borrowers p
+            JOIN categories c ON p.categorycode = c.categorycode
+            WHERE 1=1
+        };
+        my @base_params;
+        if (@staff_categories) {
+            $base_sql .= ' AND p.categorycode IN (' . join( q{,}, ('?') x @staff_categories ) . ')';
+            push @base_params, @staff_categories;
+        }
+        else {
+            $base_sql .= q{ AND c.category_type = 'S'};
+        }
+        if (@group_branches) {
+            $base_sql .= ' AND p.branchcode IN (' . join( q{,}, ('?') x @group_branches ) . ')';
+            push @base_params, @group_branches;
+        }
+        if ($branch) {
+            $base_sql    .= q{ AND p.branchcode = ?};
+            push @base_params, $branch;
+        }
+        if ($q) {
+            $base_sql .= q{ AND (p.firstname LIKE ? OR p.surname LIKE ? OR p.cardnumber LIKE ?)};
+            my $like = "%$q%";
+            push @base_params, $like, $like, $like;
+        }
+        my ($pool_size) = $dbh->selectrow_array( $base_sql, undef, @base_params );
+
+        my $branch_scope =
+              @group_branches ? { mode => 'group', label => $group_label, branches => \@group_branches }
+            : $branch         ? { mode => 'branch', label => $branch, branches => [$branch] }
+            :                   { mode => 'all', label => undef, branches => [] };
+
+        return $c->render(
+            status  => 200,
+            openapi => {
+                staff  => $rows,
+                count  => scalar @{$rows},
+                pool   => $pool_size + 0,
+                limit  => $limit,
+                filter => {
+                    mode         => @staff_categories ? 'codes' : 'category_type_s',
+                    codes        => \@staff_categories,
+                    branch_scope => $branch_scope,
+                    slot         => %slot_context ? \%slot_context : undef,
+                    date         => $date,
+                },
+            },
+        );
     }
     catch {
         $c->unhandled_exception($_);
     };
 }
+
 =head3 me_week
 
 Query: { start: YYYY-MM-DD }.
