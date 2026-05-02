@@ -10,14 +10,18 @@
  * `use_koha_calendar=1` in plugin_data (the install hook seeds 1).
  */
 
+import {
+    cleanupRosterFixture,
+    createRosterFixture,
+    SUPERLIBRARIAN_BORROWERNUMBER,
+    TEST_BRANCH,
+    type RosterFixture,
+    type RosterWeekResponse,
+} from "./_fixtures";
+
 const WEEK = "2026-05-04"; // Monday
 const TUE = "2026-05-05";
 const OUT_OF_WEEK = "2026-05-18";
-const SUPERLIBRARIAN_BORROWERNUMBER = 51;
-
-interface InsertResult {
-    insertId: number;
-}
 
 // Koha::Calendar memoizes the per-branch holiday set in memcached for ~21h
 // (Koha/Calendar.pm _holidays). Inserts to special_holidays are invisible
@@ -32,84 +36,29 @@ function flushHolidayCache(branchcode: string) {
 }
 
 describe("StaffRoster get_week", () => {
-    let ns: string;
-    let typeId: number;
-    let rosterId: number;
-    let slotMonId: number;
+    let fixture: Partial<RosterFixture> = {};
 
     before(() => {
         cy.login();
     });
 
     beforeEach(() => {
-        ns = `cytest_${Date.now()}`;
-        cy.task<InsertResult>("query", {
-            sql: `INSERT INTO staff_roster_types
-                    (code, name, color, is_active, created_at, updated_at)
-                  VALUES (?, ?, ?, 1, NOW(), NOW())`,
-            values: [`${ns}_T`.slice(0, 50), `${ns} type`, "#abcdef"],
-        })
-            .then(res => {
-                typeId = res.insertId;
-                return cy.task<InsertResult>("query", {
-                    sql: `INSERT INTO staff_roster
-                            (roster_type_id, branch_id, name,
-                             effective_from, is_active,
-                             created_at, updated_at)
-                          VALUES (?, "CPL", ?, ?, 1, NOW(), NOW())`,
-                    values: [typeId, `${ns} roster`, "2026-01-01"],
-                });
-            })
-            .then(res => {
-                rosterId = res.insertId;
-                return cy.task<InsertResult>("query", {
-                    sql: `INSERT INTO staff_roster_slots
-                            (roster_id, recurrence_rule, start_time, end_time,
-                             min_staff, max_staff, created_at, updated_at)
-                          VALUES (?, "FREQ=WEEKLY;BYDAY=MO",
-                                  "09:00:00", "12:00:00", 1, 2,
-                                  NOW(), NOW())`,
-                    values: [rosterId],
-                });
-            })
-            .then(res => {
-                slotMonId = res.insertId;
-            });
+        fixture = {};
+        createRosterFixture().then(f => {
+            fixture = f;
+        });
     });
 
     afterEach(() => {
-        cy.task("query", {
-            sql: "DELETE FROM staff_roster_assignments WHERE slot_id = ?",
-            values: [slotMonId],
-        });
-        cy.task("query", {
-            sql: "DELETE FROM staff_roster_exceptions WHERE roster_id = ?",
-            values: [rosterId],
-        });
-        cy.task("query", {
-            sql: "DELETE FROM staff_roster_slots WHERE id = ?",
-            values: [slotMonId],
-        });
-        cy.task("query", {
-            sql: "DELETE FROM staff_roster WHERE id = ?",
-            values: [rosterId],
-        });
-        cy.task("query", {
-            sql: "DELETE FROM staff_roster_types WHERE id = ?",
-            values: [typeId],
-        });
-        cy.task("query", {
-            sql: "DELETE FROM special_holidays WHERE title = ?",
-            values: [`${ns} holiday`],
-        });
+        cleanupRosterFixture(fixture);
     });
 
     it("returns roster header + week_start + applies_on_dates on Monday only", () => {
-        cy.task("apiGet", {
-            endpoint: `/api/v1/contrib/staffroster/rosters/${rosterId}/week?start=${WEEK}`,
-        }).then((res: any) => {
+        cy.task<RosterWeekResponse>("apiGet", {
+            endpoint: `/api/v1/contrib/staffroster/rosters/${fixture.rosterId}/week?start=${WEEK}`,
+        }).then(res => {
             expect(res.week_start).to.eq(WEEK);
-            expect(res.roster.id).to.eq(rosterId);
+            expect(res.roster.id).to.eq(fixture.rosterId);
             expect(res.slots).to.have.length(1);
             expect(res.slots[0].applies_on_dates).to.deep.eq([WEEK]);
         });
@@ -121,7 +70,7 @@ describe("StaffRoster get_week", () => {
                     (slot_id, borrowernumber, assignment_date, status,
                      created_at, updated_at)
                   VALUES (?, ?, ?, "scheduled", NOW(), NOW())`,
-            values: [slotMonId, SUPERLIBRARIAN_BORROWERNUMBER, WEEK],
+            values: [fixture.slotId, SUPERLIBRARIAN_BORROWERNUMBER, WEEK],
         });
         cy.task("query", {
             sql: `INSERT INTO staff_roster_assignments
@@ -129,15 +78,15 @@ describe("StaffRoster get_week", () => {
                      created_at, updated_at)
                   VALUES (?, ?, ?, "scheduled", NOW(), NOW())`,
             values: [
-                slotMonId,
+                fixture.slotId,
                 SUPERLIBRARIAN_BORROWERNUMBER,
                 OUT_OF_WEEK,
             ],
         });
 
-        cy.task("apiGet", {
-            endpoint: `/api/v1/contrib/staffroster/rosters/${rosterId}/week?start=${WEEK}`,
-        }).then((res: any) => {
+        cy.task<RosterWeekResponse>("apiGet", {
+            endpoint: `/api/v1/contrib/staffroster/rosters/${fixture.rosterId}/week?start=${WEEK}`,
+        }).then(res => {
             expect(res.assignments).to.have.length(1);
             expect(res.assignments[0].assignment_date).to.eq(WEEK);
         });
@@ -149,15 +98,13 @@ describe("StaffRoster get_week", () => {
                     (roster_id, exception_date, exception_type, reason,
                      created_at, updated_at)
                   VALUES (?, ?, "closed", "manual", NOW(), NOW())`,
-            values: [rosterId, TUE],
+            values: [fixture.rosterId, TUE],
         });
 
-        cy.task("apiGet", {
-            endpoint: `/api/v1/contrib/staffroster/rosters/${rosterId}/week?start=${WEEK}`,
-        }).then((res: any) => {
-            const tue = res.exceptions.filter(
-                (e: any) => e.exception_date === TUE,
-            );
+        cy.task<RosterWeekResponse>("apiGet", {
+            endpoint: `/api/v1/contrib/staffroster/rosters/${fixture.rosterId}/week?start=${WEEK}`,
+        }).then(res => {
+            const tue = res.exceptions.filter(e => e.exception_date === TUE);
             expect(tue).to.have.length(1);
             expect(tue[0].reason).to.eq("manual");
             expect(tue[0].source).to.be.undefined;
@@ -169,19 +116,17 @@ describe("StaffRoster get_week", () => {
             sql: `INSERT INTO special_holidays
                     (branchcode, day, month, year, isexception,
                      title, description)
-                  VALUES ("CPL", 5, 5, 2026, 0, ?, "")`,
-            values: [`${ns} holiday`],
+                  VALUES (?, 5, 5, 2026, 0, ?, "")`,
+            values: [TEST_BRANCH, `${fixture.ns} holiday`],
         });
-        flushHolidayCache("CPL");
+        flushHolidayCache(TEST_BRANCH);
 
-        cy.task("apiGet", {
-            endpoint: `/api/v1/contrib/staffroster/rosters/${rosterId}/week?start=${WEEK}`,
-        }).then((res: any) => {
-            const cal = res.exceptions.find(
-                (e: any) => e.exception_date === TUE,
-            );
+        cy.task<RosterWeekResponse>("apiGet", {
+            endpoint: `/api/v1/contrib/staffroster/rosters/${fixture.rosterId}/week?start=${WEEK}`,
+        }).then(res => {
+            const cal = res.exceptions.find(e => e.exception_date === TUE);
             expect(cal, "calendar closure surfaced").to.exist;
-            expect(cal.source).to.eq("calendar");
+            expect(cal!.source).to.eq("calendar");
         });
     });
 
@@ -190,24 +135,22 @@ describe("StaffRoster get_week", () => {
             sql: `INSERT INTO special_holidays
                     (branchcode, day, month, year, isexception,
                      title, description)
-                  VALUES ("CPL", 5, 5, 2026, 0, ?, "")`,
-            values: [`${ns} holiday`],
+                  VALUES (?, 5, 5, 2026, 0, ?, "")`,
+            values: [TEST_BRANCH, `${fixture.ns} holiday`],
         });
-        flushHolidayCache("CPL");
         cy.task("query", {
             sql: `INSERT INTO staff_roster_exceptions
                     (roster_id, exception_date, exception_type, reason,
                      created_at, updated_at)
                   VALUES (?, ?, "closed", "manual", NOW(), NOW())`,
-            values: [rosterId, TUE],
+            values: [fixture.rosterId, TUE],
         });
+        flushHolidayCache(TEST_BRANCH);
 
-        cy.task("apiGet", {
-            endpoint: `/api/v1/contrib/staffroster/rosters/${rosterId}/week?start=${WEEK}`,
-        }).then((res: any) => {
-            const tue = res.exceptions.filter(
-                (e: any) => e.exception_date === TUE,
-            );
+        cy.task<RosterWeekResponse>("apiGet", {
+            endpoint: `/api/v1/contrib/staffroster/rosters/${fixture.rosterId}/week?start=${WEEK}`,
+        }).then(res => {
+            const tue = res.exceptions.filter(e => e.exception_date === TUE);
             expect(tue).to.have.length(1);
             expect(tue[0].reason).to.eq("manual");
             expect(tue[0].source).to.be.undefined;

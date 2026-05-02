@@ -14,7 +14,7 @@ set -eu
 CONTAINER=${KOHA_CONTAINER:-dev-koha-1}
 PLUGIN_DIR=/var/lib/koha/kohadev/plugins
 KOHA_DIR=/kohadevbox/koha
-SPEC_GLOB=t/cypress/integration/staffroster/*
+SPEC_GLOB='t/cypress/integration/staffroster/*_spec.ts'
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 
