@@ -38,6 +38,70 @@
     margin-top: 0.4rem;
 }
 
+/* Long German compound nouns (e.g. Schließungsbehandlung) blow past
+ * Koha's 10rem fixed-width .rows label and overlap the next column.
+ * Allow normal-word wrap, plus a hyphenated break when a single word
+ * is wider than the column. */
+fieldset.rows label {
+    overflow-wrap: anywhere;
+    hyphens: auto;
+}
+
+/* Phone breakpoint: Koha's `fieldset.rows` is a label-floats-left, fixed
+ * 10rem-wide layout that breaks down at <500px viewports — labels wrap
+ * mid-word and inputs cramp into the remaining column.
+ *
+ * Stack each row vertically (label above its input + hint) so each gets
+ * the full content width, mirroring the responsive pattern Owen Leonard
+ * shipped for the new `fg`/`fg-row` form grid. We can't migrate the
+ * markup wholesale (TT pages still emit `<fieldset class="rows"><ol>`
+ * structure inherited from Koha conventions), so this overrides the
+ * float layout in-place. */
+@media (max-width: 767px) {
+    fieldset.rows label {
+        float: none;
+        width: auto;
+        margin-right: 0;
+        margin-bottom: 0.25rem;
+        text-align: left;
+        display: block;
+    }
+
+    fieldset.rows li > .hint {
+        margin-left: 0;
+    }
+
+    fieldset.rows li input[type="text"],
+    fieldset.rows li input[type="number"],
+    fieldset.rows li input[type="date"],
+    fieldset.rows li input[type="time"],
+    fieldset.rows li select,
+    fieldset.rows li textarea {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Form hints in <fieldset class="rows"> default to inline siblings of
+ * the input. German hint copy runs off the right viewport, so flow
+ * them under the control on a new line aligned with the input
+ * column (Koha's .rows label is float:left; width:10rem; margin-right:1rem).
+ * Scoped to the plugin pages because this stylesheet is only linked
+ * there. */
+fieldset.rows li > .hint {
+    display: block;
+    margin-top: 0.25rem;
+    margin-left: 11rem;
+    max-width: 60ch;
+    white-space: normal;
+}
+
+@media (max-width: 767px) {
+    fieldset.rows li > .hint {
+        margin-left: 0;
+    }
+}
+
 .staff-roster-day-picker {
     display: flex;
     flex-wrap: wrap;
