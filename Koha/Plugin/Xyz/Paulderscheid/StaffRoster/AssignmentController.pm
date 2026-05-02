@@ -27,6 +27,11 @@ use C4::Context;
 use Try::Tiny qw( catch try );
 
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility;
 
 # JSON wire format uses Koha terminology: patron_id rather than the internal
 # borrowernumber column name. _from_body / _to_response map between the two
@@ -64,7 +69,7 @@ sub create {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_assign') ) {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
 
@@ -106,7 +111,7 @@ sub create {
 
         my $id    = $dbh->last_insert_id( undef, undef, undef, undef );
         my $after = _load( $dbh, $id );
-        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit( 'CREATE', $id, { entity => 'assignment', %{$after} },
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit( 'CREATE', $id, { entity => 'assignment', %{$after} },
             $after, );
         return $c->render( status => 201, openapi => _to_response($after) );
     }
@@ -125,7 +130,7 @@ sub update {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_assign') ) {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
 
@@ -168,12 +173,12 @@ sub update {
         );
 
         if ( exists $body->{additional_fields} ) {
-            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_save_additional_fields_from_map( $dbh,
+            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::save_from_map( $dbh,
                 'staff_roster_assignments', $id, $body->{additional_fields} );
         }
 
         my $after = _load( $dbh, $id );
-        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit(
             'MODIFY', $id,
             {   entity  => 'assignment',
                 changed => [ sort keys %{$body} ],
@@ -197,7 +202,7 @@ sub delete {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_assign') ) {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
 
@@ -211,7 +216,7 @@ sub delete {
 
         $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id = ?}, undef, $id );
 
-        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit( 'DELETE', $id, { entity => 'assignment' }, $original );
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit( 'DELETE', $id, { entity => 'assignment' }, $original );
 
         return $c->render_resource_deleted;
     }
@@ -230,7 +235,7 @@ sub bulk {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_assign') ) {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
 
@@ -252,7 +257,7 @@ sub bulk {
             # building an IN-list with interpolated placeholders.
             my $sth = $dbh->prepare(q{DELETE FROM staff_roster_assignments WHERE id = ?});
             $sth->execute($_) for @{$ids};
-            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit( 'DELETE', undef,
+            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit( 'DELETE', undef,
                 { entity => 'assignment_bulk', op => 'clear', ids => $ids, actor => $actor } );
             return $c->render( status => 200, openapi => { deleted => scalar @{$ids} } );
         }
@@ -315,7 +320,7 @@ sub bulk {
             }
             $dbh->commit;
 
-            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit( 'MODIFY', undef,
+            Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit( 'MODIFY', undef,
                 { entity => 'assignment_bulk', op => 'move', ids => $ids, target => $target, actor => $actor } );
             return $c->render( status => 200, openapi => { updated => scalar @{$ids} } );
         }
@@ -340,7 +345,7 @@ sub self_create {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_self_assign') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_self_assign') ) {
             return $c->render(
                 status  => 403,
                 openapi => { error => 'staffroster_self_assign permission required' }
@@ -386,7 +391,7 @@ sub self_create {
               WHERE s.id = ?}, undef, $slot_id
         );
         if (   $roster_for_close
-            && $plugin->_is_closed_for_roster( $roster_for_close, $date ) )
+            && Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::is_closed_for_roster( $plugin, $roster_for_close, $date ) )
         {
             return $c->render( status => 409, openapi => { error => 'Date is closed' } );
         }
@@ -409,7 +414,7 @@ sub self_create {
 
         my $id    = $dbh->last_insert_id( undef, undef, undef, undef );
         my $after = _load( $dbh, $id );
-        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit( 'SELF_CLAIM', $id, { entity => 'assignment', %{$after} },
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit( 'SELF_CLAIM', $id, { entity => 'assignment', %{$after} },
             $after, );
         return $c->render( status => 201, openapi => _to_response($after) );
     }
@@ -429,7 +434,7 @@ sub self_delete {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_self_assign') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_self_assign') ) {
             return $c->render(
                 status  => 403,
                 openapi => { error => 'staffroster_self_assign permission required' }
@@ -486,7 +491,7 @@ sub self_delete {
         delete $original->{start_time};
 
         $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id = ?}, undef, $id );
-        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit( 'SELF_UNCLAIM', $id,
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit( 'SELF_UNCLAIM', $id,
             { entity => 'assignment', borrowernumber => $borrowernumber }, $original, );
         return $c->render_resource_deleted;
     }
@@ -510,13 +515,13 @@ sub _gate_slot {
 
     my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
 
-    if ( !$plugin->_can_view_roster($roster) ) {
+    if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::can_view_roster( $plugin, $roster ) ) {
         return { status => 403, error => 'Not authorized for this roster' };
     }
 
     if (   $plugin->retrieve_data('use_koha_calendar')
         && $plugin->retrieve_data('koha_calendar_strict')
-        && $plugin->_is_closed_for_roster( $roster, $date ) )
+        && Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::is_closed_for_roster( $plugin, $roster, $date ) )
     {
         return { status => 409, error => 'Date is closed per Koha calendar' };
     }
@@ -544,7 +549,7 @@ sub _conflict_check {
     );
     return 'Slot not found' if !defined $max_staff;
 
-    if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $rrule, $date, $anchor ) ) {
+    if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on( $rrule, $date, $anchor ) ) {
         return 'Slot does not run on that day';
     }
 
@@ -610,7 +615,7 @@ sub _load {
     );
     return if !$row;
 
-    my $af = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_load_additional_fields( $dbh, 'staff_roster_assignments', $id );
+    my $af = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::load( $dbh, 'staff_roster_assignments', $id );
     $row->{additional_fields} = $af->{values};
     return $row;
 }

@@ -29,6 +29,9 @@ use Try::Tiny qw( catch try );
 use Koha::DateUtils;
 
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
 
 =head1 API
@@ -47,7 +50,7 @@ sub available {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_assign') ) {
             return $c->render(
                 status  => 403,
                 openapi => { error => 'staffroster_assign permission required' }
@@ -84,13 +87,13 @@ sub available {
             }, undef, $slot_id
             );
             if ($roster) {
-                if ( !$plugin->_can_view_roster($roster) ) {
+                if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::can_view_roster($plugin,$roster) ) {
                     return $c->render( status => 403, openapi => { error => 'Not authorized for this roster' } );
                 }
                 if ( ( $plugin->retrieve_data('library_group_mode') // 'off' ) eq 'strict'
                     && $roster->{library_group_id} )
                 {
-                    @group_branches = $plugin->_branchcodes_for_roster($roster);
+                    @group_branches = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::branchcodes_for_roster( $plugin, $roster );
                     $group_label    = $roster->{group_title};
                 }
             }
@@ -237,7 +240,7 @@ sub me_week {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_view') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_view') ) {
             return $c->render(
                 status  => 403,
                 openapi => { error => 'staffroster_view permission required' }
@@ -288,7 +291,7 @@ sub me_week {
         for my $row ( @{$rows} ) {
             my $rid = $row->{roster_id};
             if ( !exists $roster_ok{$rid} ) {
-                $roster_ok{$rid} = $plugin->_can_view_roster(
+                $roster_ok{$rid} = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::can_view_roster($plugin,
                     {   id               => $rid,
                         branch_id        => $row->{branch_id},
                         library_group_id => $row->{library_group_id},
@@ -353,7 +356,7 @@ sub me_open_slots {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_self_assign') ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions::has_perm('staffroster_self_assign') ) {
             return $c->render(
                 status  => 403,
                 openapi => { error => 'staffroster_self_assign permission required' }
@@ -390,7 +393,7 @@ sub me_open_slots {
         }, { Slice => {} }
         );
 
-        my @visible = grep { $plugin->_can_view_roster($_) } @{ $rosters || [] };
+        my @visible = grep { Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::can_view_roster($plugin,$_) } @{ $rosters || [] };
         if ( !@visible ) {
             return $c->render(
                 status  => 200,
@@ -476,9 +479,9 @@ sub me_open_slots {
             for my $i ( 0 .. 6 ) {
                 my $date = $start_dt->clone->add( days => $i )->ymd;
                 next
-                    if !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $slot->{recurrence_rule},
+                    if !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on( $slot->{recurrence_rule},
                     $date, $roster->{effective_from} );
-                next if $plugin->_is_closed_for_roster( $roster, $date );
+                next if Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::is_closed_for_roster( $plugin, $roster, $date );
 
                 my $taken     = $count_for{ $slot->{id} }{$date} // 0;
                 my $remaining = $cap - $taken;

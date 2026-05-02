@@ -28,7 +28,10 @@ use Try::Tiny qw( catch try );
 use Koha::AuthorisedValues;
 use Koha::DateUtils;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility;
 
 =head1 API
 
@@ -76,7 +79,7 @@ sub get_week {
         }
 
         my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
-        if ( !$plugin->_can_view_roster($roster) ) {
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::can_view_roster( $plugin, $roster ) ) {
             return $c->render( status => 403, openapi => { error => 'Not authorized for this roster' } );
         }
 
@@ -97,13 +100,13 @@ sub get_week {
         my $rec_anchor  = $roster->{effective_from};
         for my $slot ( @{$slots} ) {
             $slot->{days_of_week}
-                = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_byday_from_rrule( $slot->{recurrence_rule} );
+                = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::byday_from_rrule( $slot->{recurrence_rule} );
             my @applies;
             for my $i ( 0 .. 6 ) {
                 my $date = $week_anchor->clone->add( days => $i )->ymd;
                 push @applies,
                     $date
-                    if Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_slot_applies_on( $slot->{recurrence_rule},
+                    if Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on( $slot->{recurrence_rule},
                     $date, $rec_anchor );
             }
             $slot->{applies_on_dates} = \@applies;
@@ -152,7 +155,7 @@ sub get_week {
             }
         }
         if ( @{$assignments} && @{$assignment_fields} ) {
-            my $af_values = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_bulk_additional_field_values( $dbh,
+            my $af_values = Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::bulk_values( $dbh,
                 'staff_roster_assignments', [ map { $_->{id} } @{$assignments} ] );
             for my $a ( @{$assignments} ) {
                 $a->{additional_fields} = $af_values->{ $a->{id} } || {};
@@ -176,7 +179,7 @@ sub get_week {
             for my $i ( 0 .. 6 ) {
                 my $date = $start_dt->clone->add( days => $i )->ymd;
                 next if $seen{$date};
-                if ( $plugin->_is_closed_for_roster( $roster, $date ) ) {
+                if ( Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility::is_closed_for_roster( $plugin, $roster, $date ) ) {
                     push @{$exceptions},
                         {
                         id             => undef,
