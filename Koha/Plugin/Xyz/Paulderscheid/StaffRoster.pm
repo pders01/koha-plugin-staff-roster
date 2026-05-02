@@ -52,34 +52,18 @@ use Koha::Patrons;
 
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::I18N;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::DateUtils;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit;
 
 # Recurrence helpers; pulled in early so the slot save path doesn't pay the
 # require cost on first request.
 use DateTime::Event::ICal;
 use DateTime::Format::ICal;
 
-# Flow plugin mutations into Koha's action_logs so admins can audit changes
-# from tools/viewlog.pl alongside borrower / catalogue / acquisitions activity.
-# All entries land under module 'STAFFROSTER'; the entity (roster, slot,
-# assignment, exception, type) and any extra context goes into the JSON info
-# blob. Loaded lazily so the plugin still works in environments where C4::Log
-# isn't available (very old Koha).
-sub _audit {
-    my ( $action, $object_id, $infos, $original ) = @_;
-    return if !defined $action;
-    eval {
-        require C4::Log;
-        $infos //= {};
-
-        # ACTN1 / Bug 25159: pass $original (pre-state) so logaction can
-        # produce a structured JSON diff in action_logs.diff. CREATE/DELETE
-        # branches in C4::Log diff against {} when $original is undef, so
-        # for those we still pass a hashref representing the full row.
-        C4::Log::logaction( 'STAFFROSTER', $action, $object_id, $infos, undef, $original );
-        1;
-    };
-    return;
-}
+# Backwards-compat shims: existing internal call sites stayed on _audit /
+# _txn after the helpers moved into Lib::Audit. Migrate one mutation
+# handler at a time when refactoring continues; keep these around as
+# trivial delegations so the diff stays small.
+sub _audit { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::audit(@_); }
 
 our $metadata = {
     'author'           => 'Paul Derscheid',
@@ -407,27 +391,7 @@ sub _unregister_permissions {
 
 # Permission check used by every gated handler. Superlibrarians bypass all
 # checks (matches Koha's convention everywhere else). Returns 1/0.
-# Run $code inside a transaction. Plack's $dbh defaults to AutoCommit=1, so
-# any handler that does several related $dbh->do calls risks a torn write
-# (one row committed, the next throws). Wrap the related work in this and
-# the helper rolls everything back on error. Returns whatever $code returns.
-sub _txn {
-    my ( $dbh, $code ) = @_;
-    my $autocommit_was = $dbh->{AutoCommit};
-    $dbh->begin_work if $autocommit_was;
-    my @result;
-    my $rv = eval {
-        @result = wantarray ? $code->() : ( scalar $code->() );
-        $dbh->commit if $autocommit_was;
-        1;
-    };
-    if ( !$rv ) {
-        my $err = $@ || 'unknown';
-        eval { $dbh->rollback } if $autocommit_was;
-        die $err;
-    }
-    return wantarray ? @result : $result[0];
-}
+sub _txn { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit::txn(@_); }
 
 sub _has_perm {
     my ($code) = @_;
