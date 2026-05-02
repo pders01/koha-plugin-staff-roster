@@ -88,6 +88,10 @@
 .srg-grid {
     margin-bottom: 0;
     table-layout: fixed;
+    /* Day cols collapse below this on mobile; the table widens past
+       viewport and .srg-grid-wrap scrolls. The slot col stays sticky
+       so the time anchor doesn't disappear. */
+    min-width: 720px;
 }
 
 .srg-grid > thead > tr > th {
@@ -96,6 +100,7 @@
     vertical-align: middle;
     border-bottom: 2px solid #ddd;
     padding: 0.5rem;
+    background: #fff;
 }
 
 .srg-grid > tbody > tr > th,
@@ -106,6 +111,16 @@
 
 .srg-grid .srg-day {
     display: block;
+}
+
+.srg-slot-col,
+.srg-slot-cell {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #fff;
+    /* Right-edge shadow only shows when the day cells scroll under. */
+    box-shadow: 1px 0 0 #e3e3e3;
 }
 
 .srg-slot-col {
@@ -337,6 +352,31 @@
 
     .srg-staff-panel {
         max-height: 30vh;
+    }
+}
+
+@media (max-width: 575px) {
+    /* Slim the slot anchor on phones so day cells get more room
+       before the table starts scrolling horizontally. */
+    .srg-slot-col,
+    .srg-slot-cell {
+        width: 88px;
+    }
+
+    .srg-grid > thead > tr > th,
+    .srg-grid > tbody > tr > th,
+    .srg-grid > tbody > tr > td {
+        padding: 0.35rem 0.4rem;
+        font-size: 0.85rem;
+    }
+
+    .srg-cell {
+        height: 56px;
+    }
+
+    .srg-assignment {
+        font-size: 0.75rem;
+        padding: 0.15rem 0.3rem;
     }
 }
 

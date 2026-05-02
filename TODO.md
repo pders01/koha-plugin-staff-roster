@@ -76,8 +76,6 @@ Both items below need an external decision before any code lands.
       `view_assignments` against a known week_start and asserts each
       `<th aria-colindex>` shows the right `MM-DD` would lock it in.
       Defer until the helper or weekStart wiring actually breaks.
-- [ ] **Mobile schedule grid**: 8 columns × tall slot column means
-      horizontal scroll on phones. Acceptable for v1, not polished.
 - [ ] **Slot delete confirm**: uses inline modal on the manage_slots
       page; roster delete uses a separate `delete_confirm` op + page.
       Two patterns for destructive actions. Trade-off: per-slot
@@ -114,6 +112,15 @@ Both items below need an external decision before any code lands.
 
 ## Done (recent — older entries pruned 2026-05-02)
 
+- [x] **Mobile grid polish**: slot column is now `position: sticky;
+      left: 0` so the time anchor stays visible while day cells scroll
+      horizontally. The table also picks up `min-width: 720px` so
+      sub-720 viewports trigger horizontal scroll inside the
+      `.srg-grid-wrap` overflow box instead of squishing weekday
+      cells unreadable. New `<575px` breakpoint slims the slot
+      column to 88px, drops cell padding + assignment chip font
+      size, and shortens cell height to 56px. Pure CSS — no JS or
+      template churn. Bundle CSS grew by ~150B.
 - [x] **Cypress integration coverage for `get_week` + calendar merge**:
       added `cypress/integration/staffroster/get_week_spec.ts` (5
       subtests: roster header + applies_on_dates, 7-day assignment
