@@ -5,37 +5,31 @@ deciding where to add something.
 
 ## Layers
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Browser                                                     │
-│   src/components/staff-roster-grid.ts   ── Lit, drag/drop  │
-│   src/components/my-shifts-list.ts      ── Lit, self-svc   │
-│   src/components/open-shifts-list.ts    ── Lit, self-svc   │
-│   src/i18n/                             ── runtime strings │
-│   src/api.ts                            ── REST client     │
-└─────────────────────────────────────────────────────────────┘
-                       │ HTTPS
-┌──────────────────────▼──────────────────────────────────────┐
-│ Koha (mod_perl / Plack)                                     │
-│   tool / admin / configure / report ─ CGI handlers         │
-│       in StaffRoster.pm                                     │
-│   /api/v1/contrib/staffroster/* ── REST                    │
-│       AssignmentController.pm  (CRUD, bulk, self-service)  │
-│       RosterController.pm      (week view aggregation)     │
-│       StaffController.pm       (staff lookup, my/open)     │
-│   Lib/I18N.pm                  (translation lookup)        │
-│   cron/staff_roster_nightly.pl (reminder runner)           │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ DBI
-┌──────────────────────▼──────────────────────────────────────┐
-│ MariaDB                                                     │
-│   staff_roster, staff_roster_types, staff_roster_slots,    │
-│   staff_roster_assignments, staff_roster_exceptions,       │
-│   staff_roster_swap_requests                               │
-│   action_logs (module='STAFFROSTER')                       │
-│   plugin_data (settings)                                   │
-│   letter (module='STAFFROSTER' code='REMINDER')            │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Browser
+        grid["staff-roster-grid.ts<br/>(Lit, drag/drop)"]
+        myshifts["my-shifts-list.ts<br/>(Lit, self-svc)"]
+        openshifts["open-shifts-list.ts<br/>(Lit, self-svc)"]
+        i18n["src/i18n/<br/>(runtime strings)"]
+        api["src/api.ts<br/>(REST client)"]
+    end
+
+    subgraph Koha["Koha (mod_perl / Plack)"]
+        cgi["tool / admin / configure / report<br/>CGI handlers in StaffRoster.pm"]
+        rest["/api/v1/contrib/staffroster/*<br/>AssignmentController, RosterController,<br/>StaffController"]
+        libs["Lib/* helpers<br/>I18N, Audit, Permissions, Visibility,<br/>Rrule, AdditionalFields, Schema"]
+        tools["Controllers/Tool/*<br/>List, Form, Slots, Exceptions, Swaps,<br/>SelfService"]
+        cron["cron/staff_roster_nightly.pl"]
+    end
+
+    subgraph MariaDB
+        plugin_tables["staff_roster, staff_roster_types,<br/>staff_roster_slots, staff_roster_assignments,<br/>staff_roster_exceptions, staff_roster_swap_requests"]
+        koha_tables["action_logs (module=STAFFROSTER)<br/>plugin_data (settings)<br/>letter (STAFFROSTER/REMINDER)"]
+    end
+
+    Browser -->|HTTPS| Koha
+    Koha -->|DBI| MariaDB
 ```
 
 ## File guide
@@ -81,20 +75,20 @@ REST routes live under `/api/v1/contrib/staffroster/`.
 
 ## Translation flow
 
+```mermaid
+flowchart LR
+    src[("locales/de.json<br/>(single source of truth)")]
+    perl["Lib/I18N.pm<br/>read on first call, cache per lang"]
+    tt["get_template() → tr() in every TT<br/><code>[% tr('English source') | html %]</code>"]
+    js["src/i18n/de.ts<br/>JSON import, inlined by vite"]
+    bundle["__()<br/>reads documentElement.lang"]
+
+    src --> perl --> tt
+    src --> js --> bundle
 ```
-locales/de.json  ←── single source of truth
-       │
-       ├── Lib/I18N.pm reads it from disk on first call,
-       │     caches per language; tr() falls through to English
-       │     for missing keys.
-       │     get_template() injects tr() into every TT.
-       │     [% tr('English source') | html %]
-       │
-       └── src/i18n/de.ts re-exports it via JSON import; vite
-             inlines the dict into the bundle. __() reads
-             document.documentElement.lang and falls through to
-             English on miss.
-```
+
+Both branches fall through to the English source when a key is missing,
+so a partial translation never breaks a page.
 
 The dictionary keys are the English source strings, not opaque
 codes — this means a missing translation degrades gracefully to

@@ -16,99 +16,79 @@ branches and locations.
 
 ## Entity Relationship Diagram
 
-```
-+---------------------+       +-------------------+
-| staff_roster_types  |       | borrowers (Koha)  |
-+---------------------+       +-------------------+
-| id (PK)             |       | borrowernumber    |
-| code                |       | ...               |
-| name                |       +-------------------+
-| description         |              |
-| color               |              |
-| is_active           |              |
-| created_at          |              |
-| updated_at          |              |
-+---------------------+              |
-         |                           |
-         | 1:N                       |
-         v                           |
-+---------------------+              |
-| staff_roster        |              |
-+---------------------+              |
-| id (PK)             |              |
-| roster_type_id (FK) |              |
-| branch_id (FK)      |--------+     |
-| name                |        |     |
-| description         |        |     |
-| effective_from      |        |     |
-| effective_to        |        |     |
-| is_active           |        |     |
-| created_at          |        |     |
-| updated_at          |        |     |
-+---------------------+        |     |
-         |                     |     |
-         | 1:N                 |     |
-         v                     |     |
-+-------------------------+    |     |
-| staff_roster_slots      |    |     |
-+-------------------------+    |     |
-| id (PK)                 |    |     |
-| roster_id (FK)          |    |     |
-| day_of_week (0-6)       |    |     |
-| start_time              |    |     |
-| end_time                |    |     |
-| min_staff               |    |     |
-| max_staff               |    |     |
-| location                |    |     |
-| notes                   |    |     |
-| created_at              |    |     |
-| updated_at              |    |     |
-+-------------------------+    |     |
-         |                     |     |
-         | 1:N                 |     |
-         v                     |     |
-+------------------------------+     |
-| staff_roster_assignments     |     |
-+------------------------------+     |
-| id (PK)                      |     |
-| slot_id (FK)                 |     |
-| borrowernumber (FK)          |-----+
-| assignment_date              |
-| status                       |
-| assigned_by (FK)             |-----+
-| notes                        |
-| created_at                   |
-| updated_at                   |
-+------------------------------+
+```mermaid
+erDiagram
+    staff_roster_types ||--o{ staff_roster : "categorizes"
+    staff_roster ||--o{ staff_roster_slots : "schedules"
+    staff_roster ||--o{ staff_roster_exceptions : "overrides"
+    staff_roster_slots ||--o{ staff_roster_assignments : "fills"
+    staff_roster_assignments ||--o{ staff_roster_swap_requests : "swap from"
+    staff_roster_assignments |o--o{ staff_roster_swap_requests : "swap to (optional)"
+    borrowers ||--o{ staff_roster_assignments : "assigned"
+    borrowers ||--o{ staff_roster_assignments : "assigned_by"
+    borrowers ||--o{ staff_roster_exceptions : "created_by"
+    borrowers ||--o{ staff_roster_swap_requests : "to_borrowernumber"
+    branches ||--o{ staff_roster : "branch_id"
+    library_groups ||--o{ staff_roster : "library_group_id"
 
-+------------------------------+
-| staff_roster_exceptions      |
-+------------------------------+
-| id (PK)                      |
-| roster_id (FK)               |
-| exception_date               |
-| exception_type               |
-| reason                       |
-| created_by (FK)              |
-| created_at                   |
-| updated_at                   |
-+------------------------------+
-
-+------------------------------+
-| staff_roster_swap_requests   |
-+------------------------------+
-| id (PK)                      |
-| from_assignment_id (FK)      |
-| to_borrowernumber (FK)       |
-| to_assignment_id (FK, null)  |
-| status                       |
-| request_message              |
-| response_message             |
-| requested_at                 |
-| responded_at                 |
-| created_at                   |
-| updated_at                   |
-+------------------------------+
+    staff_roster_types {
+        INT id PK
+        VARCHAR code UK
+        VARCHAR name
+        TEXT description
+        VARCHAR color
+        TINYINT is_active
+    }
+    staff_roster {
+        INT id PK
+        INT roster_type_id FK
+        VARCHAR branch_id FK "nullable"
+        INT library_group_id FK "nullable"
+        VARCHAR name
+        TEXT description
+        DATE effective_from
+        DATE effective_to "nullable"
+        TINYINT is_active
+    }
+    staff_roster_slots {
+        INT id PK
+        INT roster_id FK
+        VARCHAR recurrence_rule "iCal RRULE"
+        TIME start_time
+        TIME end_time
+        INT min_staff
+        INT max_staff
+        VARCHAR location "nullable"
+        TEXT notes "nullable"
+    }
+    staff_roster_assignments {
+        INT id PK
+        INT slot_id FK
+        INT borrowernumber FK
+        DATE assignment_date
+        ENUM status "scheduled / confirmed / completed / cancelled / no_show"
+        INT assigned_by FK "nullable"
+        TEXT notes "nullable"
+    }
+    staff_roster_exceptions {
+        INT id PK
+        INT roster_id FK
+        DATE exception_date
+        ENUM exception_type "closed / holiday / special / reduced_hours"
+        VARCHAR reason "nullable"
+        INT created_by FK "nullable"
+    }
+    staff_roster_swap_requests {
+        INT id PK
+        INT from_assignment_id FK
+        INT to_borrowernumber FK
+        INT to_assignment_id FK "nullable (one-way swap)"
+        ENUM status "pending / approved / rejected / cancelled"
+        TEXT request_message "nullable"
+        TEXT response_message "nullable"
+        DATETIME requested_at
+        DATETIME responded_at "nullable"
+    }
 ```
 
 ## Table Definitions
@@ -132,36 +112,40 @@ Defines the categories/types of roster duties.
 
 Main roster/schedule definition table.
 
-| Column          | Type         | Constraints          | Description                              |
-|-----------------|--------------|----------------------|------------------------------------------|
-| id              | INT          | PK, AUTO_INCREMENT   | Unique identifier                        |
-| roster_type_id  | INT          | FK, NOT NULL         | Reference to staff_roster_types          |
-| branch_id       | VARCHAR(10)  | FK, NULL             | Reference to Koha branches (NULL = all)  |
-| name            | VARCHAR(255) | NOT NULL             | Roster name                              |
-| description     | TEXT         | NULL                 | Detailed description                     |
-| effective_from  | DATE         | NOT NULL             | Start date of roster validity            |
-| effective_to    | DATE         | NULL                 | End date (NULL = indefinite)             |
-| is_active       | TINYINT(1)   | DEFAULT 1            | Whether roster is currently active       |
-| created_at      | DATETIME     | NOT NULL             | Record creation timestamp                |
-| updated_at      | DATETIME     | NOT NULL             | Last update timestamp                    |
+| Column           | Type         | Constraints          | Description                              |
+|------------------|--------------|----------------------|------------------------------------------|
+| id               | INT          | PK, AUTO_INCREMENT   | Unique identifier                        |
+| roster_type_id   | INT          | FK, NOT NULL         | Reference to staff_roster_types          |
+| branch_id        | VARCHAR(10)  | FK, NULL             | Single-branch scope (NULL when group/all) |
+| library_group_id | INT          | FK, NULL             | Library-group scope (NULL when branch/all). Mutually exclusive with branch_id at the app level. |
+| name             | VARCHAR(255) | NOT NULL             | Roster name                              |
+| description      | TEXT         | NULL                 | Detailed description                     |
+| effective_from   | DATE         | NOT NULL             | Start date of roster validity            |
+| effective_to     | DATE         | NULL                 | End date (NULL = indefinite)             |
+| is_active        | TINYINT(1)   | DEFAULT 1            | Whether roster is currently active       |
+| created_at       | DATETIME     | NOT NULL             | Record creation timestamp                |
+| updated_at       | DATETIME     | NOT NULL             | Last update timestamp                    |
 
 ### 3. staff_roster_slots
 
-Defines the time slots within a roster (recurring weekly pattern).
+Defines the recurring time slots within a roster. Recurrence is stored
+as an iCal RFC 5545 RRULE in `recurrence_rule` (e.g.
+`FREQ=WEEKLY;BYDAY=MO,WE,FR`); see Architecture.md for the supported
+subset.
 
-| Column       | Type         | Constraints          | Description                              |
-|--------------|--------------|----------------------|------------------------------------------|
-| id           | INT          | PK, AUTO_INCREMENT   | Unique identifier                        |
-| roster_id    | INT          | FK, NOT NULL         | Reference to staff_roster                |
-| day_of_week  | TINYINT      | NOT NULL, CHECK 0-6  | 0=Sunday, 1=Monday, ..., 6=Saturday      |
-| start_time   | TIME         | NOT NULL             | Slot start time                          |
-| end_time     | TIME         | NOT NULL             | Slot end time                            |
-| min_staff    | INT          | DEFAULT 1            | Minimum staff required                   |
-| max_staff    | INT          | DEFAULT 1            | Maximum staff allowed                    |
-| location     | VARCHAR(255) | NULL                 | Specific location/desk within branch     |
-| notes        | TEXT         | NULL                 | Notes about this slot                    |
-| created_at   | DATETIME     | NOT NULL             | Record creation timestamp                |
-| updated_at   | DATETIME     | NOT NULL             | Last update timestamp                    |
+| Column          | Type         | Constraints          | Description                              |
+|-----------------|--------------|----------------------|------------------------------------------|
+| id              | INT          | PK, AUTO_INCREMENT   | Unique identifier                        |
+| roster_id       | INT          | FK, NOT NULL         | Reference to staff_roster                |
+| recurrence_rule | VARCHAR(512) | NOT NULL             | iCal RRULE subset (FREQ + BYDAY ± INTERVAL/UNTIL/MONTHLY ordinals) |
+| start_time      | TIME         | NOT NULL             | Slot start time                          |
+| end_time        | TIME         | NOT NULL             | Slot end time                            |
+| min_staff       | INT          | DEFAULT 1            | Minimum staff required                   |
+| max_staff       | INT          | DEFAULT 1            | Maximum staff allowed                    |
+| location        | VARCHAR(255) | NULL                 | Specific location/desk within branch     |
+| notes           | TEXT         | NULL                 | Notes about this slot                    |
+| created_at      | DATETIME     | NOT NULL             | Record creation timestamp                |
+| updated_at      | DATETIME     | NOT NULL             | Last update timestamp                    |
 
 ### 4. staff_roster_assignments
 
@@ -225,8 +209,8 @@ CREATE INDEX idx_assignments_date ON staff_roster_assignments(assignment_date);
 -- Assignments by staff member
 CREATE INDEX idx_assignments_staff ON staff_roster_assignments(borrowernumber, assignment_date);
 
--- Slots by roster and day
-CREATE INDEX idx_slots_roster_day ON staff_roster_slots(roster_id, day_of_week);
+-- Slots by roster (recurrence is computed in Perl, not indexable)
+CREATE INDEX idx_slots_roster ON staff_roster_slots(roster_id);
 
 -- Exceptions by roster and date
 CREATE INDEX idx_exceptions_roster_date ON staff_roster_exceptions(roster_id, exception_date);
@@ -359,33 +343,15 @@ ORDER BY sra.assignment_date, srs.start_time;
 
 ### Find unfilled slots for a date range
 
-```sql
-SELECT 
-    sr.name AS roster_name,
-    srs.day_of_week,
-    srs.start_time,
-    srs.end_time,
-    srs.min_staff,
-    dates.dt AS slot_date,
-    COUNT(sra.id) AS assigned_count
-FROM staff_roster_slots srs
-JOIN staff_roster sr ON srs.roster_id = sr.id
-CROSS JOIN (
-    -- Generate date range
-    SELECT DATE_ADD(CURDATE(), INTERVAL n DAY) AS dt
-    FROM (SELECT 0 n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 
-          UNION SELECT 4 UNION SELECT 5 UNION SELECT 6) numbers
-) dates
-LEFT JOIN staff_roster_assignments sra 
-    ON sra.slot_id = srs.id 
-    AND sra.assignment_date = dates.dt
-    AND sra.status IN ('scheduled', 'confirmed')
-WHERE sr.is_active = 1
-  AND DAYOFWEEK(dates.dt) - 1 = srs.day_of_week
-  AND dates.dt BETWEEN sr.effective_from AND COALESCE(sr.effective_to, '9999-12-31')
-GROUP BY sr.id, srs.id, dates.dt
-HAVING assigned_count < srs.min_staff;
-```
+Recurrence lives in `recurrence_rule` as an iCal RRULE, not a simple
+`day_of_week` column, so the "does this slot apply on this date" check
+isn't pure SQL. The plugin's
+`Lib::Rrule::slot_applies_on($rrule, $date, $anchor)` helper covers
+the WEEKLY + MONTHLY + ordinal subset; the canonical aggregator lives
+in `RosterController#get_week`, which returns a per-day applicability
+list alongside the slot. To find unfilled slots offline, walk the
+date range in Perl and filter by `slot_applies_on` before joining
+against the assignment count.
 
 ## Version History
 
