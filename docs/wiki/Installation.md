@@ -61,6 +61,21 @@ container or on the Koha host, schedule:
 Without this, the `enable_email_reminders` setting and the
 `STAFFROSTER`/`REMINDER` letter template are inert.
 
+### Dev (kohadev container)
+
+`just cron-nightly` syncs the plugin source into the
+`dev-koha-1` container and fires the cron once via `koha-shell`.
+Output line is `staff_roster_nightly: enqueued N reminder(s).`
+Override container/instance with positional args:
+
+```bash
+just cron-nightly my-koha-1 myinstance
+```
+
+Use this to verify the three knobs end to end (the setting toggle,
+the letter template, the reminder window) without waiting for a real
+crontab to fire.
+
 ## Verify
 
 - Open **Tools → Staff Roster** — you should land on an empty

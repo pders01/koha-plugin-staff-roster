@@ -58,3 +58,15 @@ binary:
 # t/cypress/integration/staffroster/ alongside Koha's own.
 test-cypress:
   scripts/run-cypress.sh
+
+# Sync plugin source into the kohadev container and fire the nightly
+# reminder cron once. Use this in dev to verify enable_email_reminders +
+# the REMINDER letter template + reminder_days_before all line up;
+# production schedules the same script via koha-common's cronjob_wrapper
+# (see docs/wiki/Installation.md).
+cron-nightly container="dev-koha-1" instance="kohadev":
+  docker exec {{container}} rm -rf /var/lib/koha/{{instance}}/plugins/Koha /var/lib/koha/{{instance}}/plugins/cron
+  docker cp Koha {{container}}:/var/lib/koha/{{instance}}/plugins/Koha
+  docker cp cron {{container}}:/var/lib/koha/{{instance}}/plugins/cron
+  docker exec {{container}} koha-shell {{instance}} -c \
+    "perl /var/lib/koha/{{instance}}/plugins/cron/staff_roster_nightly.pl"

@@ -16,6 +16,14 @@
 #   30 1 * * * koha-shell kohadev -c "perl /path/to/cron/staff_roster_nightly.pl"
 
 use Modern::Perl;
+
+# koha-shell sets PERL5LIB to the Koha tree but not to the plugins dir.
+# Bootstrap from the script's own location so the cron entry above can
+# stay a simple `perl /…/cron/staff_roster_nightly.pl` instead of
+# carrying a -I flag for every invocation.
+use FindBin qw( $Bin );
+use lib "$Bin/..";
+
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
 
 my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
