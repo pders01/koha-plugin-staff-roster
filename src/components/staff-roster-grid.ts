@@ -335,7 +335,7 @@ export class StaffRosterGrid extends LitElement {
     this.editForm = {
       status: a.status,
       notes: a.notes ?? "",
-      fields: { ...(a.additional_fields ?? {}) },
+      fields: { ...a.additional_fields },
     };
     this.pendingFocusModal = true;
   }

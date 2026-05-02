@@ -2006,7 +2006,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		this.editing = e, this.editOriginEl = t, this.editForm = {
 			status: e.status,
 			notes: e.notes ?? "",
-			fields: { ...e.additional_fields ?? {} }
+			fields: { ...e.additional_fields }
 		}, this.pendingFocusModal = !0;
 	}
 	cancelEdit() {

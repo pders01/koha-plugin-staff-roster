@@ -107,7 +107,7 @@ describe("StaffRoster get_week", () => {
             const tue = res.exceptions.filter(e => e.exception_date === TUE);
             expect(tue).to.have.length(1);
             expect(tue[0].reason).to.eq("manual");
-            expect(tue[0].source).to.be.undefined;
+            expect(tue[0].source).to.eq(undefined);
         });
     });
 
@@ -125,7 +125,7 @@ describe("StaffRoster get_week", () => {
             endpoint: `/api/v1/contrib/staffroster/rosters/${fixture.rosterId}/week?start=${WEEK}`,
         }).then(res => {
             const cal = res.exceptions.find(e => e.exception_date === TUE);
-            expect(cal, "calendar closure surfaced").to.exist;
+            expect(cal, "calendar closure surfaced").to.not.eq(undefined);
             expect(cal!.source).to.eq("calendar");
         });
     });
@@ -153,7 +153,7 @@ describe("StaffRoster get_week", () => {
             const tue = res.exceptions.filter(e => e.exception_date === TUE);
             expect(tue).to.have.length(1);
             expect(tue[0].reason).to.eq("manual");
-            expect(tue[0].source).to.be.undefined;
+            expect(tue[0].source).to.eq(undefined);
         });
     });
 });
