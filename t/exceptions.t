@@ -14,10 +14,14 @@ for my $cand ( "$RealBin/..", '/var/lib/koha/kohadev/plugins' ) {
 }
 unshift @INC, '/kohadevbox/koha/';
 unshift @INC, '/kohadevbox/koha/t/lib/';
+use lib "$RealBin/lib";
 
 eval { require C4::Context;                                   1 } or plan skip_all => "C4::Context not available";
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster; 1 }
     or plan skip_all => "plugin module did not load";
+
+require StaffRosterFixture;
+StaffRosterFixture->import(qw( ensure_roster ));
 
 my $dbh = C4::Context->dbh;
 $dbh->{AutoCommit} = 0;
@@ -36,8 +40,7 @@ C4::Context->set_userenv( $test_bn, 'test_runner', '0', 'Test', 'Runner', undef,
 
 my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
 
-my ($rid) = $dbh->selectrow_array(q{SELECT id FROM staff_roster LIMIT 1});
-plan skip_all => 'no staff_roster rows in database' if !$rid;
+my ($rid) = ensure_roster();
 
 # Stub CGI with the methods the handlers use.
 package StubCGI;

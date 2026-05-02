@@ -16,10 +16,14 @@ for my $cand ( "$RealBin/..", '/var/lib/koha/kohadev/plugins' ) {
 }
 unshift @INC, '/kohadevbox/koha/';
 unshift @INC, '/kohadevbox/koha/t/lib/';
+use lib "$RealBin/lib";
 
 eval { require C4::Context;                                   1 } or plan skip_all => 'C4::Context not available';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster; 1 }
     or plan skip_all => 'plugin module did not load';
+
+require StaffRosterFixture;
+StaffRosterFixture->import(qw( ensure_roster ));
 
 my $dbh = C4::Context->dbh;
 $dbh->{AutoCommit} = 0;
@@ -38,12 +42,7 @@ C4::Context->set_userenv( $self_bn, 'test_runner', '0', 'Test', 'Runner', undef,
 
 my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
 
-my ( $rid, $slot_id ) = $dbh->selectrow_array(
-    q{SELECT r.id, s.id FROM staff_roster r
-        JOIN staff_roster_slots s ON s.roster_id = r.id
-       WHERE r.is_active = 1 LIMIT 1},
-);
-plan skip_all => 'no active roster + slot in database' if !$rid || !$slot_id;
+my ( $rid, $slot_id ) = ensure_roster();
 
 my ( $rrule, $anchor ) = $dbh->selectrow_array(
     q{SELECT s.recurrence_rule, r.effective_from

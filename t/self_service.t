@@ -15,6 +15,7 @@ for my $cand ( "$RealBin/..", '/var/lib/koha/kohadev/plugins' ) {
 }
 unshift @INC, '/kohadevbox/koha/';
 unshift @INC, '/kohadevbox/koha/t/lib/';
+use lib "$RealBin/lib";
 
 eval { require C4::Context;                                   1 } or plan skip_all => 'C4::Context not available';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster; 1 }
@@ -23,6 +24,9 @@ eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::AssignmentControll
     or plan skip_all => 'AssignmentController did not load';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::StaffController; 1 }
     or plan skip_all => 'StaffController did not load';
+
+require StaffRosterFixture;
+StaffRosterFixture->import(qw( ensure_roster ));
 
 my $dbh = C4::Context->dbh;
 $dbh->{AutoCommit} = 0;
@@ -41,15 +45,9 @@ C4::Context->set_userenv( $test_bn, 'test_runner', '0', 'Test', 'Runner', undef,
 
 my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
 
-# Find or create a roster + slot that we can claim against. Capacity 2 so we
-# can test the "slot full" path by filling it ourselves.
-my ($rid) = $dbh->selectrow_array(q{SELECT id FROM staff_roster WHERE is_active = 1 LIMIT 1});
-plan skip_all => 'no active staff_roster rows' if !$rid;
-
-# Pick a slot that runs every weekday for max coverage on the date matrix.
-my ($slot_id)
-    = $dbh->selectrow_array( q{SELECT id FROM staff_roster_slots WHERE roster_id = ? ORDER BY id LIMIT 1}, undef, $rid, );
-plan skip_all => 'no slots on test roster' if !$slot_id;
+# Bootstrap our own roster + weekday slot. Capacity 2 so we can
+# exercise the "slot full" path by filling it ourselves.
+my ( $rid, $slot_id ) = ensure_roster();
 
 # Bump capacity to 2 for the duration of these tests so we can exercise
 # both "still room" and "full" without churning fixtures.

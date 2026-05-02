@@ -17,12 +17,16 @@ for my $cand ( "$RealBin/..", '/var/lib/koha/kohadev/plugins' ) {
 }
 unshift @INC, '/kohadevbox/koha/';
 unshift @INC, '/kohadevbox/koha/t/lib/';
+use lib "$RealBin/lib";
 
 eval { require C4::Context;                                   1 } or plan skip_all => 'C4::Context not available';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster; 1 }
     or plan skip_all => 'plugin module did not load';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Controllers::Tool::Swaps; 1 }
     or plan skip_all => 'Tool::Swaps did not load';
+
+require StaffRosterFixture;
+StaffRosterFixture->import(qw( ensure_roster ));
 
 my $dbh = C4::Context->dbh;
 $dbh->{AutoCommit} = 0;
@@ -44,15 +48,13 @@ C4::Context->set_userenv( $self_bn, 'test_runner', '0', 'Test', 'Runner', undef,
 my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
 $plugin->store_data( { require_swap_approval => '1' } );
 
-# Pick a roster + two slots so the mutual swap moves borrowers across two
-# distinct assignments. Skip if the dev fixture only has one slot.
-my ($rid) = $dbh->selectrow_array(q{SELECT id FROM staff_roster WHERE is_active = 1 LIMIT 1});
-plan skip_all => 'no active roster' if !$rid;
+# Bootstrap a fresh roster with two distinct weekday slots so the
+# mutual swap has somewhere to move borrowers between.
+my ( $rid, $slot_a_id, $slot_b_id ) = ensure_roster();
 my $slot_rows = $dbh->selectall_arrayref(
     q{SELECT id, recurrence_rule, start_time, end_time FROM staff_roster_slots
-       WHERE roster_id = ? ORDER BY id LIMIT 2}, { Slice => {} }, $rid,
+       WHERE id IN (?, ?) ORDER BY id}, { Slice => {} }, $slot_a_id, $slot_b_id,
 );
-plan skip_all => 'need at least two slots on a roster' if !$slot_rows || @{$slot_rows} < 2;
 my ( $slot_a, $slot_b ) = @{$slot_rows};
 
 my ($anchor) = $dbh->selectrow_array( q{SELECT effective_from FROM staff_roster WHERE id = ?}, undef, $rid );

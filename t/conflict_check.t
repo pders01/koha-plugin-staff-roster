@@ -15,12 +15,16 @@ for my $cand ( "$RealBin/..", '/var/lib/koha/kohadev/plugins' ) {
 }
 unshift @INC, '/kohadevbox/koha/';
 unshift @INC, '/kohadevbox/koha/t/lib/';
+use lib "$RealBin/lib";
 
 eval { require C4::Context;                                   1 } or plan skip_all => 'C4::Context not available';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster; 1 }
     or plan skip_all => 'plugin module did not load';
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster::AssignmentController; 1 }
     or plan skip_all => 'AssignmentController did not load';
+
+require StaffRosterFixture;
+StaffRosterFixture->import(qw( ensure_roster ));
 
 my $dbh = C4::Context->dbh;
 $dbh->{AutoCommit} = 0;
@@ -32,12 +36,7 @@ END {
 
 my $cc = \&Koha::Plugin::Xyz::Paulderscheid::StaffRoster::AssignmentController::_conflict_check;
 
-my ($rid) = $dbh->selectrow_array(q{SELECT id FROM staff_roster WHERE is_active = 1 LIMIT 1});
-plan skip_all => 'no active staff_roster rows' if !$rid;
-
-my ($slot_id)
-    = $dbh->selectrow_array( q{SELECT id FROM staff_roster_slots WHERE roster_id = ? ORDER BY id LIMIT 1}, undef, $rid, );
-plan skip_all => 'no slots on test roster' if !$slot_id;
+my ( $rid, $slot_id ) = ensure_roster();
 
 # Capacity 2 lets us exercise "room remains" and "slot full" against the
 # same slot without per-test fixture churn.

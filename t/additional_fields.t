@@ -15,10 +15,14 @@ for my $cand ( "$RealBin/..", '/var/lib/koha/kohadev/plugins' ) {
 }
 unshift @INC, '/kohadevbox/koha/';
 unshift @INC, '/kohadevbox/koha/t/lib/';
+use lib "$RealBin/lib";
 
 eval { require C4::Context;                                   1 } or plan skip_all => "C4::Context not available";
 eval { require Koha::Plugin::Xyz::Paulderscheid::StaffRoster; 1 }
     or plan skip_all => "plugin module did not load";
+
+require StaffRosterFixture;
+StaffRosterFixture->import(qw( ensure_roster ));
 
 my $dbh = C4::Context->dbh;
 $dbh->{AutoCommit} = 0;
@@ -47,10 +51,11 @@ sub multi_param {
 
 package main;
 
-# Pick a roster + assignment to attach AF rows to, or skip if the box is empty.
-my ($rid) = $dbh->selectrow_array(q{SELECT id FROM staff_roster LIMIT 1});
+# Bootstrap a roster (the helper rows attach to). Assignment id is
+# optional — only used by the assignment-AF subtest, which can stub
+# its own row from the fixture's slot.
+my ($rid) = ensure_roster();
 my ($aid) = $dbh->selectrow_array(q{SELECT id FROM staff_roster_assignments LIMIT 1});
-plan skip_all => 'no staff_roster rows in database; create one first' if !$rid;
 
 # Field IDs in a test-only range, well clear of real data.
 my $ROSTER_F1     = 90001;
