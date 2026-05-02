@@ -298,7 +298,45 @@ sub install() {
     );
 
     _register_permissions($dbh);
+    _register_notice_templates($dbh);
     return 1;
+}
+
+# Notice template for the nightly reminder. INSERT IGNORE keeps any
+# admin-edited copy in the letter table intact across upgrades while still
+# seeding fresh installs. Token syntax matches Koha core's <<...>> markers
+# resolved by C4::Letters::_substitute_tables / GetPreparedLetter.
+my %NOTICE_TEMPLATES = (
+    REMINDER => {
+        title   => 'Reminder: roster shift on <<assignment_date>>',
+        content => <<'HTML',
+Hi <<patron_firstname>>,
+
+Reminder of your upcoming roster shift:
+
+  Roster:   <<roster_name>>
+  Date:     <<assignment_date>>
+  Time:     <<start_time>> - <<end_time>>
+  Location: <<location>>
+
+Thanks.
+HTML
+    },
+);
+
+sub _register_notice_templates {
+    my ($dbh) = @_;
+    for my $code ( sort keys %NOTICE_TEMPLATES ) {
+        my $tpl = $NOTICE_TEMPLATES{$code};
+        $dbh->do(
+            q{INSERT IGNORE INTO letter
+                (module, code, branchcode, name, is_html, title, content,
+                 message_transport_type, lang)
+              VALUES ('STAFFROSTER', ?, '', ?, 0, ?, ?, 'email', 'default')},
+            undef, $code, "Staff Roster: $code", $tpl->{title}, $tpl->{content},
+        );
+    }
+    return;
 }
 
 # Granular sub-permissions registered under Koha's plugins module (bit 19).
@@ -448,6 +486,7 @@ sub upgrade {
     # Always re-register sub-permissions on upgrade so existing installs pick
     # up new codes + description tweaks without manual intervention.
     _register_permissions($dbh);
+    _register_notice_templates($dbh);
 
     $self->store_data( { '__INSTALLED_VERSION__' => $self->get_metadata->{version} } );
 
@@ -520,6 +559,7 @@ sub uninstall {
     $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_types });
 
     _unregister_permissions($dbh);
+    $dbh->do( q{DELETE FROM letter WHERE module = 'STAFFROSTER'} );
 
     return 1;
 }
@@ -1781,7 +1821,7 @@ sub cronjob_nightly {
         q{SELECT a.id, a.borrowernumber, a.assignment_date,
                  s.start_time, s.end_time, s.location,
                  r.name AS roster_name,
-                 b.email
+                 b.email, b.firstname
             FROM staff_roster_assignments a
             JOIN staff_roster_slots s ON a.slot_id = s.id
             JOIN staff_roster        r ON s.roster_id = r.id
@@ -1805,22 +1845,37 @@ sub cronjob_nightly {
             warn "StaffRoster: skipping reminder for borrower $a->{borrowernumber} (no email on file)";
             next;
         }
-        my $title   = "Reminder: roster shift on $a->{assignment_date}";
-        my $content = sprintf
-            "Hi,\n\nReminder of your upcoming shift:\n\n  Roster: %s\n  Date: %s\n  Time: %s - %s\n  Location: %s\n\nThanks.\n",
-            $a->{roster_name},
-            $a->{assignment_date},
-            substr( $a->{start_time}, 0, 5 ),
-            substr( $a->{end_time},   0, 5 ),
-            $a->{location} // '(unspecified)';
+
+        my $letter = C4::Letters::GetPreparedLetter(
+            module                 => 'STAFFROSTER',
+            letter_code            => 'REMINDER',
+            message_transport_type => 'email',
+            substitute             => {
+                patron_firstname => $a->{firstname} // q{},
+                roster_name      => $a->{roster_name},
+                assignment_date  => $a->{assignment_date},
+                start_time       => substr( $a->{start_time}, 0, 5 ),
+                end_time         => substr( $a->{end_time},   0, 5 ),
+                location         => $a->{location} // '(unspecified)',
+            },
+        );
+
+        if ( !$letter ) {
+            $failed++;
+            warn "StaffRoster: REMINDER letter not found in notice templates (assignment $a->{id})";
+            _audit(
+                'NOTICE_FAILED', $a->{id},
+                {   entity         => 'reminder',
+                    borrowernumber => $a->{borrowernumber},
+                    error          => 'letter template missing',
+                }
+            );
+            next;
+        }
 
         my $message_id = eval {
             C4::Letters::EnqueueLetter(
-                {   letter => {
-                        title          => $title,
-                        content        => $content,
-                        'content-type' => 'text/plain; charset=utf-8',
-                    },
+                {   letter                 => $letter,
                     borrowernumber         => $a->{borrowernumber},
                     message_transport_type => 'email',
                 }
