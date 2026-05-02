@@ -4,27 +4,143 @@ Open work items, grouped by priority. Items get crossed off as commits land.
 
 ## Now (small, cohesive)
 
-_Empty — pick the next batch._
+Architectural sweep findings (2026-05-02). Real bugs first, then i18n
+gaps, then perf/observability nits, then cleanup. Each line is a
+one-commit-sized change.
 
-Candidates worth picking up first (any of them is a clean ~1-day commit):
+### Real bugs
+
+- [ ] **`Lib/I18N.pm` `tr` `state` cache binds the locale forever per
+      Plack worker** (`Lib/I18N.pm:87`). Drop the `state` so each
+      request resolves the active language fresh; `state` is fine in
+      `load()` (file-level cache) but not in the per-request dispatch.
+- [ ] **`_tool_delete_slot` + `_tool_delete_exception` discard
+      `$dbh->do` return** (`StaffRoster.pm:1287, 1351`); a no-op
+      delete still pushes the success flash. Capture `$ok`, branch on
+      it, push `error_on_delete` when false (mirror
+      `_admin_delete_type`).
+- [ ] **`_tool_respond_swap` catch-all maps real DB errors to
+      `swap_not_pending`** (`StaffRoster.pm:1535`). Add a separate
+      `swap_txn_failed` message code so a deadlock or constraint
+      violation no longer silently looks like a stale-state race to
+      the user.
+- [ ] **`_tool_cancel_swap` not wrapped in `_txn`**
+      (`StaffRoster.pm:1590`); the audit row can race the DELETE.
+      Wrap the `$dbh->do` + `_audit` pair like `_tool_respond_swap`
+      already does.
+- [ ] **`renderModalShell` aria-label="Close" hardcoded English**
+      (`src/components/shared/modal.ts:39`). Swap for
+      `${__('Close')}`; the dictionary already has the key.
+
+### i18n gaps
+
+- [ ] **REST controller error strings never translated**
+      (every controller returns prose like "Slot full ($filled/$max_staff)",
+      "Date is closed per Koha calendar", "Self-unclaim closed: must
+      drop at least Xh"). The TT side translates everything; the REST
+      toast path is a parallel English channel. Either return
+      machine-readable error codes and translate in the Lit toast
+      layer, or wrap each error string through `tr()` and seed
+      `de.json`.
+- [ ] **`exception_types` labels hard-coded English**
+      (`StaffRoster.pm:1828` — Closed / Holiday / Special event /
+      Reduced hours). Pass codes to the TT and let the template
+      translate, or wrap via `Lib::I18N::tr()` before stuffing into
+      the template.
+
+### Performance / observability
+
+- [ ] **`_user_group_ids` N+1 ancestor walk** runs once per visible
+      roster on every page load via `_aside_context` ->
+      `_can_view_roster` (`StaffRoster.pm:2057`). Memoize per request
+      keyed by `(borrowernumber, branch)` so the sidebar dropdown
+      doesn't issue O(rosters × tree_depth) queries.
+- [ ] **Bulk audit lacks actor**
+      (`AssignmentController.pm:250, 307`). Add
+      `actor => $c->stash('koha.user')->borrowernumber` to the
+      `_audit` info blob in both `clear` and `move` branches.
+- [ ] **`availableStaff` re-fetches on every keystroke**
+      (`src/api.ts:11` plus the search debounce already in the grid).
+      Drop `ignoreCache: true` so the browser dedups duplicate
+      requests, and verify the existing 300ms staffDebounce is wired
+      correctly. Same evaluation for `rosterWeek` / `myWeek` /
+      `myOpenSlots` — short TTL probably safer than no cache.
+
+### Cleanup
+
+- [ ] **Dead jQuery week-nav block in `tool.tt:1172-1187`** (binds
+      `#prev_week` / `#next_week` / `#go_to_week` which no longer
+      exist; superseded by `renderWeekToolbar` in the Lit grid).
+      Delete.
+- [ ] **`bulk` endpoint declared but never called** (`api.ts:16`).
+      Either remove it from `ENDPOINTS` or wire a
+      `bulkAssignments(...)` helper if the bulk-import feature is
+      planned.
+- [ ] **Stray `.staff-roster-menu h5` rule in `src/styles.css:361`**
+      (the file's stated boundary is "Lit-component styles only";
+      sidebar lives in `staff-roster-plugin.css`). Move it.
+- [ ] **`src/i18n/de.ts` sync comment lies** — the file already
+      imports `de.json` directly so it auto-syncs at build time. The
+      hand-sync warning is misleading; replace with a comment about
+      adding a TT-side key-coverage check instead.
+- [ ] **`_current_week_start` duplicated three times**
+      (`StaffRoster.pm:2445`, `RosterController.pm:216`,
+      `StaffController.pm:526`). Hoist to `Lib::DateUtils` (or the
+      `Lib::Business` module that the next batch creates).
+
+Earlier "Now" candidates (still open):
 
 - **Add a French (or other) translation**. Infrastructure is in place;
   `docs/wiki/Translation-Guide.md` walks through the steps end-to-end.
-  Bumps real i18n coverage above the German baseline. Pure additive
-  work — no risk to existing surfaces.
 - **Wire the cron runner into the kohadev container** so reminder
-  emails actually fire in dev, not just unit-test in isolation. Lets
-  the next person eyeball the email template + verify the
-  `STAFFROSTER`/`REMINDER` letter substitution against real Koha
-  notice-rendering quirks. Touches `cron/staff_roster_nightly.pl`,
-  `docs/wiki/Installation.md`, possibly a Makefile target.
-
-Avoid the Distribution items (need external decisions) and the
-Phase 2 features (need design sign-off) for a quick win.
+  emails fire in dev. Touches `cron/staff_roster_nightly.pl`,
+  `docs/wiki/Installation.md`.
 
 ## Next (single-feature batches)
 
-_Empty — pick the next batch._
+- [ ] **Reorganize the plugin's module layout — flat is not enough.**
+      `Koha/Plugin/Xyz/Paulderscheid/StaffRoster/` is currently a flat
+      bag of `.pm` files (the 2400-line main module + three
+      controllers + I18N). At plugin scale this is hard to navigate.
+      Group by concern:
+      - `Lib/Schema.pm` — install / upgrade / uninstall DDL + a real
+        numbered migration registry (kill the imperative `if version
+        < X` chain in `upgrade()`).
+      - `Lib/Business.pm` — shared helpers controllers reach for
+        today via the main module's private `_*` subs (`_audit`,
+        `_has_perm`, `_gate`, `_slot_applies_on`, `_conflict_check`,
+        `_is_closed_for_roster`, `_can_view_roster`,
+        `_load_additional_fields`). Removes the implicit
+        controller -> main-module-private contract and the per-request
+        `Koha::Plugin::...->new` instantiation inside hot paths.
+      - `Lib/Visibility.pm` — the library-group walking
+        (`_user_group_ids`, `_visibility_clause`, `_can_view_roster`).
+      - `Lib/Audit.pm` — `_audit`, `_txn`, JSON Diff plumbing.
+      - `Lib/Rrule.pm` — RRULE helpers
+        (`_byday_from_rrule`, `_rrule_from_params`, `_slot_applies_on`,
+        plus the DateTime::Event::ICal fast-path).
+      - `Lib/DateUtils.pm` — the `_current_week_start` triplet
+        (currently duplicated across main + two controllers).
+      - `Controllers/Tool/{List,Form,Slots,Exceptions,Swaps,Assignments,SelfService}.pm`
+        — split the `_tool_view_*` + `_tool_*_handler` chunks out of
+        the main module's `tool` dispatcher. The dispatcher map stays
+        small.
+      Migration is mechanical (move + add `use`, no behavior change),
+      but it touches every controller and the test harness, so it
+      probably wants its own branch + cypress + prove run.
+- [ ] **Per-component bundle entry points**: `src/grid.ts`,
+      `src/my-shifts.ts`, `src/open-shifts.ts` so each TT op only
+      ships the component it actually mounts (currently every op
+      pulls all three plus the embedded German dict). Vite already
+      supports multiple entries; the TT changes are
+      `<script src="staff-roster-grid.js">` etc.
+- [ ] **`dragging` / `pickedUp` unification in
+      `staff-roster-grid.ts`**: collapse the parallel state machines
+      (HTML5 DnD vs keyboard pickup vs touch tap) into a single
+      `activeCargo` + `activeMode` pair. Today the EscapeController
+      can cancel `pickedUp` but not a mid-flight `dragging`, and a
+      double-pickup window exists if a user starts a drag while a
+      keyboard pickup is set.
 
 ## Phase 2 (planned features, each its own work block)
 
@@ -72,6 +188,29 @@ Both items below need an external decision before any code lands.
       page; roster delete uses a separate `delete_confirm` op + page.
       Two patterns for destructive actions. Trade-off: per-slot
       full-page round-trips would feel heavy. Revisit only on feedback.
+- [ ] **CGI tool views not gated by `staffroster_view`** sub-perm
+      (only by Koha's generic `tools` flag). The REST layer enforces
+      it; the rendered HTML shell does not. Add `_gate('staffroster_view',
+      \@messages)` at the top of the `tool` dispatcher's roster-scoped
+      op gate (around `StaffRoster.pm:1090`). Same evaluation for
+      `manage_swaps` / `manage_exceptions` against
+      `staffroster_manage_rosters`.
+- [ ] **Mutual-swap (two-assignment) approval has no prove test**.
+      `t/swap_ownership.t` covers the request side; `_tool_respond_swap`'s
+      hot path that swaps two assignments inside `_txn` with
+      `FOR UPDATE` locking is not exercised. Add `t/swap_respond.t`.
+- [ ] **409 conflict rejections never reach `action_logs`**. An admin
+      cannot reconstruct "who tried to assign whom and why it was
+      blocked" from the audit trail. Consider an
+      `_audit('CONFLICT_REJECTED', ...)` call in `_conflict_check`'s
+      caller path with slot_id, date, borrowernumber.
+- [ ] **`uninstall` drops six tables + the admin-edited
+      `STAFFROSTER`/`REMINDER` letter** unconditionally
+      (`StaffRoster.pm:561`). `_register_notice_templates` uses
+      `INSERT IGNORE` to protect admin edits on install/upgrade, but
+      uninstall destroys them. Either leave the letter row, or
+      surface a confirmation that lists "you are about to delete N
+      assignments + your edited reminder template".
 
 ## Pointers for the next agent
 
