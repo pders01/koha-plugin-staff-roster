@@ -69,11 +69,13 @@ Both items below need an external decision before any code lands.
 
 ## Backlog
 
-- [ ] **Remaining hot-path tests**: Lit `dayOfWeekForColumn` (needs
-      JS test infra; not in tree) and the `get_week` calendar merge
-      (integration-shaped — real HTTP path, not a unit helper).
-      `_user_group_ids` + `_conflict_check` covered in `t/visibility.t`
-      and `t/conflict_check.t`.
+- [ ] **Lit `cellDate` regression test**: cypress integration covers
+      `get_week` end-to-end (see Done) but the column-header date
+      derivation in `staff-roster-grid.ts` (`cellDate(dayIdx)`) is
+      still untested. A 30-line cypress spec that loads
+      `view_assignments` against a known week_start and asserts each
+      `<th aria-colindex>` shows the right `MM-DD` would lock it in.
+      Defer until the helper or weekStart wiring actually breaks.
 - [ ] **Mobile schedule grid**: 8 columns × tall slot column means
       horizontal scroll on phones. Acceptable for v1, not polished.
 - [ ] **Slot delete confirm**: uses inline modal on the manage_slots
@@ -112,6 +114,18 @@ Both items below need an external decision before any code lands.
 
 ## Done (recent — older entries pruned 2026-05-02)
 
+- [x] **Cypress integration coverage for `get_week` + calendar merge**:
+      added `cypress/integration/staffroster/get_week_spec.ts` (5
+      subtests: roster header + applies_on_dates, 7-day assignment
+      window, manual exception in window, Koha calendar merge,
+      DB-exception precedence over the calendar duplicate). Specs
+      seed via `cy.task("query", …)` with per-test namespaces +
+      teardown; calendar tests call a `flushHolidayCache` helper
+      because `Koha::Calendar` memoizes the per-branch holiday set
+      in memcached for ~21h. Runner is `scripts/run-cypress.sh`,
+      wired to `just test-cypress`; uses ktd's pre-installed
+      `/kohadevbox/Cypress/12.17.4/Cypress/Cypress` binary, no new
+      dev deps in the plugin tree.
 - [x] **Backfill remaining tool.tt + Lit grid i18n strings**: wrapped
       raw English in tool.tt (exception-row Delete button + 5 jQuery
       `.text(...)` legend strings) and in `staff-roster-grid.ts`

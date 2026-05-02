@@ -51,3 +51,10 @@ check:
 # Build standalone binary
 binary:
   {{perl_exec}} scripts/build-binary.pl
+
+# Run the plugin's Cypress integration specs inside the kohadev container.
+# Reuses ktd's bundled cypress install, syncs the plugin source, restarts
+# Plack so REST routes pick up changes, then drops the specs into
+# t/cypress/integration/staffroster/ alongside Koha's own.
+test-cypress:
+  scripts/run-cypress.sh

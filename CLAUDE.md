@@ -23,6 +23,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 - `Koha/Plugin/Xyz/Paulderscheid/StaffRoster/locales/*.json` - Translation dictionaries
 - `src/` - Lit components (TypeScript)
 - `t/` - Plugin tests (run inside the kohadev container)
+- `cypress/integration/staffroster/` - Cypress integration specs run via ktd's bundled cypress
 - `docs/wiki/` - User manual + GitHub Wiki source
 
 ## Entry Points
@@ -63,3 +64,21 @@ remove the target first or the new files won't reach the controllers.
 
 `perl -c` against the main `.pm` reports a false-positive C3 merge
 error outside the Plack process; trust the test suite instead.
+
+### Cypress integration tests
+
+Specs in `cypress/integration/staffroster/` exercise live REST routes
+through ktd's bundled cypress install. Wrapped in `just test-cypress`:
+
+```bash
+just test-cypress
+```
+
+The script syncs the plugin into the container, reinstalls + restarts
+Plack, drops the specs into Koha's `t/cypress/integration/staffroster/`,
+then invokes `npx cypress run` against just those files. Specs seed
+their own roster/slot/assignment fixtures via `cy.task("query", …)` and
+use unique namespaces so parallel runs don't collide. Calendar-merge
+tests must call the `flushHolidayCache` helper after writing to
+`special_holidays` — Koha::Calendar memoizes per-branch holiday sets
+in memcached for ~21h.
