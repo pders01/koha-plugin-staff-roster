@@ -12,14 +12,18 @@ _Empty — pick the next batch._
 
 ## Phase 2 (planned features, each its own work block)
 
-- [ ] **Self-service patron view**: borrower sees own shifts, can
-      self-assign to open slots if `staff_can_self_assign`. Group-scoped.
-      Read-only calendar view is a great kalendus fit.
 - [ ] **Skills / competencies**: schema doesn't model "John can work CIRC
       but not REF". Add `staff_skills` table + per-roster-type required
       skills; filter `/staff/available` by competency.
 - [ ] **i18n**: all strings hardcoded English. Either Koha's gettext or
       `@jpahd/lit-stack/i18n` for the Lit component.
+- [ ] **Volunteer / non-staff self-service (OPAC)**: only build if real
+      demand surfaces. The intranet self-service shipped (see Done) covers
+      every staff/borrower-with-staff-perm case; OPAC pulls in a separate
+      auth surface and `@jpahd/kalendus` distribution. Skip until asked.
+- [ ] **Self-unclaim lockout**: setting hook `self_unclaim_lockout_hours`
+      not yet implemented. Decide whether to enforce a window
+      (e.g. ≥24h before shift) before letting staff drop their own shift.
 
 ## Hardening follow-ups (from cross-codebase review 2026-05-02)
 
@@ -66,6 +70,15 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Staff self-service (intranet)**: "My shifts" + "Open shifts" tools
+      under the existing staff intranet. Backed by GET /me/week,
+      GET /me/open_slots, POST /me/claim, DELETE /me/claim/{id}. Four-layer
+      gate on claim (kill-switch setting + sub-perm + group visibility +
+      capacity). Body `borrowernumber` ignored: session always wins.
+      Audited as SELF_CLAIM / SELF_UNCLAIM. New sub-perm
+      `staffroster_self_assign`. Two new Lit components (`my-shifts-list`,
+      `open-shifts-list`) reuse the existing intranet asset bundle.
+      Coverage in `t/self_service.t`. OPAC variant deferred to Phase 2.
 - [x] **Granular sub-permissions**: 8 staffroster_* sub-perms registered
       under Koha plugins flag (bit 19) via INSERT...ON DUPLICATE KEY
       UPDATE so existing user_permissions grants survive upgrades.

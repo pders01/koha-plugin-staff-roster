@@ -12,6 +12,7 @@ import {
   type Slot,
   type Staff,
 } from "../api.js";
+import { getClass, isoMonday } from "../util.js";
 
 const POLL_MS = 5000;
 const UNDO_LIMIT = 10;
@@ -999,15 +1000,3 @@ export class StaffRosterGrid extends LitElement {
   }
 }
 
-function isoMonday(d: Date): string {
-  const day = d.getDay();
-  const diff = (day + 6) % 7;
-  const m = new Date(d);
-  m.setDate(d.getDate() - diff);
-  return m.toISOString().slice(0, 10);
-}
-
-function getClass(): string {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("class") ?? "";
-}

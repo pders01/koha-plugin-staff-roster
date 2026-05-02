@@ -14,12 +14,16 @@
         Manage Slots &rsaquo;
     [% ELSIF op == 'view_assignments' %]
         View Assignments &rsaquo;
+    [% ELSIF op == 'my_shifts' %]
+        My Shifts &rsaquo;
+    [% ELSIF op == 'open_shifts' %]
+        Open Shifts &rsaquo;
     [% END %]
     Staff Roster | Plugins | Koha
 </title>
 [% INCLUDE 'doc-head-close.inc' %]
 <link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster-plugin.css" />
-[% IF op == 'view_assignments' %]
+[% IF op == 'view_assignments' || op == 'my_shifts' || op == 'open_shifts' %]
     <link rel="modulepreload" href="/api/v1/contrib/staffroster/static/staff-roster.js" crossorigin />
     <link rel="preload" as="style" href="/api/v1/contrib/staffroster/static/staff-roster.css" />
     <link rel="stylesheet" href="/api/v1/contrib/staffroster/static/staff-roster.css" />
@@ -122,6 +126,8 @@
                 [% ELSIF op == 'edit_roster' %]Edit Roster
                 [% ELSIF op == 'manage_slots' %]Manage Slots
                 [% ELSIF op == 'view_assignments' %]View Assignments
+                [% ELSIF op == 'my_shifts' %]My Shifts
+                [% ELSIF op == 'open_shifts' %]Open Shifts
                 [% ELSIF op == 'delete_confirm' %]Confirm Deletion
                 [% END %]
             [% END %]
@@ -139,6 +145,12 @@
             </li>
             <li[% IF op == 'add_roster' %] class="active"[% END %]>
                 <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=add_roster">New roster</a>
+            </li>
+            <li[% IF op == 'my_shifts' %] class="active"[% END %]>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=my_shifts">My shifts</a>
+            </li>
+            <li[% IF op == 'open_shifts' %] class="active"[% END %]>
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=tool&op=open_shifts">Open shifts</a>
             </li>
         </ul>
 
@@ -1059,6 +1071,40 @@
 
         <script type="module" src="/api/v1/contrib/staffroster/static/staff-roster.js"></script>
         <staff-roster-grid roster-id="[% roster.id | html %]" week-start="[% week_start | html %]"></staff-roster-grid>
+    [% END %]
+
+    [% IF op == 'my_shifts' %]
+        <h1>My Shifts</h1>
+        <p class="text-muted">
+            Your scheduled shifts across all rosters you can see.
+        </p>
+
+        <script type="module" src="/api/v1/contrib/staffroster/static/staff-roster.js"></script>
+        <my-shifts-list week-start="[% week_start | html %]"></my-shifts-list>
+    [% END %]
+
+    [% IF op == 'open_shifts' %]
+        <h1>Open Shifts</h1>
+        [% IF !staff_can_self_assign %]
+            <div class="alert alert-warning">
+                Self-service is disabled in plugin configuration.
+                Ask an administrator to enable
+                <em>Staff can self-assign to open slots</em> on the
+                <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure">Configuration</a>
+                page.
+            </div>
+        [% ELSIF !has_self_assign_perm %]
+            <div class="alert alert-warning">
+                You do not have the <code>staffroster_self_assign</code>
+                permission. Ask a manager to grant it on your patron record.
+            </div>
+        [% ELSE %]
+            <p class="text-muted">
+                Slots with capacity remaining that you are eligible to claim.
+            </p>
+            <script type="module" src="/api/v1/contrib/staffroster/static/staff-roster.js"></script>
+            <open-shifts-list week-start="[% week_start | html %]"></open-shifts-list>
+        [% END %]
     [% END %]
 
             </main>

@@ -1,4 +1,4 @@
-package Koha::Plugin::Xyz::Paulderscheid::StaffRoster v0.0.2;
+package Koha::Plugin::Xyz::Paulderscheid::StaffRoster v0.0.3;
 
 use Modern::Perl;
 
@@ -35,7 +35,7 @@ our $metadata = {
     'name'             => 'StaffRoster',
     'release_filename' => 'koha-plugin-staff-roster',
     'static_dir_name'  => 'static',
-    'version'          => '0.0.2',
+    'version'          => '0.0.3',
 };
 
 sub new {
@@ -262,6 +262,7 @@ my %SUBPERMISSIONS = (
     staffroster_swap_request     => 'Staff Roster: request a shift swap',
     staffroster_swap_respond     => 'Staff Roster: accept or reject a swap directed at you',
     staffroster_swap_approve     => 'Staff Roster: approve swaps as a manager',
+    staffroster_self_assign      => 'Staff Roster: self-claim open shifts and drop own shifts',
     staffroster_configure        => 'Staff Roster: change plugin configuration',
 );
 
@@ -880,6 +881,8 @@ my %TOOL_VIEWS = (
     view_assignments  => \&_tool_view_assignments,
     manage_exceptions => \&_tool_view_manage_exceptions,
     manage_swaps      => \&_tool_view_manage_swaps,
+    my_shifts         => \&_tool_view_my_shifts,
+    open_shifts       => \&_tool_view_open_shifts,
 );
 
 sub tool {
@@ -1586,6 +1589,24 @@ sub _tool_view_assignments {
     );
 
     $template->param( roster => $roster, slots => $slots, week_start => $week_start );
+    return;
+}
+
+sub _tool_view_my_shifts {
+    my ( $self, $dbh, $cgi, $template ) = @_;
+    my $week_start = $cgi->param('week_start') // _get_current_week_start();
+    $template->param( week_start => $week_start );
+    return;
+}
+
+sub _tool_view_open_shifts {
+    my ( $self, $dbh, $cgi, $template ) = @_;
+    my $week_start = $cgi->param('week_start') // _get_current_week_start();
+    $template->param(
+        week_start             => $week_start,
+        staff_can_self_assign  => $self->retrieve_data('staff_can_self_assign') ? 1 : 0,
+        has_self_assign_perm   => _has_perm('staffroster_self_assign')          ? 1 : 0,
+    );
     return;
 }
 
@@ -2422,6 +2443,7 @@ sub intranet_js {
         staffroster_swap_request: 'Staff Roster: request a shift swap',
         staffroster_swap_respond: 'Staff Roster: accept or reject a swap directed at you',
         staffroster_swap_approve: 'Staff Roster: approve swaps as a manager',
+        staffroster_self_assign: 'Staff Roster: self-claim open shifts and drop own shifts',
         staffroster_configure: 'Staff Roster: change plugin configuration'
       };
       // Sub-permission checkboxes carry value="<flag>:<code>" (e.g.

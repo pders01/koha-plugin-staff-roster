@@ -257,6 +257,145 @@ sub bulk {
     };
 }
 
+=head3 self_create
+
+Body: { slot_id, assignment_date }. Borrowernumber is taken from the session
+and any value in the body is ignored — self-claim must always be self.
+Refuses if `staff_can_self_assign` setting is off, the slot is closed for the
+day, or the borrower already has an overlapping assignment.
+
+=cut
+
+sub self_create {
+    my $c = shift->openapi->valid_input or return;
+
+    return try {
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_self_assign') ) {
+            return $c->render( status => 403,
+                openapi => { error => 'staffroster_self_assign permission required' } );
+        }
+
+        my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
+        if ( !$plugin->retrieve_data('staff_can_self_assign') ) {
+            return $c->render( status => 403,
+                openapi => { error => 'Self-service is disabled' } );
+        }
+
+        my $user = $c->stash('koha.user');
+        if ( !$user ) {
+            return $c->render( status => 401, openapi => { error => 'Authentication required' } );
+        }
+        my $borrowernumber = $user->borrowernumber;
+
+        my $body    = $c->req->json // {};
+        my $slot_id = $body->{slot_id};
+        my $date    = $body->{assignment_date};
+        if ( !$slot_id || !$date ) {
+            return $c->render( status => 400,
+                openapi => { error => 'slot_id and assignment_date required' } );
+        }
+
+        my $dbh = C4::Context->dbh;
+
+        my $gate = _gate_slot( $dbh, $slot_id, $date );
+        return $c->render( status => $gate->{status}, openapi => { error => $gate->{error} } )
+            if $gate->{error};
+
+        # Self-claim never drops on a closure, regardless of strict mode. The
+        # default _gate_slot only blocks on calendar when `koha_calendar_strict`
+        # is set; for self-service we always block.
+        my $roster_for_close = $dbh->selectrow_hashref(
+            q{SELECT r.* FROM staff_roster r
+              JOIN staff_roster_slots s ON s.roster_id = r.id
+              WHERE s.id = ?}, undef, $slot_id
+        );
+        if ( $roster_for_close
+            && $plugin->_is_closed_for_roster( $roster_for_close, $date ) )
+        {
+            return $c->render( status => 409, openapi => { error => 'Date is closed' } );
+        }
+
+        my $conflict = _conflict_check( $dbh, $slot_id, $borrowernumber, $date );
+        if ($conflict) {
+            return $c->render( status => 409, openapi => { error => $conflict } );
+        }
+
+        $dbh->do(
+            q{
+            INSERT INTO staff_roster_assignments
+            (slot_id, borrowernumber, assignment_date, status, notes, assigned_by, created_at, updated_at)
+            VALUES (?, ?, ?, 'scheduled', NULL, ?, NOW(), NOW())
+        },
+            undef,
+            $slot_id, $borrowernumber, $date,
+            $borrowernumber,
+        );
+
+        my $id = $dbh->last_insert_id( undef, undef, undef, undef );
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
+            'SELF_CLAIM', $id,
+            {   entity          => 'assignment',
+                slot_id         => $slot_id,
+                borrowernumber  => $borrowernumber,
+                assignment_date => $date,
+                status          => 'scheduled',
+            }
+        );
+        return $c->render( status => 201, openapi => _load( $dbh, $id ) );
+    }
+    catch {
+        $c->unhandled_exception($_);
+    };
+}
+
+=head3 self_delete
+
+Drop one of your own assignments. Rejects if the assignment isn't yours.
+Audited as SELF_UNCLAIM so the action_logs distinguish from manager deletes.
+
+=cut
+
+sub self_delete {
+    my $c = shift->openapi->valid_input or return;
+
+    return try {
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_self_assign') ) {
+            return $c->render( status => 403,
+                openapi => { error => 'staffroster_self_assign permission required' } );
+        }
+
+        my $user = $c->stash('koha.user');
+        if ( !$user ) {
+            return $c->render( status => 401, openapi => { error => 'Authentication required' } );
+        }
+        my $borrowernumber = $user->borrowernumber;
+
+        my $id  = $c->validation->param('assignment_id');
+        my $dbh = C4::Context->dbh;
+
+        my ($owner) = $dbh->selectrow_array(
+            q{SELECT borrowernumber FROM staff_roster_assignments WHERE id = ?},
+            undef, $id
+        );
+        if ( !defined $owner ) {
+            return $c->render( status => 404, openapi => { error => 'Assignment not found' } );
+        }
+        if ( $owner != $borrowernumber ) {
+            return $c->render( status => 403, openapi => { error => 'Not your assignment' } );
+        }
+
+        $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id = ?}, undef, $id );
+        Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
+            'SELF_UNCLAIM', $id, { entity => 'assignment', borrowernumber => $borrowernumber } );
+        return $c->render_resource_deleted;
+    }
+    catch {
+        $c->unhandled_exception($_);
+    };
+}
+
 # Gate a slot+date against visibility (parent roster) and Koha calendar hard mode.
 # Returns { status => HTTP, error => message } on rejection, empty hash on pass.
 sub _gate_slot {

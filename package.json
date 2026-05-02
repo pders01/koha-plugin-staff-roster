@@ -18,5 +18,5 @@
         "dev": "vite build --watch"
     },
     "type": "module",
-    "version": "0.0.2"
+    "version": "0.0.3"
 }

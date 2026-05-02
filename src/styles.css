@@ -388,3 +388,44 @@
         inset 0 0 0 2px var(--srg-type-color, #418940),
         0 0 0 3px rgba(65, 137, 64, 0.25);
 }
+
+.srg-my-shift {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.4rem 0;
+}
+
+.srg-my-shift + .srg-my-shift {
+    border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.srg-my-shift-time {
+    font-weight: 600;
+    min-width: 6.5em;
+}
+
+.srg-my-shift-roster {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.srg-my-shift-location {
+    font-size: 0.9em;
+}
+
+.srg-my-shift-status {
+    font-size: 0.8em;
+    background: #e9ecef;
+    color: #495057;
+    padding: 0.15em 0.6em;
+    border-radius: 999px;
+}
+
+.srg-day-heading {
+    font-size: 1rem;
+    margin: 0 0 0.4rem;
+    color: #495057;
+}
+

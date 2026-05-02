@@ -538,6 +538,333 @@
             "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::RosterController#get_week"
         }
     },
+    "/me/week": {
+        "get": {
+            "operationId": "getMyWeek",
+            "parameters": [
+                {
+                    "description": "Week start date (YYYY-MM-DD, defaults to current week's Monday)",
+                    "in": "query",
+                    "name": "start",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "required": false,
+                    "type": "string"
+                }
+            ],
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "200": {
+                    "description": "Own assignments across visible rosters for the week",
+                    "schema": {
+                        "type": "object"
+                    }
+                },
+                "401": {
+                    "description": "Not authenticated",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "403": {
+                    "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "Own assignments across visible rosters for the week",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "plugins": "staffroster_view"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::StaffController#me_week"
+        }
+    },
+    "/me/open_slots": {
+        "get": {
+            "operationId": "getMyOpenSlots",
+            "parameters": [
+                {
+                    "description": "Week start date (YYYY-MM-DD, defaults to current week's Monday)",
+                    "in": "query",
+                    "name": "start",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "required": false,
+                    "type": "string"
+                }
+            ],
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "200": {
+                    "description": "Open slot openings the borrower could self-claim",
+                    "schema": {
+                        "type": "object"
+                    }
+                },
+                "401": {
+                    "description": "Not authenticated",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "403": {
+                    "description": "Access forbidden",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "description": "Error message",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "Open slot openings the borrower could self-claim",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "plugins": "staffroster_self_assign"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::StaffController#me_open_slots"
+        }
+    },
+    "/me/claim": {
+        "post": {
+            "consumes": [
+                "application/json"
+            ],
+            "operationId": "selfClaim",
+            "parameters": [
+                {
+                    "in": "body",
+                    "name": "body",
+                    "required": true,
+                    "schema": {
+                        "properties": {
+                            "assignment_date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": "string"
+                            },
+                            "slot_id": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "slot_id",
+                            "assignment_date"
+                        ],
+                        "type": "object"
+                    }
+                }
+            ],
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "201": {
+                    "description": "Assignment created",
+                    "schema": {
+                        "type": "object"
+                    }
+                },
+                "400": {
+                    "description": "Bad request",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "401": {
+                    "description": "Not authenticated",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "403": {
+                    "description": "Self-service disabled or no permission",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "409": {
+                    "description": "Conflict (slot full, overlap, calendar closed)",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "Self-claim an open slot",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "plugins": "staffroster_self_assign"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#self_create"
+        }
+    },
+    "/me/claim/{assignment_id}": {
+        "delete": {
+            "operationId": "selfUnclaim",
+            "parameters": [
+                {
+                    "description": "assignment_id identifier",
+                    "in": "path",
+                    "name": "assignment_id",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "204": {
+                    "description": "Self-uncllaim"
+                },
+                "401": {
+                    "description": "Not authenticated",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "403": {
+                    "description": "Not your assignment or no permission",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "404": {
+                    "description": "Not found",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "500": {
+                    "description": "Internal error",
+                    "schema": {
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            },
+            "summary": "Drop one of your own assignments",
+            "tags": [
+                "StaffRoster"
+            ],
+            "x-koha-authorization": {
+                "permissions": {
+                    "plugins": "staffroster_self_assign"
+                }
+            },
+            "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#self_delete"
+        }
+    },
     "/staff/available": {
         "get": {
             "operationId": "listAvailableStaff",

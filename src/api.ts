@@ -8,16 +8,20 @@ const ENDPOINTS: ApiEndpoints = {
   get: {
     rosterWeek: { url: `${BASE}/rosters`, cache: false },
     availableStaff: { url: `${BASE}/staff/available`, cache: false },
+    myWeek: { url: `${BASE}/me/week`, cache: false },
+    myOpenSlots: { url: `${BASE}/me/open_slots`, cache: false },
   },
   post: {
     assignments: { url: `${BASE}/assignments`, cache: false },
     bulk: { url: `${BASE}/assignments/bulk`, cache: false },
+    selfClaim: { url: `${BASE}/me/claim`, cache: false },
   },
   put: {
     assignments: { url: `${BASE}/assignments`, cache: false },
   },
   delete: {
     assignments: { url: `${BASE}/assignments`, cache: false },
+    selfClaim: { url: `${BASE}/me/claim`, cache: false },
   },
 };
 
@@ -140,6 +144,89 @@ export async function updateAssignment(
 
 export async function deleteAssignment(id: number): Promise<void> {
   const res = await api.delete({ endpoint: "assignments", path: [String(id)] });
+  await asJson<void>(res);
+}
+
+export type MyShift = {
+  assignment_id: number;
+  roster_id: number;
+  slot_id: number;
+  assignment_date: string;
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  status: Assignment["status"];
+  notes: string | null;
+  updated_at: string;
+};
+
+export type MyWeekRoster = {
+  id: number;
+  name: string;
+  type_name: string;
+  type_code: string;
+  type_color: string;
+  branch_name: string | null;
+  group_name: string | null;
+};
+
+export type MyWeek = {
+  week_start: string;
+  rosters: MyWeekRoster[];
+  shifts: MyShift[];
+};
+
+export async function fetchMyWeek(weekStart: string): Promise<MyWeek> {
+  const res = await api.get({
+    endpoint: "myWeek",
+    query: { start: weekStart },
+  });
+  return asJson<MyWeek>(res);
+}
+
+export type Opening = {
+  roster_id: number;
+  roster_name: string;
+  type_name: string;
+  type_color: string;
+  branch_name: string | null;
+  slot_id: number;
+  assignment_date: string;
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  capacity_remaining: number;
+};
+
+export type OpenSlots = {
+  week_start: string;
+  openings: Opening[];
+};
+
+export async function fetchMyOpenSlots(weekStart: string): Promise<OpenSlots> {
+  const res = await api.get({
+    endpoint: "myOpenSlots",
+    query: { start: weekStart },
+  });
+  return asJson<OpenSlots>(res);
+}
+
+export async function selfClaim(body: {
+  slot_id: number;
+  assignment_date: string;
+}): Promise<Assignment> {
+  const res = await api.post({
+    endpoint: "selfClaim",
+    requestInit: { method: "post", body: JSON.stringify(body) },
+  });
+  return asJson<Assignment>(res);
+}
+
+export async function selfUnclaim(assignmentId: number): Promise<void> {
+  const res = await api.delete({
+    endpoint: "selfClaim",
+    path: [String(assignmentId)],
+  });
   await asJson<void>(res);
 }
 
