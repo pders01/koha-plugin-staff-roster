@@ -654,7 +654,7 @@
                             <label for="location">[% tr('Location:') | html %]</label>
                             [% IF av_locations.size %]
                                 <select name="location" id="location">
-                                    <option value="">[% tr('— None —') | html %]</option>
+                                    <option value="">[% tr('-- None --') | html %]</option>
                                     [% FOREACH av IN av_locations %]
                                         <option value="[% av.value | html %]">[% av.lib || av.value | html %]</option>
                                     [% END %]
@@ -710,7 +710,7 @@
                                     <td>[% slot.days_label | html %]</td>
                                     <td>
                                         [% IF slot.location %][% slot.location | html %]
-                                        [% ELSE %]<span class="text-muted">—</span>[% END %]
+                                        [% ELSE %]<span class="text-muted">-</span>[% END %]
                                     </td>
                                     <td>[% slot.min_staff %]–[% slot.max_staff %]</td>
                                     <td class="actions">
@@ -912,7 +912,7 @@
                         <li>
                             <label for="from_assignment_id" class="required">[% tr('Give up shift:') | html %]</label>
                             <select name="from_assignment_id" id="from_assignment_id" required="required">
-                                <option value="">[% tr('— Pick an upcoming assignment —') | html %]</option>
+                                <option value="">[% tr('-- Pick an upcoming assignment --') | html %]</option>
                                 [% FOREACH a IN own_assignments %]
                                     <option value="[% a.id | html %]">
                                         [% a.assignment_date | html %] · [% a.start_time.substr(0,5) | html %]–[% a.end_time.substr(0,5) | html %]
@@ -926,7 +926,7 @@
                         <li>
                             <label for="to_borrowernumber" class="required">[% tr('Hand off to:') | html %]</label>
                             <select name="to_borrowernumber" id="to_borrowernumber" required="required">
-                                <option value="">[% tr('— Pick a staff member —') | html %]</option>
+                                <option value="">[% tr('-- Pick a staff member --') | html %]</option>
                                 [% FOREACH s IN candidate_staff %]
                                     <option value="[% s.borrowernumber | html %]">[% s.surname | html %], [% s.firstname | html %] ([% s.cardnumber | html %])</option>
                                 [% END %]
@@ -935,7 +935,7 @@
                         <li>
                             <label for="to_assignment_id">[% tr('In exchange for (optional):') | html %]</label>
                             <select name="to_assignment_id" id="to_assignment_id">
-                                <option value="">[% tr('— No return shift, one-way handoff —') | html %]</option>
+                                <option value="">[% tr('-- No return shift, one-way handoff --') | html %]</option>
                                 [% FOREACH a IN roster_assignments %]
                                     [% NEXT IF a.borrowernumber == current_borrowernumber %]
                                     <option value="[% a.id | html %]" data-borrowernumber="[% a.borrowernumber | html %]">
@@ -1045,7 +1045,7 @@
                                             </form>
                                         [% END %]
                                     [% ELSE %]
-                                        <span class="text-muted">—</span>
+                                        <span class="text-muted">-</span>
                                     [% END %]
                                 </td>
                             </tr>

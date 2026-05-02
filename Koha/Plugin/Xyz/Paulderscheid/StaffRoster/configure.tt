@@ -82,9 +82,9 @@
                 <li>
                     <label for="library_group_mode">[% tr('Group enforcement:') | html %]</label>
                     <select name="library_group_mode" id="library_group_mode">
-                        <option value="off"    [% IF library_group_mode == 'off'    %]selected[% END %]>[% tr('Off — groups ignored') | html %]</option>
-                        <option value="filter" [% IF library_group_mode == 'filter' %]selected[% END %]>[% tr("Filter — non-members don't see group rosters") | html %]</option>
-                        <option value="strict" [% IF library_group_mode == 'strict' %]selected[% END %]>[% tr('Strict — non-members get 403 on read and write') | html %]</option>
+                        <option value="off"    [% IF library_group_mode == 'off'    %]selected[% END %]>[% tr('Off: groups ignored') | html %]</option>
+                        <option value="filter" [% IF library_group_mode == 'filter' %]selected[% END %]>[% tr("Filter: non-members don't see group rosters") | html %]</option>
+                        <option value="strict" [% IF library_group_mode == 'strict' %]selected[% END %]>[% tr('Strict: non-members get 403 on read and write') | html %]</option>
                     </select>
                     <span class="hint">[% tr('Superlibrarians always see all rosters regardless of mode.') | html %]</span>
                 </li>
@@ -115,7 +115,7 @@
                     [% IF staff_categories_is_default %]
                         <span class="hint">
                             <i class="fa fa-info-circle" aria-hidden="true"></i>
-                            [% tr('Default in effect: all category_type S patrons are pre-selected. Saving without changes locks this list — newly created S-type categories will not be auto-included after that. Clear the selection to keep the open-ended default.') | html %]
+                            [% tr('Default in effect: all category_type S patrons are pre-selected. Saving without changes locks this list, so newly created S-type categories will not be auto-included after that. Clear the selection to keep the open-ended default.') | html %]
                         </span>
                     [% ELSE %]
                         <span class="hint">[% tr("Categories whose patrons can be assigned to slots. Hold Ctrl/Cmd to multi-select. Empty = fall back to all category_type='S' patrons.") | html %]</span>
@@ -150,8 +150,8 @@
                 <li>
                     <label for="koha_calendar_strict">[% tr('Closure handling:') | html %]</label>
                     <select name="koha_calendar_strict" id="koha_calendar_strict">
-                        <option value="1" [% IF koha_calendar_strict == '1' %]selected[% END %]>[% tr('Hard — block assignment on closed dates') | html %]</option>
-                        <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>[% tr('Soft — show closure but allow assignment') | html %]</option>
+                        <option value="1" [% IF koha_calendar_strict == '1' %]selected[% END %]>[% tr('Hard: block assignment on closed dates') | html %]</option>
+                        <option value="0" [% IF koha_calendar_strict == '0' %]selected[% END %]>[% tr('Soft: show closure but allow assignment') | html %]</option>
                     </select>
                 </li>
             </ol>
