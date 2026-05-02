@@ -851,8 +851,8 @@
                                         <input type="hidden" name="roster_id" value="[% roster.id | html %]" />
                                         <input type="hidden" name="exception_id" value="[% ex.id | html %]" />
                                         <button type="submit" class="btn btn-default btn-xs"
-                                                onclick="return confirm('Delete exception for [% ex.exception_date | html %]?');">
-                                            <i class="fa fa-trash"></i> Delete
+                                                onclick="return confirm('[% tr('Delete exception for DATE?') | replace('DATE', ex.exception_date) | html %]');">
+                                            <i class="fa fa-trash"></i> [% tr('Delete') | html %]
                                         </button>
                                     </form>
                                 </td>
@@ -1143,7 +1143,7 @@
             $("#add_slot_btn").on("click", function(e) {
                 e.preventDefault();
                 $("#slot_form_container").slideDown();
-                $("#slot_form_legend").text("Add Time Slot");
+                $("#slot_form_legend").text("[% tr('Add Time Slot') | html %]");
                 $("#slot_form")[0].reset();
                 $("#slot_id").val("");
                 $("#freq").val("WEEKLY").trigger("change");
@@ -1155,7 +1155,7 @@
             function syncFreqUI() {
                 var monthly = $("#freq").val() === "MONTHLY";
                 $("#ordinal_row").toggle(monthly);
-                $("#interval_hint").text(monthly ? "month(s)" : "week(s)");
+                $("#interval_hint").text(monthly ? "[% tr('month(s)') | html %]" : "[% tr('week(s)') | html %]");
             }
             $("#freq").on("change", syncFreqUI);
             syncFreqUI();
@@ -1190,7 +1190,7 @@
                 $("#ordinal").val(ord || 1);
                 $("#until_date").val($this.data("until") || "");
 
-                $("#slot_form_legend").text("Edit Time Slot");
+                $("#slot_form_legend").text("[% tr('Edit Time Slot') | html %]");
                 $("#slot_form_container").slideDown();
 
                 $('html, body').animate({
@@ -1224,7 +1224,7 @@
             // Exception form toggle + edit prefill (manage_exceptions op).
             $("#add_exception_btn").on("click", function(e) {
                 e.preventDefault();
-                $("#exception_form_legend").text("Add exception");
+                $("#exception_form_legend").text("[% tr('Add exception') | html %]");
                 $("#exception_form")[0].reset();
                 $("#exception_id").val("");
                 $("#exception_form_container").slideDown();
@@ -1239,7 +1239,7 @@
                 $("#exception_date").val($b.data("date"));
                 $("#exception_type").val($b.data("type"));
                 $("#reason").val($b.data("reason") || "");
-                $("#exception_form_legend").text("Edit exception");
+                $("#exception_form_legend").text("[% tr('Edit exception') | html %]");
                 $("#exception_form_container").slideDown();
                 $('html, body').animate({ scrollTop: $("#exception_form_container").offset().top - 100 }, 300);
             });
