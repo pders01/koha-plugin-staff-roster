@@ -23,6 +23,12 @@ sub available {
     my $c = shift->openapi->valid_input or return;
 
     return try {
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+            return $c->render( status => 403,
+                openapi => { error => 'staffroster_assign permission required' } );
+        }
+
         my $date    = $c->req->param('date');
         my $slot_id = $c->req->param('slot_id');
         my $branch  = $c->req->param('branch');
@@ -34,7 +40,6 @@ sub available {
 
         my $dbh = C4::Context->dbh;
 
-        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
         my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
         my @staff_categories = $plugin->_staff_categorycodes;
 

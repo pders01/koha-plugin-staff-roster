@@ -110,7 +110,7 @@
             ],
             "x-koha-authorization": {
                 "permissions": {
-                    "catalogue": "1"
+                    "plugins": "staffroster_assign"
                 }
             },
             "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#create"
@@ -232,7 +232,7 @@
             ],
             "x-koha-authorization": {
                 "permissions": {
-                    "catalogue": "1"
+                    "plugins": "staffroster_assign"
                 }
             },
             "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#bulk"
@@ -324,7 +324,7 @@
             ],
             "x-koha-authorization": {
                 "permissions": {
-                    "catalogue": "1"
+                    "plugins": "staffroster_assign"
                 }
             },
             "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#delete"
@@ -453,7 +453,7 @@
             ],
             "x-koha-authorization": {
                 "permissions": {
-                    "catalogue": "1"
+                    "plugins": "staffroster_assign"
                 }
             },
             "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::AssignmentController#update"
@@ -532,7 +532,7 @@
             ],
             "x-koha-authorization": {
                 "permissions": {
-                    "catalogue": "1"
+                    "plugins": "staffroster_view"
                 }
             },
             "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::RosterController#get_week"
@@ -616,7 +616,7 @@
             ],
             "x-koha-authorization": {
                 "permissions": {
-                    "catalogue": "1"
+                    "plugins": "staffroster_assign"
                 }
             },
             "x-mojo-to": "Xyz::Paulderscheid::StaffRoster::StaffController#available"

@@ -1286,6 +1286,7 @@ sub _tool_respond_swap {
 
 sub _tool_cancel_swap {
     my ( $self, $dbh, $cgi, $messages ) = @_;
+    return if !_gate( 'staffroster_swap_request', $messages );
     my $swap_id = $cgi->param('swap_id');
     my $env     = C4::Context->userenv;
 
