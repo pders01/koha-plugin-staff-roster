@@ -1,4 +1,4 @@
-package Koha::Plugin::Xyz::Paulderscheid::StaffRoster v0.0.1;
+package Koha::Plugin::Xyz::Paulderscheid::StaffRoster v0.0.2;
 
 use Modern::Perl;
 
@@ -28,14 +28,14 @@ sub _audit {
 our $metadata = {
     'author'           => 'Paul Derscheid',
     'date_authored'    => '2025-12-24',
-    'date_updated'     => '2026-05-01',
+    'date_updated'     => '2026-05-02',
     'description'      => 'Manage staff duty rosters and schedules across library branches',
     'maximum_version'  => '',
     'minimum_version'  => '24.05.00.000',
     'name'             => 'StaffRoster',
     'release_filename' => 'koha-plugin-staff-roster',
     'static_dir_name'  => 'static',
-    'version'          => '0.0.1',
+    'version'          => '0.0.2',
 };
 
 sub new {
@@ -2308,7 +2308,37 @@ String - HTML/JS to include in intranet
 sub intranet_js {
     my $self = shift;
 
+    # Koha's includes/permissions.inc renders sub-permission labels through a
+    # hardcoded SWITCH/CASE map. Plugin codes the core map doesn't know about
+    # render an empty <label>. Inject labels client-side so admins can see
+    # what each staffroster_* checkbox actually grants.
     return <<~'JS';
+    <script>
+    (function () {
+      var page = document.body && document.body.id;
+      if (page !== 'patrons_member-flags' && page !== 'pat_member-flags') return;
+      var labels = {
+        staffroster_view: 'Staff Roster: view rosters and own schedule',
+        staffroster_assign: 'Staff Roster: drag staff onto slots and edit assignments',
+        staffroster_manage_rosters: 'Staff Roster: create or edit rosters, slots, exceptions',
+        staffroster_manage_types: 'Staff Roster: manage roster types catalogue',
+        staffroster_swap_request: 'Staff Roster: request a shift swap',
+        staffroster_swap_respond: 'Staff Roster: accept or reject a swap directed at you',
+        staffroster_swap_approve: 'Staff Roster: approve swaps as a manager',
+        staffroster_configure: 'Staff Roster: change plugin configuration'
+      };
+      document.querySelectorAll('input.flag[type="checkbox"][name="flag"]').forEach(function (cb) {
+        var code = cb.value;
+        if (!Object.prototype.hasOwnProperty.call(labels, code)) return;
+        var label = (cb.closest('li, tr, div') || document)
+            .querySelector('label.permissiondesc') || document.querySelector('label[for="' + cb.id + '"]');
+        if (label && !label.textContent.trim()) {
+          label.innerHTML = '<span class="sub_permission">' + labels[code] +
+            '</span> <span class="permissioncode">(' + code + ')</span>';
+        }
+      });
+    })();
+    </script>
     JS
 }
 

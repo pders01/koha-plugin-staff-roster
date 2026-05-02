@@ -1,22 +1,22 @@
 {
-  "name": "koha-plugin-staff-roster",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "description": "Manage staff duty rosters and schedules across library branches",
-  "author": "Paul Derscheid",
-  "scripts": {
-    "build": "vite build",
-    "dev": "vite build --watch",
-    "check": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@jpahd/lit-stack": "file:../../../pers/web/lit-framework",
-    "@lit/context": "^1.1.6",
-    "lit": "^3.3.2"
-  },
-  "devDependencies": {
-    "typescript": "^6.0.0-beta",
-    "vite": "^8.0.4"
-  }
+    "author": "Paul Derscheid",
+    "dependencies": {
+        "@jpahd/lit-stack": "file:../../../pers/web/lit-framework",
+        "@lit/context": "^1.1.6",
+        "lit": "^3.3.2"
+    },
+    "description": "Manage staff duty rosters and schedules across library branches",
+    "devDependencies": {
+        "typescript": "^6.0.0-beta",
+        "vite": "^8.0.4"
+    },
+    "name": "koha-plugin-staff-roster",
+    "private": true,
+    "scripts": {
+        "build": "vite build",
+        "check": "tsc --noEmit",
+        "dev": "vite build --watch"
+    },
+    "type": "module",
+    "version": "0.0.2"
 }
