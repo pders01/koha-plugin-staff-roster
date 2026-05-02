@@ -193,6 +193,19 @@ jobs:
           restore-keys: |
             bun-${{ runner.os }}-
 
+      - name: Install scaffold's perl deps via apt
+        run: |
+          # The scaffold CLI bin/koha-plugin.pl needs Path::Tiny + a few
+          # other CPAN modules listed in cpanfile. Local dev uses carton
+          # against ./local/lib/perl5; on CI we install the same modules
+          # from apt (much faster than running carton install in CI).
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libpath-tiny-perl libdatetime-perl libjson-perl \
+            libreadonly-perl libtemplate-perl libterm-ui-perl \
+            libterm-readline-perl-perl libtype-tiny-perl libyaml-tiny-perl \
+            libperl-tidy-perl
+
       - name: Build bundle
         run: |
           bun install --frozen-lockfile
