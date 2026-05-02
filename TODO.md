@@ -51,10 +51,11 @@ _Empty — pick the next batch._
 
 ## Backlog
 
-- [ ] **Tests** for remaining hot paths: `_user_group_ids` (recursive
-      group walk), `_conflict_check` (overlap SQL), Lit
-      `dayOfWeekForColumn` mapping, calendar merge in `get_week`. RRule
-      helpers covered in `t/rrule.t`.
+- [ ] **Remaining hot-path tests**: Lit `dayOfWeekForColumn` (needs
+      JS test infra; not in tree) and the `get_week` calendar merge
+      (integration-shaped — real HTTP path, not a unit helper).
+      `_user_group_ids` + `_conflict_check` covered in `t/visibility.t`
+      and `t/conflict_check.t`.
 - [ ] **Mobile schedule grid**: 8 columns × tall slot column means
       horizontal scroll on phones. Acceptable for v1, not polished.
 - [ ] **Slot delete confirm**: uses inline modal on the manage_slots
@@ -64,6 +65,13 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Hot-path test coverage**: `t/conflict_check.t` (8 subtests
+      against AssignmentController::_conflict_check — capacity,
+      self-overlap, exclude_id branch, slot-not-found, RRule
+      applies-on-date) and `t/visibility.t` (5 subtests against
+      _user_group_ids using a mocked `Koha::Library::Groups` so the
+      test stays self-contained against the dev container's empty
+      library_groups table). Plugin test count is now 53 (was 40).
 - [x] **Lit grid hardening duo**: `refresh()` now drops the response
       when `this.dragging` is set so a mid-flight poll can't replace
       the chip the user is holding; `pendingFocusModal` selector
