@@ -817,27 +817,24 @@ sub configure {
     my $selected_cats    = $self->retrieve_data('staff_categories') // q{};
     my %selected_cat_map = map { $_ => 1 } split /,/smx, $selected_cats;
 
+    # When admin hasn't picked any explicit categories, the plugin falls
+    # back to every category_type='S' patron. Pre-select those rows in
+    # the multi-select so the active default is visible at a glance.
+    # The TT also wires `data-default-fallback` on each pre-selected
+    # option so the save handler can distinguish a user-confirmed
+    # explicit choice from the visual default — see configure.tt JS.
+    my $is_default_fallback = !%selected_cat_map;
+
     my @categories = map {
-        my $code = $_->categorycode;
-        {   code        => $code,
-            description => $_->description,
-            selected    => $selected_cat_map{$code} ? 1 : 0,
+        my $code  = $_->categorycode;
+        my $is_s  = ( $_->category_type // q{} ) eq 'S';
+        my $is_on = $selected_cat_map{$code} ? 1 : ( $is_default_fallback && $is_s ? 1 : 0 );
+        {   code               => $code,
+            description        => $_->description,
+            selected           => $is_on,
+            default_fallback   => ( $is_default_fallback && $is_s ) ? 1 : 0,
         };
     } Koha::Patron::Categories->search( {}, { order_by => 'description' } )->as_list;
-
-    # Effective set: when admin hasn't picked any explicit categories, the
-    # plugin falls back to all category_type='S' patrons. Surface that
-    # implicit default so admins can see which categories are currently
-    # in scope without reading the hint paragraph.
-    my @effective_categories;
-    if ( !%selected_cat_map ) {
-        @effective_categories = map {
-            { code => $_->categorycode, description => $_->description };
-        } Koha::Patron::Categories->search(
-            { category_type => 'S' },
-            { order_by      => 'description' }
-        )->as_list;
-    }
 
     $template->param(
         enable_email_reminders             => $self->retrieve_data('enable_email_reminders')         // '0',
@@ -858,7 +855,7 @@ sub configure {
         library_groups               => _flatten_groups( $root_groups, 0 ),
         all_libraries                => [ Koha::Libraries->search( {}, { order_by => 'branchname' } )->as_list ],
         patron_categories            => \@categories,
-        effective_staff_categories   => \@effective_categories,
+        staff_categories_is_default  => $is_default_fallback ? 1 : 0,
     );
 
     return $self->output_html( $template->output );
