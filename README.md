@@ -5,16 +5,21 @@ grid, recurring time slots with iCal RRULE, library-group scoping,
 calendar-aware closures, swap workflow, self-service claim/drop, and
 nightly email reminders. German UI translation included.
 
-> **Status:** active development. Backend tested against Koha kohadev
-> (24.05+); 51 plugin tests cover the hot paths. The REST surface uses
-> Koha terminology (`patron_id`) so it slots into the rest of the API
-> without surprise.
+> **Status:** pre-alpha (plugin metadata `0.1.0`; GitHub release tag
+> `v0.1.0-alpha.0`, marked as a GitHub pre-release). Built and exercised against
+> Koha **main** throughout development; no other release line has been
+> verified yet. The `minimum_version` metadata field is permissive
+> (24.05+) on the assumption that the touched surfaces are
+> backward-compatible, but installs on older releases should expect to
+> file a bug. The REST surface uses Koha terminology (`patron_id`) so
+> it slots into the rest of the API without surprise.
 
 ## Features
 
 - **Schedule grid** — drag staff onto time slots, drop assignments
   between cells, undo with Cmd-Z, optimistic UI with concurrent-edit
-  highlighting.
+  highlighting. Keyboard pickup (`Enter` / `Space`, arrow nav, `Esc`
+  cancel) covers HTML5 DnD, keyboard-only, and touch alike.
 - **Recurring slots** — `FREQ=WEEKLY` and `FREQ=MONTHLY` with
   `BYDAY` (incl. ordinals like `1MO`, `-1FR`), `INTERVAL`, and
   `UNTIL`.
@@ -25,35 +30,41 @@ nightly email reminders. German UI translation included.
 - **Self-service** — staff can claim open shifts and drop their own,
   gated by sub-permission, kill-switch setting, and a configurable
   hour-window lockout.
-- **Swap workflow** — request a one-way handoff or a mutual swap;
-  manager approval optional per setting.
+- **Swap workflow** — request a one-way handoff or a mutual two-
+  assignment swap; manager approval optional per setting.
 - **Nightly email reminders** — N days before each shift, via a Koha
   notice template (`STAFFROSTER`/`REMINDER`) admins can edit.
 - **Audit trail** — every mutation flows into Koha's `action_logs`
-  with full pre/post diff support.
-- **i18n** — English + German shipped; partial translations fall
-  through to English so a missing key never breaks a page.
+  with full pre/post diff support; 409 conflict rejections also emit
+  `CONFLICT_REJECTED` rows so blocked attempts stay reconstructable.
+- **i18n** — English + German shipped (~280 keys); partial
+  translations fall through to English so a missing key never breaks
+  a page. Templated REST errors (`Slot full ({filled}/{max})`,
+  `Self-unclaim closed: must drop at least {hours}h before the shift`)
+  re-render in the active locale.
 
 See **[docs/wiki/](docs/wiki/Home.md)** for the full user manual,
 configuration guide, and architecture notes. The same files double as
-the GitHub Wiki source.
+the GitHub Wiki source. The release log lives in
+**[CHANGELOG.md](CHANGELOG.md)**.
 
 ## Install
 
-1. Build the `.kpz` package:
+1. Grab the latest `.kpz` from the project's
+   [GitHub Releases](https://github.com/pders01/koha-plugin-staff-roster/releases)
+   page, or build one yourself:
 
    ```bash
-   bun install && bun run build
-   # then zip the Koha/ directory into a .kpz the way Koha expects
+   bun install
+   bun run build           # bundles the Lit components into Koha/Plugin/.../staff-roster.js
+   just package            # produces koha-plugin-staff-roster-<version>.kpz at repo root
    ```
-
-   Or grab a release from the project's GitHub Releases page.
 
 2. Upload via Koha's plugin admin (Administration → Manage plugins →
    Upload plugin) and run the installer when prompted.
 
 3. Grant the `staffroster_*` sub-permissions (under the `plugins`
-   flag) to the staff who need them.
+   flag) to the staff who need them. Superlibrarians always pass.
 
 4. Open **Tools → Staff Roster** to start.
 
@@ -76,18 +87,20 @@ field-by-field walkthrough.
 ## Project layout
 
 ```
-Koha/Plugin/Xyz/Paulderscheid/StaffRoster.pm    Main module + CGI handlers
-Koha/Plugin/Xyz/Paulderscheid/StaffRoster/      Controllers, templates, locales
-  AssignmentController.pm                        REST: assignments + self-service
-  RosterController.pm                            REST: per-roster week view
-  StaffController.pm                             REST: staff lookup + my/open
-  Lib/I18N.pm                                    Translation helper
-  *.tt                                           Tool / admin / configure / report
-  locales/de.json                                German UI translations
+Koha/Plugin/Xyz/Paulderscheid/StaffRoster.pm     Main module (lifecycle + tool / admin / configure / report dispatchers)
+Koha/Plugin/Xyz/Paulderscheid/StaffRoster/
+  AssignmentController.pm                         REST: assignments + self-service
+  RosterController.pm                             REST: per-roster week view
+  StaffController.pm                              REST: staff lookup + /me endpoints
+  Lib/                                            Helper packages: I18N, DateUtils, Audit, Permissions, Visibility, Rrule, AdditionalFields, Schema
+  Controllers/Tool/                               Per-op handler + view bodies (List, Form, Slots, Exceptions, Swaps, SelfService)
+  *.tt                                            Tool / admin / configure / report templates
+  locales/de.json                                 German UI translations (shared with the JS bundle via src/i18n/de.ts)
+cron/staff_roster_nightly.pl                     Nightly reminder cron entry (FindBin-bootstrapped)
 src/                                             Lit components (TypeScript)
-t/                                               Plugin tests (live container DB)
+t/                                               Plugin prove tests (live container DB)
 cypress/                                         Cypress integration specs
-docs/wiki/                                       User manual + wiki sources
+docs/wiki/                                       User manual + GitHub Wiki source
 ```
 
 ## Testing
@@ -100,16 +113,17 @@ docker exec dev-koha-1 sh -c \
   "cd /var/lib/koha/kohadev/plugins && \
    KOHA_CONF=/etc/koha/sites/kohadev/koha-conf.xml \
    prove t/00-load.t t/rrule.t t/self_service.t t/swap_ownership.t \
-         t/exceptions.t t/additional_fields.t t/conflict_check.t \
-         t/visibility.t"
+         t/swap_respond.t t/exceptions.t t/additional_fields.t \
+         t/conflict_check.t t/visibility.t"
 ```
 
-51 tests across 8 files cover RRule semantics, self-service flow,
-swap ownership, exception CRUD, additional fields, the
-`_conflict_check` capacity gate, and the recursive group walk.
+**67 tests across 9 files** cover RRule semantics, self-service flow,
+swap ownership + mutual approve, exception CRUD, additional fields,
+the `_conflict_check` capacity gate, the recursive group walk, and
+the load-everything smoke test.
 
 For the live REST round-trip (calendar merge, exception precedence,
-grid render):
+grid render, drag-and-drop):
 
 ```bash
 just test-cypress
@@ -117,7 +131,13 @@ just test-cypress
 
 The script syncs the plugin into the kohadev container, restarts
 Plack, and runs `cypress/integration/staffroster/*_spec.ts` through
-ktd's bundled cypress install.
+ktd's bundled cypress install. **27 tests across 7 specs.**
+
+To fire the nightly reminder cron once in dev:
+
+```bash
+just cron-nightly
+```
 
 ## License
 

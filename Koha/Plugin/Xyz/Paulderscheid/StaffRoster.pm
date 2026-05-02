@@ -1,4 +1,4 @@
-package Koha::Plugin::Xyz::Paulderscheid::StaffRoster v0.0.3;
+package Koha::Plugin::Xyz::Paulderscheid::StaffRoster v0.1.0;
 
 =head1 NAME
 
@@ -80,8 +80,8 @@ our $metadata = {
     'minimum_version'  => '24.05.00.000',
     'name'             => 'StaffRoster',
     'release_filename' => 'koha-plugin-staff-roster',
-    'static_dir_name'  => 'static',
-    'version'          => '0.0.3',
+    'static_dir_name'  => '.',
+    'version'          => '0.1.0',
 };
 
 sub new {

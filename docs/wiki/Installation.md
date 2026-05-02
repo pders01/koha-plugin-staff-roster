@@ -2,10 +2,15 @@
 
 ## Requirements
 
-- **Koha 24.05** or newer (the plugin uses
-  `Koha::DateUtils::dt_from_string`, `Koha::Library::Groups`,
+- **Koha main** is the only release line currently exercised end to
+  end (prove + cypress). The `minimum_version` metadata field is
+  permissive (`24.05.00.000`) on the assumption that the touched
+  surfaces (`Koha::DateUtils::dt_from_string`, `Koha::Library::Groups`,
   `Koha::Calendar`, the post-25159 `C4::Log::logaction` signature,
-  and the standard plugins-table sub-permission machinery).
+  and the standard plugins-table sub-permission machinery) are
+  backward-compatible, but installs on stable / oldstable should
+  treat themselves as the canary and file a bug on anything
+  surprising.
 - The Koha plugin system enabled (`enable_plugins` in
   `koha-conf.xml`).
 - A staff user with the `superlibrarian` flag for the initial
