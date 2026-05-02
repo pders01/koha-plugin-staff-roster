@@ -1,5 +1,34 @@
 package Koha::Plugin::Xyz::Paulderscheid::StaffRoster v0.0.3;
 
+=head1 NAME
+
+Koha::Plugin::Xyz::Paulderscheid::StaffRoster - Manage staff duty rosters
+across library branches and library groups.
+
+=head1 SYNOPSIS
+
+  Installed via the Koha plugins admin page; surfaces tool / admin /
+  configure / report entry points plus a REST API under
+  /api/v1/contrib/paulderscheid_staff_roster.
+
+=head1 DESCRIPTION
+
+Models roster types, rosters (scoped to a single branch or a library
+group), recurring slots, per-date assignments, exceptions, and shift
+swap requests. Mutations flow into Koha's action_logs (module
+'STAFFROSTER') so admins can audit changes from tools/viewlog.pl.
+
+The plugin module owns the install / upgrade / uninstall lifecycle,
+template rendering for the tool views, and the per-CGI-op handlers
+referenced from C<tool>, C<admin>, and C<configure>. The REST surface
+lives under StaffRoster::*Controller (Mojolicious controllers).
+
+=head1 AUTHOR
+
+Paul Derscheid <paulderscheid@gmail.com>
+
+=cut
+
 use Modern::Perl;
 
 use base qw(Koha::Plugins::Base);
@@ -1726,10 +1755,16 @@ sub _tool_view_manage_exceptions {
     return;
 }
 
-# Nightly cron entry point. Invoke from cron/staff_roster_nightly.pl (or any
-# scheduler that can call into the plugin). Enqueues a reminder email per
-# upcoming assignment N days out, where N = reminder_days_before. Returns the
-# number of messages enqueued for callers that want to log it.
+=head3 cronjob_nightly
+
+Nightly cron entry point. Invoke from cron/staff_roster_nightly.pl (or any
+scheduler that can call into the plugin). Enqueues a reminder email per
+upcoming assignment N days out, where N = reminder_days_before. Idempotent
+within the calendar day via NOT EXISTS against action_logs. In list context
+returns C<($sent, $failed)>; in scalar context returns C<$sent>.
+
+=cut
+
 sub cronjob_nightly {
     my ($self) = @_;
 

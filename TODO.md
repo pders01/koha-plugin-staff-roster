@@ -4,19 +4,22 @@ Open work items, grouped by priority. Items get crossed off as commits land.
 
 ## Now (small, cohesive)
 
-- [ ] **Backend Perl review against KOHA_CODING_GUIDELINES**:
-      `../koha-plugin/KOHA_CODING_GUIDELINES.md` (~2k lines). Pass over
-      `Koha/Plugin/Xyz/Paulderscheid/StaffRoster.pm` (~2.5k lines) +
-      `StaffRoster/*.pm` controllers. Likely hits: SQL section
-      (placeholders, ANSI quotes, backticks), HTML9 (filter all template
-      vars), TERM2/TERM3 (terminology), action-logs JSON Diff format,
-      .pm POD coverage, naming conventions. Backend is the explicit
-      ask — frontend dedup pass is done (HIGH + MEDIUM items shipped;
-      breadcrumbs include reverted, see Hardening note below).
+_Empty — pick the next batch._
 
 ## Next (single-feature batches)
 
-_Empty — pick the next batch._
+- [ ] **HTML2 + i18n: cron reminder email via Koha letter template**.
+      `cronjob_nightly` builds the email title + body in Perl with
+      hardcoded English prose, so it never reaches the gettext pipeline
+      and admins can't customise it. Migrate to
+      `C4::Letters::GetPreparedLetter` against a registered notice
+      template (module='STAFFROSTER', code='REMINDER') seeded on
+      install. Folds into the i18n Phase 2 work but ships standalone.
+- [ ] **TERM1: rename JSON `borrowernumber` → `patron_id` in the REST
+      surface**. AssignmentController sites (lines 32, 61, 117, 290+,
+      360+) plus the Lit + TT consumers. Breaks the API contract, so
+      either gate behind a settings hook or coordinate a single
+      switchover commit with the frontend.
 
 ## Phase 2 (planned features, each its own work block)
 
@@ -35,11 +38,6 @@ _Empty — pick the next batch._
 
 ## Hardening follow-ups (from cross-codebase review 2026-05-02)
 
-- [ ] **Bulk assignment conflict check**: AssignmentController#bulk move
-      runs one UPDATE on every id without `_conflict_check`; two
-      simultaneous bulk moves can overfill `max_staff`. Decide on
-      fail-on-first-conflict vs skip-and-report semantics, then wrap
-      the move in a per-id loop or a transaction with a count guard.
 - [ ] **Lit grid poll/drag race**: pause `pollTimer` while a mutation is
       in flight, or discard poll results that resolve while
       `this.dragging` is non-null. Today a fast drag during a poll can
@@ -87,6 +85,30 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Backend Perl review against KOHA_CODING_GUIDELINES**:
+      6 commits landed on 2026-05-02 covering the high-priority
+      findings from the four parallel reviewer agents.
+      - `fix(backend)`: bulk-move `_conflict_check` (was completely
+        skipped, worse than the race the TODO had flagged), DST/TZ
+        bug in `_current_week_start` (3 copies — Roster + Staff
+        controllers + plugin .pm `_get_current_week_start`),
+        `start` query-param regex validation.
+      - `fix(audit)` ×2: ACTN1 / Bug 25159 JSON Diff wired through
+        `_audit` (now takes `$original`); every assignment + roster
+        + slot + exception + swap mutation snapshots pre-state and
+        passes it. Cron NOTICE entries stay flat (no mutated object).
+      - `refactor(sql)`: SQL10 — drop `qq{... ($placeholders)}` /
+        `$exclude_*_clause` interpolation; switch IN-list builders
+        to `q{...} . $placeholders . q{}` and `_conflict_check` to
+        `@clauses` arrays joined by AND.
+      - `refactor(perl)`: PERL31 — hoist 16 in-sub `require` calls to
+        `use` at file top across the four modules. C4::Log stays in
+        the `_audit` eval per the existing very-old-Koha rationale.
+      - `docs(pod)`: PERL13 — module-level NAME / DESCRIPTION /
+        AUTHOR for the four files plus POD on `cronjob_nightly` and
+        the `_current_week_start` helpers.
+      Deferred to Next: HTML2 cron email letter template, TERM1
+      `borrowernumber` → `patron_id` rename.
 - [x] **Frontend dedup pass (Lit + TT)**:
       - `src/components/shared/`: `toolbar.ts` (`renderWeekToolbar` —
         Previous/Next/Refresh, schedule grid passes Undo via `extras`),

@@ -1,5 +1,23 @@
 package Koha::Plugin::Xyz::Paulderscheid::StaffRoster::RosterController;
 
+=head1 NAME
+
+Koha::Plugin::Xyz::Paulderscheid::StaffRoster::RosterController -
+Mojolicious controller exposing a roster's week view via REST.
+
+=head1 DESCRIPTION
+
+Returns the assembled week JSON for the schedule grid: roster header,
+slots (decorated with applies_on_dates per the recurrence rule),
+assignments in the window, additional fields, and exceptions merged
+with Koha calendar closures when use_koha_calendar is on.
+
+=head1 AUTHOR
+
+Paul Derscheid <paulderscheid@gmail.com>
+
+=cut
+
 use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
@@ -186,6 +204,14 @@ sub get_week {
         $c->unhandled_exception($_);
     };
 }
+
+=head3 _current_week_start
+
+Default fallback for the C<start> query param. Returns the YYYY-MM-DD of
+the most recent Monday in the Koha-configured timezone (DateTime's
+truncate(week) anchors to Monday).
+
+=cut
 
 sub _current_week_start {
     return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;

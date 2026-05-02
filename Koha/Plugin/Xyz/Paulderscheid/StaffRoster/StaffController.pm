@@ -1,5 +1,24 @@
 package Koha::Plugin::Xyz::Paulderscheid::StaffRoster::StaffController;
 
+=head1 NAME
+
+Koha::Plugin::Xyz::Paulderscheid::StaffRoster::StaffController -
+Mojolicious controller for staff/patron lookup endpoints.
+
+=head1 DESCRIPTION
+
+Hosts /staff/available (filtered staff pool for the assignment picker),
+/me/week (the session borrower's own shifts), and /me/open_slots (slots
+the session borrower could self-claim). Self-service mutations live in
+the AssignmentController under self_create / self_delete; see there for
+the four-layer claim gate.
+
+=head1 AUTHOR
+
+Paul Derscheid <paulderscheid@gmail.com>
+
+=cut
+
 use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
@@ -479,9 +498,25 @@ sub me_open_slots {
     };
 }
 
+=head3 _current_week_start
+
+Returns the YYYY-MM-DD of the most recent Monday in the Koha-configured
+timezone, used as the fallback when the C<start> query param is absent
+or malformed.
+
+=cut
+
 sub _current_week_start {
     return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
 }
+
+=head3 _validated_week_start
+
+Returns C<$input> when it parses as YYYY-MM-DD, otherwise falls back to
+C<_current_week_start>. Keeps malformed input from flowing into
+DATE_ADD bind values where it would silently coerce to NULL.
+
+=cut
 
 sub _validated_week_start {
     my ($input) = @_;

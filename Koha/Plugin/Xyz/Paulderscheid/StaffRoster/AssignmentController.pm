@@ -1,5 +1,24 @@
 package Koha::Plugin::Xyz::Paulderscheid::StaffRoster::AssignmentController;
 
+=head1 NAME
+
+Koha::Plugin::Xyz::Paulderscheid::StaffRoster::AssignmentController -
+Mojolicious controller for staff_roster_assignments REST endpoints.
+
+=head1 DESCRIPTION
+
+Backs CREATE / MODIFY / DELETE on a single assignment, the bulk
+move/clear endpoint, and the staff self-service claim/unclaim pair.
+Every mutation gates on a sub-permission, runs through _conflict_check
+(slot capacity + per-borrower overlap), and emits an action_logs entry
+with the pre/post snapshot for diff support.
+
+=head1 AUTHOR
+
+Paul Derscheid <paulderscheid@gmail.com>
+
+=cut
+
 use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
