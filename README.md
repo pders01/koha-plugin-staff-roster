@@ -14,6 +14,35 @@ nightly email reminders. German UI translation included.
 > file a bug. The REST surface uses Koha terminology (`patron_id`) so
 > it slots into the rest of the API without surprise.
 
+## Background
+
+This plugin started as a dual-use exercise: build a real, useful
+Koha extension and, along the way, exercise the plugin system to
+see what patterns emerge. The roster problem is genuine — desk
+shift management is a recurring need across single-branch and
+multi-branch libraries — and the result is meant to stand on its
+own as a serious plugin. Adoption will tell us whether it stays
+standalone or grows beyond that.
+
+Two side outputs fall out of the work:
+
+- **Templates and patterns for [`pders01/koha-plugin`](https://github.com/pders01/koha-plugin)**,
+  the scaffold CLI that bootstrapped this repo. Recurring shape
+  decisions made here (cpanfile boundaries, package layout, RRule
+  handling, sub-permission registry, additional-fields glue,
+  `_audit` plumbing, the static asset surface, the i18n shim, the
+  Lit + TT bridge, nightly cron entrypoint, `.kpz` packaging, CI
+  shape) are good candidates to fold back into the scaffold so the
+  next plugin that hits the same shape gets a head start.
+- **Possible upstream contributions to Koha itself.** Some helpers
+  here exist as plugin-side workarounds where a small core hook
+  could serve every plugin that needs the same thing — granular
+  sub-permissions under `plugins`, library-group visibility
+  walking, calendar closure merging into per-instance exception
+  rows, the post-25159 `_audit` wrapper. Time permitting, a few
+  of these may become Bugzilla proposals down the line; the plugin
+  is happy to keep carrying them in the meantime.
+
 ## Features
 
 - **Schedule grid** — drag staff onto time slots, drop assignments
