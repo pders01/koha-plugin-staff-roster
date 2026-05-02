@@ -56,6 +56,7 @@ use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Audit;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Permissions;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Visibility;
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule;
+use Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields;
 
 # Recurrence helpers; pulled in early so the slot save path doesn't pay the
 # require cost on first request.
@@ -1999,145 +2000,13 @@ sub _rrule_label       { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::L
 sub _slot_applies_on   { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_applies_on(@_); }
 sub _slot_anchor       { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::Rrule::slot_anchor(@_); }
 
-# Additional fields helpers --------------------------------------------------
-# Plumbing on top of Koha's additional_fields / additional_field_values tables.
-# The plugin uses raw DBI rather than Koha::Object, so we can't pull in the
-# Koha::Object::Mixin::AdditionalFields mixin; we do the equivalent reads /
-# writes ourselves. Admins manage field definitions via the standard
-# admin/additional-fields.pl page (deep-link with tablename=...).
-
-# Returns { available => [field_hash, ...], values => { field_id => [val,..] } }
-# where 'available' is what the additional-fields-entry.inc include expects:
-# field hashes carry the same keys (id, name, authorised_value_category,
-# repeatable, marcfield, marcfield_mode) that the include reads.
-sub _load_additional_fields {
-    my ( $dbh, $tablename, $record_id ) = @_;
-    my $available = $dbh->selectall_arrayref(
-        q{SELECT id, name, authorised_value_category, marcfield, marcfield_mode, searchable, repeatable
-          FROM additional_fields WHERE tablename = ? ORDER BY id},
-        { Slice => {} }, $tablename
-    ) || [];
-
-    # The TT include calls $field->effective_authorised_value_category as a
-    # method. Wrap each hash so the include works without changes.
-    for my $f ( @{$available} ) {
-        my $cat = $f->{authorised_value_category};
-        $f->{effective_authorised_value_category} = $cat;
-    }
-
-    my %values;
-    if ($record_id) {
-        my $rows = $dbh->selectall_arrayref(
-            q{SELECT field_id, value FROM additional_field_values
-              WHERE record_table = ? AND record_id = ?},
-            { Slice => {} }, $tablename, $record_id
-        ) || [];
-        for my $r ( @{$rows} ) {
-            push @{ $values{ $r->{field_id} } }, $r->{value};
-        }
-    }
-    return { available => $available, values => \%values };
-}
-
-# Replaces every additional_field_value row for ($tablename, $record_id) with
-# the values posted as additional_field_<id>. Mirrors set_additional_fields in
-# Koha::Object::Mixin::AdditionalFields. No-op when there are no fields
-# defined for $tablename, so admins can opt in by creating fields and
-# pre-existing rows keep working.
-sub _save_additional_fields {
-    my ( $dbh, $tablename, $record_id, $cgi ) = @_;
-    return if !$record_id;
-    my $fields = _additional_field_defs( $dbh, $tablename );
-    return if !@{$fields};
-    my %values_by_id = map { $_->{id} => [ $cgi->multi_param( 'additional_field_' . $_->{id} ) ] } @{$fields};
-    return _store_additional_field_values( $dbh, $tablename, $record_id, \%values_by_id );
-}
-
-# Same as _save_additional_fields but accepts a pre-built map
-# { field_id => [values, ...] }. Used by JSON API endpoints.
-sub _save_additional_fields_from_map {
-    my ( $dbh, $tablename, $record_id, $map ) = @_;
-    return if !$record_id || !$map;
-    my $fields = _additional_field_defs( $dbh, $tablename );
-    return if !@{$fields};
-    my %allowed = map { $_->{id} => 1 } @{$fields};
-    my %values_by_id;
-    for my $fid ( keys %{$map} ) {
-        next if !$allowed{$fid};
-        my $v = $map->{$fid};
-        $values_by_id{$fid} = ref $v eq 'ARRAY' ? $v : [$v];
-    }
-    return _store_additional_field_values( $dbh, $tablename, $record_id, \%values_by_id );
-}
-
-sub _additional_field_defs {
-    my ( $dbh, $tablename ) = @_;
-    return $dbh->selectall_arrayref( q{SELECT id, repeatable FROM additional_fields WHERE tablename = ?},
-        { Slice => {} }, $tablename )
-        || [];
-}
-
-sub _store_additional_field_values {
-    my ( $dbh, $tablename, $record_id, $values_by_id ) = @_;
-
-    # Wrap delete + reinsert in a single transaction so a failed insert leaves
-    # the prior values untouched. The default plack handler runs with
-    # AutoCommit=1, so the bare delete-then-loop above could otherwise commit a
-    # partial state if any insert blew up.
-    my $autocommit_was = $dbh->{AutoCommit};
-    $dbh->begin_work if $autocommit_was;
-    eval {
-        $dbh->do( q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
-            undef, $tablename, $record_id );
-        for my $fid ( keys %{$values_by_id} ) {
-            for my $v ( @{ $values_by_id->{$fid} } ) {
-                next if !defined $v || $v eq q{};
-                $dbh->do(
-                    q{INSERT INTO additional_field_values (field_id, record_table, record_id, value)
-                      VALUES (?, ?, ?, ?)},
-                    undef, $fid, $tablename, $record_id, $v
-                );
-            }
-        }
-        $dbh->commit if $autocommit_was;
-        1;
-    } or do {
-        my $err = $@ || 'unknown error';
-        $dbh->rollback if $autocommit_was;
-        die $err;
-    };
-    return;
-}
-
-# Removes all additional_field_value rows attached to ($tablename, $record_id).
-sub _delete_additional_fields {
-    my ( $dbh, $tablename, $record_id ) = @_;
-    return if !$record_id;
-    $dbh->do( q{DELETE FROM additional_field_values WHERE record_table = ? AND record_id = ?},
-        undef, $tablename, $record_id );
-    return;
-}
-
-# Convenience: { record_id => { field_id => [vals,...] } } for a list view that
-# wants to render every roster's additional field summary in one query.
-sub _bulk_additional_field_values {
-    my ( $dbh, $tablename, $record_ids ) = @_;
-    return {} if !$record_ids || !@{$record_ids};
-    # Static SQL, executed per record_id, instead of an interpolated
-    # IN-list. The fan-out is bounded by the page-of-rosters size.
-    my $sth = $dbh->prepare(
-        q{SELECT field_id, value FROM additional_field_values
-          WHERE record_table = ? AND record_id = ?}
-    );
-    my %out;
-    for my $rid ( @{$record_ids} ) {
-        $sth->execute( $tablename, $rid );
-        while ( my $row = $sth->fetchrow_hashref ) {
-            push @{ $out{$rid}{ $row->{field_id} } }, $row->{value};
-        }
-    }
-    return \%out;
-}
+# Additional fields helpers — actual logic in Lib::AdditionalFields.
+# Backwards-compat shims preserved for existing callers.
+sub _load_additional_fields           { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::load(@_); }
+sub _save_additional_fields           { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::save(@_); }
+sub _save_additional_fields_from_map  { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::save_from_map(@_); }
+sub _delete_additional_fields         { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::remove(@_); }
+sub _bulk_additional_field_values     { return Koha::Plugin::Xyz::Paulderscheid::StaffRoster::Lib::AdditionalFields::bulk_values(@_); }
 
 
 =head3 api_namespace
