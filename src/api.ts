@@ -43,7 +43,7 @@ export type Slot = {
 export type Assignment = {
   id: number;
   slot_id: number;
-  borrowernumber: number;
+  patron_id: number;
   assignment_date: string;
   status: "scheduled" | "confirmed" | "completed" | "cancelled" | "no_show";
   notes: string | null;
@@ -64,7 +64,7 @@ export type AssignmentField = {
 };
 
 export type Staff = {
-  borrowernumber: number;
+  patron_id: number;
   firstname: string;
   surname: string;
   cardnumber: string;
@@ -111,7 +111,7 @@ export async function fetchWeek(rosterId: number, weekStart: string): Promise<Ro
 
 export async function createAssignment(body: {
   slot_id: number;
-  borrowernumber: number;
+  patron_id: number;
   assignment_date: string;
   status?: string;
   notes?: string;
@@ -127,7 +127,7 @@ export async function updateAssignment(
   id: number,
   body: Partial<{
     slot_id: number;
-    borrowernumber: number;
+    patron_id: number;
     assignment_date: string;
     status: string;
     notes: string | null;

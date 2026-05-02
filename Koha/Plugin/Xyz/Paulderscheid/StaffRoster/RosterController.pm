@@ -109,8 +109,8 @@ sub get_week {
 
         my $assignments = $dbh->selectall_arrayref(
             q{
-            SELECT a.id, a.slot_id, a.borrowernumber, a.assignment_date, a.status,
-                   a.notes, a.assigned_by, a.updated_at,
+            SELECT a.id, a.slot_id, a.borrowernumber AS patron_id, a.assignment_date,
+                   a.status, a.notes, a.assigned_by, a.updated_at,
                    p.firstname, p.surname, p.cardnumber
             FROM staff_roster_assignments a
             JOIN staff_roster_slots s ON a.slot_id = s.id

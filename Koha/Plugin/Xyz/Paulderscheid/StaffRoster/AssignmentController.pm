@@ -28,6 +28,27 @@ use Try::Tiny qw( catch try );
 
 use Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
 
+# JSON wire format uses Koha terminology: patron_id rather than the internal
+# borrowernumber column name. _from_body / _to_response map between the two
+# so handler bodies + response renderers don't have to think about it.
+sub _from_body {
+    my ($body) = @_;
+    return $body if !ref $body || ref $body ne 'HASH';
+    my %out = %{$body};
+    $out{borrowernumber} = delete $out{patron_id}
+        if exists $out{patron_id} && !exists $out{borrowernumber};
+    return \%out;
+}
+
+sub _to_response {
+    my ($row) = @_;
+    return $row if !ref $row || ref $row ne 'HASH';
+    my %out = %{$row};
+    $out{patron_id} = delete $out{borrowernumber}
+        if exists $out{borrowernumber};
+    return \%out;
+}
+
 =head1 API
 
 =head2 Methods
@@ -47,12 +68,12 @@ sub create {
             return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
         }
 
-        my $body = $c->req->json // {};
+        my $body = _from_body( $c->req->json // {} );
         my ( $slot_id, $borrowernumber, $date ) = @{$body}{qw( slot_id borrowernumber assignment_date )};
 
         if ( !$slot_id || !$borrowernumber || !$date ) {
             return $c->render( status => 400,
-                openapi => { error => 'slot_id, borrowernumber, assignment_date required' } );
+                openapi => { error => 'slot_id, patron_id, assignment_date required' } );
         }
 
         my $dbh = C4::Context->dbh;
@@ -88,7 +109,7 @@ sub create {
             { entity => 'assignment', %{$after} },
             $after,
         );
-        return $c->render( status => 201, openapi => $after );
+        return $c->render( status => 201, openapi => _to_response($after) );
     }
     catch {
         $c->unhandled_exception($_);
@@ -110,7 +131,7 @@ sub update {
         }
 
         my $id   = $c->validation->param('assignment_id');
-        my $body = $c->req->json // {};
+        my $body = _from_body( $c->req->json // {} );
         my $dbh  = C4::Context->dbh;
 
         my $current = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_assignments WHERE id = ?}, undef, $id );
@@ -163,7 +184,7 @@ sub update {
             $current,
         );
 
-        return $c->render( status => 200, openapi => $after );
+        return $c->render( status => 200, openapi => _to_response($after) );
     }
     catch {
         $c->unhandled_exception($_);
@@ -239,7 +260,7 @@ sub bulk {
         }
 
         if ( $op eq 'move' ) {
-            my $target = $body->{target} // {};
+            my $target = _from_body( $body->{target} // {} );
             if ( !%{$target} ) {
                 return $c->render( status => 400, openapi => { error => 'target required for move' } );
             }
@@ -248,7 +269,7 @@ sub bulk {
                 qw( slot_id borrowernumber assignment_date );
             if ( !@set_fields ) {
                 return $c->render( status => 400,
-                    openapi => { error => 'target must include slot_id, borrowernumber, or assignment_date' } );
+                    openapi => { error => 'target must include slot_id, patron_id, or assignment_date' } );
             }
             my $set_sql    = join q{, }, ( map { "$_ = ?" } @set_fields ), 'updated_at = NOW()';
             my @set_params = map { $target->{$_} } @set_fields;
@@ -390,7 +411,7 @@ sub self_create {
             { entity => 'assignment', %{$after} },
             $after,
         );
-        return $c->render( status => 201, openapi => $after );
+        return $c->render( status => 201, openapi => _to_response($after) );
     }
     catch {
         $c->unhandled_exception($_);

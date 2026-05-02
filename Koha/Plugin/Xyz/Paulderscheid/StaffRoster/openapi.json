@@ -16,7 +16,7 @@
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
                             },
-                            "borrowernumber": {
+                            "patron_id": {
                                 "type": "integer"
                             },
                             "notes": {
@@ -38,7 +38,7 @@
                         },
                         "required": [
                             "slot_id",
-                            "borrowernumber",
+                            "patron_id",
                             "assignment_date"
                         ],
                         "type": "object"
@@ -149,7 +149,7 @@
                                         "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                         "type": "string"
                                     },
-                                    "borrowernumber": {
+                                    "patron_id": {
                                         "type": "integer"
                                     },
                                     "slot_id": {
@@ -352,7 +352,7 @@
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "type": "string"
                             },
-                            "borrowernumber": {
+                            "patron_id": {
                                 "type": "integer"
                             },
                             "notes": {

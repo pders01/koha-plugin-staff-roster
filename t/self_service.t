@@ -194,7 +194,7 @@ subtest 'kill-switch: setting off returns 403' => sub {
     $plugin->store_data( { staff_can_self_assign => '1' } );  # restore
 };
 
-subtest 'body borrowernumber is ignored — session wins' => sub {
+subtest 'body patron_id is ignored — session wins' => sub {
     clean_slot_date();
     my ($other_bn) = $dbh->selectrow_array(
         q{SELECT borrowernumber FROM borrowers WHERE borrowernumber != ? LIMIT 1},
@@ -202,14 +202,14 @@ subtest 'body borrowernumber is ignored — session wins' => sub {
     );
 SKIP: {
         skip 'only one borrower available', 1 if !$other_bn;
-        my $res = call_self_create( json => { borrowernumber => $other_bn } );
+        my $res = call_self_create( json => { patron_id => $other_bn } );
         is( $res->{status}, 201, 'created' );
         my ($stored) = $dbh->selectrow_array(
             q{SELECT borrowernumber FROM staff_roster_assignments
               WHERE slot_id = ? AND assignment_date = ?},
             undef, $slot_id, $test_date,
         );
-        is( $stored, $test_bn, 'session borrower wins, body value ignored' );
+        is( $stored, $test_bn, 'session borrower wins, body patron_id ignored' );
     }
 };
 

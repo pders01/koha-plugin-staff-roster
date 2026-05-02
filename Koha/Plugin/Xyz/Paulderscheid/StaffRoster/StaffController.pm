@@ -102,7 +102,8 @@ sub available {
         }
 
         my $sql = q{
-            SELECT p.borrowernumber, p.firstname, p.surname, p.cardnumber, p.branchcode
+            SELECT p.borrowernumber AS patron_id,
+                   p.firstname, p.surname, p.cardnumber, p.branchcode
             FROM borrowers p
             JOIN categories c ON p.categorycode = c.categorycode
             WHERE 1=1

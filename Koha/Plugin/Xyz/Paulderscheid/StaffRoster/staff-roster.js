@@ -1599,7 +1599,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 				try {
 					let r = await Tt({
 						slot_id: e.id,
-						borrowernumber: n.borrowernumber,
+						patron_id: n.patron_id,
 						assignment_date: t
 					});
 					await this.pushUndo({
@@ -1621,7 +1621,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 						id: n.id,
 						before: {
 							slot_id: n.slot_id,
-							borrowernumber: n.borrowernumber,
+							patron_id: n.patron_id,
 							assignment_date: n.assignment_date
 						}
 					}), await this.refresh();
@@ -1684,7 +1684,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 				kind: "delete",
 				payload: {
 					slot_id: e.slot_id,
-					borrowernumber: e.borrowernumber,
+					patron_id: e.patron_id,
 					assignment_date: e.assignment_date,
 					status: e.status,
 					notes: e.notes ?? void 0
@@ -1900,8 +1900,8 @@ var Vt = 5e3, Ht = 10, Ut = [
             role="listbox"
             aria-labelledby="srg-staff-list-label"
           >
-            ${Qe(this.available, (e) => e.borrowernumber, (e, t) => {
-			let n = this.pickedUp?.kind === "staff" && this.pickedUp.staff.borrowernumber === e.borrowernumber;
+            ${Qe(this.available, (e) => e.patron_id, (e, t) => {
+			let n = this.pickedUp?.kind === "staff" && this.pickedUp.staff.patron_id === e.patron_id;
 			return S`
                   <li
                     class="list-group-item srg-staff-pill ${n ? "srg-picked-up" : ""}"
@@ -1915,7 +1915,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 				this.dragging = {
 					kind: "staff",
 					staff: e
-				}, t.dataTransfer?.setData("text/plain", String(e.borrowernumber));
+				}, t.dataTransfer?.setData("text/plain", String(e.patron_id));
 			}}
                     @keydown=${(n) => this.onPillKeyDown(n, e, t)}
                     @focus=${() => this.focusedPillIdx = t}

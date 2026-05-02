@@ -8,18 +8,7 @@ _Empty — pick the next batch._
 
 ## Next (single-feature batches)
 
-- [ ] **HTML2 + i18n: cron reminder email via Koha letter template**.
-      `cronjob_nightly` builds the email title + body in Perl with
-      hardcoded English prose, so it never reaches the gettext pipeline
-      and admins can't customise it. Migrate to
-      `C4::Letters::GetPreparedLetter` against a registered notice
-      template (module='STAFFROSTER', code='REMINDER') seeded on
-      install. Folds into the i18n Phase 2 work but ships standalone.
-- [ ] **TERM1: rename JSON `borrowernumber` → `patron_id` in the REST
-      surface**. AssignmentController sites (lines 32, 61, 117, 290+,
-      360+) plus the Lit + TT consumers. Breaks the API contract, so
-      either gate behind a settings hook or coordinate a single
-      switchover commit with the frontend.
+_Empty — pick the next batch._
 
 ## Phase 2 (planned features, each its own work block)
 
@@ -85,6 +74,21 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **TERM1 rename: JSON `borrowernumber` → `patron_id`**. Boundary
+      mappers (`_from_body`, `_to_response`) in AssignmentController;
+      `borrowernumber AS patron_id` aliases in StaffController +
+      RosterController SELECTs; openapi.json + Lit types + grid
+      consumers + bundle all updated. DB columns + Perl variables
+      keep their internal names. Swap-workflow TT untouched (CGI form
+      params, not JSON). Self-service test renamed accordingly.
+- [x] **HTML2: cron reminder via Koha letter template**.
+      `_register_notice_templates` seeds module='STAFFROSTER',
+      code='REMINDER' on install + upgrade (INSERT IGNORE keeps
+      admin edits). `cronjob_nightly` fetches via
+      `C4::Letters::GetPreparedLetter` with a substitute hash;
+      missing template logs `NOTICE_FAILED`. Uninstall drops the
+      letter rows alongside permissions. Substitution verified
+      end-to-end against kohadev.
 - [x] **Backend Perl review against KOHA_CODING_GUIDELINES**:
       6 commits landed on 2026-05-02 covering the high-priority
       findings from the four parallel reviewer agents.

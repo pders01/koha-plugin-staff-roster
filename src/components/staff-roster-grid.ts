@@ -35,8 +35,8 @@ type Cargo =
 
 type UndoOp =
   | { kind: "create"; id: number }
-  | { kind: "delete"; payload: { slot_id: number; borrowernumber: number; assignment_date: string; status: string; notes?: string } }
-  | { kind: "update"; id: number; before: Pick<Assignment, "slot_id" | "borrowernumber" | "assignment_date"> };
+  | { kind: "delete"; payload: { slot_id: number; patron_id: number; assignment_date: string; status: string; notes?: string } }
+  | { kind: "update"; id: number; before: Pick<Assignment, "slot_id" | "patron_id" | "assignment_date"> };
 
 @customElement("staff-roster-grid")
 export class StaffRosterGrid extends LitElement {
@@ -292,7 +292,7 @@ export class StaffRosterGrid extends LitElement {
       try {
         const created = await createAssignment({
           slot_id: slot.id,
-          borrowernumber: staff.borrowernumber,
+          patron_id: staff.patron_id,
           assignment_date: date,
         });
         await this.pushUndo({ kind: "create", id: created.id });
@@ -308,7 +308,7 @@ export class StaffRosterGrid extends LitElement {
         await this.pushUndo({
           kind: "update",
           id: a.id,
-          before: { slot_id: a.slot_id, borrowernumber: a.borrowernumber, assignment_date: a.assignment_date },
+          before: { slot_id: a.slot_id, patron_id: a.patron_id, assignment_date: a.assignment_date },
         });
         await this.refresh();
       } catch (err) {
@@ -397,7 +397,7 @@ export class StaffRosterGrid extends LitElement {
         kind: "delete",
         payload: {
           slot_id: a.slot_id,
-          borrowernumber: a.borrowernumber,
+          patron_id: a.patron_id,
           assignment_date: a.assignment_date,
           status: a.status,
           notes: a.notes ?? undefined,
@@ -713,11 +713,11 @@ export class StaffRosterGrid extends LitElement {
           >
             ${repeat(
               this.available,
-              (s) => s.borrowernumber,
+              (s) => s.patron_id,
               (s, i) => {
                 const isPicked =
                   this.pickedUp?.kind === "staff" &&
-                  this.pickedUp.staff.borrowernumber === s.borrowernumber;
+                  this.pickedUp.staff.patron_id === s.patron_id;
                 return html`
                   <li
                     class="list-group-item srg-staff-pill ${isPicked ? "srg-picked-up" : ""}"
@@ -729,7 +729,7 @@ export class StaffRosterGrid extends LitElement {
                     draggable="true"
                     @dragstart=${(e: DragEvent) => {
                       this.dragging = { kind: "staff", staff: s };
-                      e.dataTransfer?.setData("text/plain", String(s.borrowernumber));
+                      e.dataTransfer?.setData("text/plain", String(s.patron_id));
                     }}
                     @keydown=${(e: KeyboardEvent) => this.onPillKeyDown(e, s, i)}
                     @focus=${() => (this.focusedPillIdx = i)}
