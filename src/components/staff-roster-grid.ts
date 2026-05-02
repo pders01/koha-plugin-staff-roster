@@ -19,6 +19,7 @@ import { renderToasts } from "./shared/toasts.js";
 import { renderModalShell } from "./shared/modal.js";
 import { EscapeController } from "./shared/escape-controller.js";
 import { __ } from "../i18n/index.js";
+import { STATUS_LABELS } from "../labels.js";
 
 const POLL_MS = 5000;
 const UNDO_LIMIT = 10;
@@ -28,13 +29,6 @@ const FULL_DAYS = () => [
   __("Monday"), __("Tuesday"), __("Wednesday"), __("Thursday"),
   __("Friday"), __("Saturday"), __("Sunday"),
 ];
-const STATUS_LABELS = (): Record<Assignment["status"], string> => ({
-  scheduled: __("Scheduled"),
-  confirmed: __("Confirmed"),
-  completed: __("Completed"),
-  cancelled: __("Cancelled"),
-  no_show: __("No-show"),
-});
 
 // iCal BYDAY codes per Monday-anchored column index.
 const ICAL_FOR_COLUMN = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
@@ -684,6 +678,10 @@ export class StaffRosterGrid extends LitElement {
     const color = this.week.roster.type_color;
     const slotsByTime = this.sortedSlots();
     const pickupActive = this.pickedUp !== null;
+    // Bind once per render so the inner cell loop doesn't re-run __()
+    // (and re-allocate the 7-element / 5-key maps) for every assignment.
+    const days = DAYS();
+    const statusLabels = STATUS_LABELS();
 
     return html`
       <div class="srg-sr-only" aria-live="polite" aria-atomic="true">${this.liveMessage}</div>
@@ -774,7 +772,7 @@ export class StaffRosterGrid extends LitElement {
             <thead>
               <tr role="row" aria-rowindex="1">
                 <th class="srg-slot-col" role="columnheader" aria-colindex="1">${__("Slot")}</th>
-                ${DAYS().map(
+                ${days.map(
                   (d, i) => html`
                     <th role="columnheader" aria-colindex=${i + 2}>
                       <span class="srg-day">${d}</span>
@@ -811,7 +809,7 @@ export class StaffRosterGrid extends LitElement {
                         ? html`<small class="text-muted d-block">${slot.location}</small>`
                         : nothing}
                     </th>
-                    ${DAYS().map((_, day) => {
+                    ${days.map((_, day) => {
                       const date = this.cellDate(day);
                       const applies = this.cellApplies(slot, day);
                       const isException = this.exceptionFor(date);
@@ -882,8 +880,8 @@ export class StaffRosterGrid extends LitElement {
                                   role="button"
                                   tabindex="0"
                                   draggable="true"
-                                  aria-label="${a.firstname} ${a.surname}, ${STATUS_LABELS()[a.status]}. ${__("Press Enter to move, Delete to remove. Click to edit.")}"
-                                  title="${a.firstname} ${a.surname} (${STATUS_LABELS()[a.status]}). ${__("Click to edit.")}"
+                                  aria-label="${a.firstname} ${a.surname}, ${statusLabels[a.status]}. ${__("Press Enter to move, Delete to remove. Click to edit.")}"
+                                  title="${a.firstname} ${a.surname} (${statusLabels[a.status]}). ${__("Click to edit.")}"
                                   @dragstart=${(e: DragEvent) => {
                                     this.dragging = { kind: "assignment", assignment: a };
                                     e.dataTransfer?.setData("text/plain", String(a.id));

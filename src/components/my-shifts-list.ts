@@ -14,14 +14,7 @@ import { renderModalShell } from "./shared/modal.js";
 import { groupByDate, renderDayGroups } from "./shared/day-groups.js";
 import { EscapeController } from "./shared/escape-controller.js";
 import { __ } from "../i18n/index.js";
-
-const STATUS_LABELS = (): Record<MyShift["status"], string> => ({
-  scheduled: __("Scheduled"),
-  confirmed: __("Confirmed"),
-  completed: __("Completed"),
-  cancelled: __("Cancelled"),
-  no_show: __("No-show"),
-});
+import { STATUS_LABELS } from "../labels.js";
 
 @customElement("my-shifts-list")
 export class MyShiftsList extends LitElement {
