@@ -104,6 +104,15 @@ Both items below need an external decision before any code lands.
 
 ## Done (recent — older entries pruned 2026-05-02)
 
+- [x] **Cypress coverage for the self-service flow**:
+      `cypress/integration/staffroster/self_service_spec.ts` walks the
+      borrower-facing claim/drop loop end to end (7 subtests): claim
+      surfaces in `/me/week`, slot drops out of `/me/open_slots`,
+      feature-flag 403, self-unclaim removal, duplicate 409, calendar
+      closure 409, self-unclaim lockout 403. The lockout subtest
+      hits `plugin_data` directly to set `self_unclaim_lockout_hours`,
+      and the closure subtest reuses the `flushHolidayCache` helper
+      from get_week. Cypress count: 13.
 - [x] **`@jpahd/lit-stack` published to npm**: `0.1.0-alpha.0`.
       package.json now references the registry version instead of
       the `file:..` path. Plugin is now installable from a fresh
