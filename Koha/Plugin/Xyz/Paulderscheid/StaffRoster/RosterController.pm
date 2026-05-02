@@ -24,8 +24,12 @@ sub get_week {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $roster_id  = $c->validation->param('roster_id');
-        my $week_start = $c->req->param('start') // _current_week_start();
+        my $roster_id     = $c->validation->param('roster_id');
+        my $start_param   = $c->req->param('start');
+        my $week_start
+            = ( defined $start_param && $start_param =~ /\A\d{4}-\d{2}-\d{2}\z/ )
+            ? $start_param
+            : _current_week_start();
 
         my $dbh = C4::Context->dbh;
 
@@ -184,10 +188,8 @@ sub get_week {
 }
 
 sub _current_week_start {
-    my @t                 = localtime;
-    my $days_since_monday = ( $t[6] + 6 ) % 7;
-    my @m                 = localtime( time - $days_since_monday * 86400 );
-    return sprintf '%04d-%02d-%02d', $m[5] + 1900, $m[4] + 1, $m[3];
+    require Koha::DateUtils;
+    return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
 }
 
 1;

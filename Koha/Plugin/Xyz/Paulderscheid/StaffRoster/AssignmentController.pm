@@ -229,20 +229,58 @@ sub bulk {
                 return $c->render( status => 400, openapi => { error => 'target required for move' } );
             }
 
-            my @sets;
-            my @params;
-            for my $field (qw( slot_id borrowernumber assignment_date )) {
-                next if !exists $target->{$field};
-                push @sets,   "$field = ?";
-                push @params, $target->{$field};
+            my @set_fields = grep { exists $target->{$_} }
+                qw( slot_id borrowernumber assignment_date );
+            if ( !@set_fields ) {
+                return $c->render( status => 400,
+                    openapi => { error => 'target must include slot_id, borrowernumber, or assignment_date' } );
             }
-            push @sets, 'updated_at = NOW()';
+            my $set_sql    = join q{, }, ( map { "$_ = ?" } @set_fields ), 'updated_at = NOW()';
+            my @set_params = map { $target->{$_} } @set_fields;
 
-            my $sql
-                = sprintf 'UPDATE staff_roster_assignments SET %s WHERE id IN (%s)',
-                join( q{, }, @sets ), $placeholders;
+            # Pre-flight every id under one transaction. Fail on first
+            # conflict to keep semantics consistent with the single-row
+            # update endpoint — partial bulk moves were the original bug.
+            $dbh->begin_work;
+            my $error;
+            for my $id ( @{$ids} ) {
+                my $current = $dbh->selectrow_hashref(
+                    q{SELECT * FROM staff_roster_assignments WHERE id = ?},
+                    undef, $id,
+                );
+                if ( !$current ) {
+                    $error = { status => 404, body => { error => "assignment $id not found", id => $id + 0 } };
+                    last;
+                }
 
-            $dbh->do( $sql, undef, @params, @{$ids} );
+                my %merged = ( %{$current}, %{$target} );
+
+                my $gate = _gate_slot( $dbh, $merged{slot_id}, $merged{assignment_date} );
+                if ( $gate->{error} ) {
+                    $error = { status => $gate->{status}, body => { error => $gate->{error}, id => $id + 0 } };
+                    last;
+                }
+
+                my $conflict = _conflict_check(
+                    $dbh, $merged{slot_id}, $merged{borrowernumber}, $merged{assignment_date}, $id,
+                );
+                if ($conflict) {
+                    $error = { status => 409, body => { error => $conflict, id => $id + 0 } };
+                    last;
+                }
+
+                $dbh->do(
+                    "UPDATE staff_roster_assignments SET $set_sql WHERE id = ?",
+                    undef, @set_params, $id,
+                );
+            }
+
+            if ($error) {
+                $dbh->rollback;
+                return $c->render( status => $error->{status}, openapi => $error->{body} );
+            }
+            $dbh->commit;
+
             require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
             Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(
                 'MODIFY', undef,

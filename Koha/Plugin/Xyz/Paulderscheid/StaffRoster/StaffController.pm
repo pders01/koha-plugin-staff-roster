@@ -223,7 +223,7 @@ sub me_week {
         }
         my $borrowernumber = $user->borrowernumber;
 
-        my $week_start = $c->req->param('start') // _current_week_start();
+        my $week_start = _validated_week_start( $c->req->param('start') );
 
         my $dbh    = C4::Context->dbh;
         my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
@@ -335,7 +335,7 @@ sub me_open_slots {
         }
         my $borrowernumber = $user->borrowernumber;
 
-        my $week_start = $c->req->param('start') // _current_week_start();
+        my $week_start = _validated_week_start( $c->req->param('start') );
 
         my $plugin = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
         if ( !$plugin->retrieve_data('staff_can_self_assign') ) {
@@ -481,10 +481,15 @@ sub me_open_slots {
 }
 
 sub _current_week_start {
-    my @t                 = localtime;
-    my $days_since_monday = ( $t[6] + 6 ) % 7;
-    my @m                 = localtime( time - $days_since_monday * 86400 );
-    return sprintf '%04d-%02d-%02d', $m[5] + 1900, $m[4] + 1, $m[3];
+    require Koha::DateUtils;
+    return Koha::DateUtils::dt_from_string()->truncate( to => 'week' )->ymd;
+}
+
+sub _validated_week_start {
+    my ($input) = @_;
+    return _current_week_start()
+        unless defined $input && $input =~ /\A\d{4}-\d{2}-\d{2}\z/;
+    return $input;
 }
 
 1;
