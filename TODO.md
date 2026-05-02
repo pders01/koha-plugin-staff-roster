@@ -27,13 +27,6 @@ _Empty — pick the next batch._
 
 ## Hardening follow-ups (from cross-codebase review 2026-05-02)
 
-- [ ] **Lit grid poll/drag race**: pause `pollTimer` while a mutation is
-      in flight, or discard poll results that resolve while
-      `this.dragging` is non-null. Today a fast drag during a poll can
-      double-fire.
-- [ ] **Edit modal first-focus**: `pendingFocusModal` lands on the
-      Cancel button; for the edit modal it should target the first form
-      control (status select). Delete modal current behaviour is fine.
 - [ ] **Breadcrumbs include re-take**: `_breadcrumbs.inc` extraction
       reverted — Koha core's `breadcrumbs` / `breadcrumb_item` BLOCKs
       (in `html_helpers.inc`) didn't resolve from inside an INCLUDE'd
@@ -53,9 +46,6 @@ _Empty — pick the next batch._
 - [ ] Force-push origin once we're ready to publish. Origin is still at
       the original POC commit; main now has 100+ commits including the
       scaffold reset.
-- [ ] Decide on `templates/env` and `templates/hooks/after_password_action.pl`
-      (untracked, predate the scaffold reset). Either delete or upstream
-      them to the koha-plugin scaffold repo.
 - [ ] Pin Lit / vite versions compatible with the Koha versions we
       support. Currently `^3.3.2` etc — minor bumps could break.
 
@@ -74,6 +64,18 @@ _Empty — pick the next batch._
 
 ## Done (recent — prune periodically)
 
+- [x] **Lit grid hardening duo**: `refresh()` now drops the response
+      when `this.dragging` is set so a mid-flight poll can't replace
+      the chip the user is holding; `pendingFocusModal` selector
+      forks on `this.editing` so the edit modal lands on
+      `#srg-edit-status` (delete modal stays on Cancel).
+- [x] **Stale scaffold templates**: `templates/env` (dead `env`
+      format, replaced by `koha-plugin.yml`) and
+      `templates/hooks/after_password_action.pl` (forward-compat
+      placeholder for a non-existent Koha hook) deleted from the
+      working tree. Both were untracked, so nothing to commit; if
+      either ever needs to live anywhere, the scaffold repo
+      (`../koha-plugin/templates/hooks/`) is the right home.
 - [x] **TERM1 rename: JSON `borrowernumber` → `patron_id`**. Boundary
       mappers (`_from_body`, `_to_response`) in AssignmentController;
       `borrowernumber AS patron_id` aliases in StaffController +

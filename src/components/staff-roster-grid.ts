@@ -134,6 +134,10 @@ export class StaffRosterGrid extends LitElement {
       }
 
       const next = await fetchWeek(this.rosterId, this.weekStart);
+      // A drag started after the fetch went out: applying the response
+      // would replace this.week (and thus the chip the user is holding)
+      // mid-flight. Drop the result; the next poll picks it up.
+      if (this.dragging) return;
       this.week = next;
       this.error = "";
 
@@ -654,9 +658,13 @@ export class StaffRosterGrid extends LitElement {
       this.pendingFocusPillIdx = null;
     }
     if (this.pendingFocusModal) {
-      const el = this.querySelector(
-        ".staff-roster-modal-open .modal-footer .btn-default",
-      ) as HTMLElement | null;
+      // Edit modal: land on the status select so keyboard users can
+      // change the field they came to change. Delete modal stays on
+      // Cancel — that's the safe default for a destructive prompt.
+      const selector = this.editing
+        ? "#srg-edit-status"
+        : ".staff-roster-modal-open .modal-footer .btn-default";
+      const el = this.querySelector(selector) as HTMLElement | null;
       if (el) el.focus();
       this.pendingFocusModal = false;
     }

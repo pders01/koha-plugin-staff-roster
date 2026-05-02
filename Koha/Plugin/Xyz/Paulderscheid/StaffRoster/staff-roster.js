@@ -1505,6 +1505,7 @@ var Vt = 5e3, Ht = 10, Ut = [
 			let e = /* @__PURE__ */ new Map(), t = /* @__PURE__ */ new Set();
 			for (let n of this.week?.assignments ?? []) e.set(this.assignmentKey(n), n.updated_at), t.add(n.id);
 			let n = await wt(this.rosterId, this.weekStart);
+			if (this.dragging) return;
 			if (this.week = n, this.error = "", t.size > 0) {
 				let t = /* @__PURE__ */ new Set();
 				for (let r of n.assignments) {
@@ -1851,8 +1852,8 @@ var Vt = 5e3, Ht = 10, Ut = [
 			t && t.focus(), this.pendingFocusPillIdx = null;
 		}
 		if (this.pendingFocusModal) {
-			let e = this.querySelector(".staff-roster-modal-open .modal-footer .btn-default");
-			e && e.focus(), this.pendingFocusModal = !1;
+			let e = this.editing ? "#srg-edit-status" : ".staff-roster-modal-open .modal-footer .btn-default", t = this.querySelector(e);
+			t && t.focus(), this.pendingFocusModal = !1;
 		}
 	}
 	render() {
