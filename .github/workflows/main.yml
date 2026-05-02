@@ -6,6 +6,10 @@ on:
     tags: ['v*']
   pull_request:
     branches: [main]
+  # Manual fire from the Actions tab. release job stays gated on
+  # refs/tags/v*, so dispatch only re-runs build + prove without
+  # publishing a duplicate Release.
+  workflow_dispatch:
 
 jobs:
   build:
