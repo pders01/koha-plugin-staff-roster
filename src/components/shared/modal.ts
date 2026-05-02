@@ -1,4 +1,5 @@
 import { html, type TemplateResult } from "lit";
+import { __ } from "../../i18n/index.js";
 
 export type ModalShellOpts = {
   title: string;
@@ -36,7 +37,7 @@ export function renderModalShell(opts: ModalShellOpts): TemplateResult {
             <button
               type="button"
               class="btn-close"
-              aria-label="Close"
+              aria-label="${__("Close")}"
               @click=${onCancel}
             ></button>
           </div>

@@ -1196,154 +1196,7 @@ var wt = class {
 			}
 		});
 	}
-}, G = "/api/v1/contrib/staffroster", K = new wt(G, {
-	get: {
-		rosterWeek: {
-			url: `${G}/rosters`,
-			ignoreCache: !0
-		},
-		availableStaff: {
-			url: `${G}/staff/available`,
-			ignoreCache: !0
-		},
-		myWeek: {
-			url: `${G}/me/week`,
-			ignoreCache: !0
-		},
-		myOpenSlots: {
-			url: `${G}/me/open_slots`,
-			ignoreCache: !0
-		}
-	},
-	post: {
-		assignments: {
-			url: `${G}/assignments`,
-			ignoreCache: !0
-		},
-		bulk: {
-			url: `${G}/assignments/bulk`,
-			ignoreCache: !0
-		},
-		selfClaim: {
-			url: `${G}/me/claim`,
-			ignoreCache: !0
-		}
-	},
-	put: { assignments: {
-		url: `${G}/assignments`,
-		ignoreCache: !0
-	} },
-	delete: {
-		assignments: {
-			url: `${G}/assignments`,
-			ignoreCache: !0
-		},
-		selfClaim: {
-			url: `${G}/me/claim`,
-			ignoreCache: !0
-		}
-	}
-});
-async function q(e) {
-	if (!e.ok) {
-		let t = await e.json().catch(() => ({})), n = Error(t.error ?? `HTTP ${e.status}`);
-		throw n.status = e.status, n;
-	}
-	if (e.status !== 204) return await e.json();
-}
-async function Tt(e, t) {
-	return q(await K.get({
-		endpoint: "rosterWeek",
-		path: [String(e), "week"],
-		query: { start: t }
-	}));
-}
-async function Et(e) {
-	return q(await K.post({
-		endpoint: "assignments",
-		requestInit: {
-			method: "post",
-			body: JSON.stringify(e)
-		}
-	}));
-}
-async function Dt(e, t) {
-	return q(await K.put({
-		endpoint: "assignments",
-		path: [String(e)],
-		requestInit: {
-			method: "put",
-			body: JSON.stringify(t)
-		}
-	}));
-}
-async function Ot(e) {
-	await q(await K.delete({
-		endpoint: "assignments",
-		path: [String(e)]
-	}));
-}
-async function kt(e) {
-	return q(await K.get({
-		endpoint: "myWeek",
-		query: { start: e }
-	}));
-}
-async function At(e) {
-	return q(await K.get({
-		endpoint: "myOpenSlots",
-		query: { start: e }
-	}));
-}
-async function jt(e) {
-	return q(await K.post({
-		endpoint: "selfClaim",
-		requestInit: {
-			method: "post",
-			body: JSON.stringify(e)
-		}
-	}));
-}
-async function Mt(e) {
-	await q(await K.delete({
-		endpoint: "selfClaim",
-		path: [String(e)]
-	}));
-}
-async function Nt(e) {
-	let t = { date: e.date };
-	return e.slot_id && (t.slot_id = String(e.slot_id)), e.branch && (t.branch = e.branch), e.q && (t.q = e.q), q(await K.get({
-		endpoint: "availableStaff",
-		query: t
-	}));
-}
-//#endregion
-//#region src/util.ts
-function Pt(e) {
-	let t = (e.getDay() + 6) % 7, n = new Date(e);
-	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);
-}
-function Ft() {
-	return new URLSearchParams(window.location.search).get("class") ?? "";
-}
-function It(e, t) {
-	let n = new Date(e);
-	return n.setDate(n.getDate() + t), n.toISOString().slice(0, 10);
-}
-function Lt() {
-	return typeof document < "u" && document.documentElement.lang || "en";
-}
-function Rt(e) {
-	let t = /* @__PURE__ */ new Date(e + "T00:00:00");
-	return new Intl.DateTimeFormat(Lt(), {
-		weekday: "long",
-		month: "short",
-		day: "numeric"
-	}).format(t);
-}
-//#endregion
-//#region src/i18n/index.ts
-var zt = { de: {
+}, Tt = { de: {
 	"Staff Roster": "Dienstplan",
 	"No rosters yet.": "Noch keine Dienstpläne.",
 	Plugins: "Plugins",
@@ -1517,10 +1370,30 @@ var zt = { de: {
 	"That shift doesn't belong to this roster.": "Diese Schicht gehört nicht zu diesem Dienstplan.",
 	"Pick approve or reject.": "Wählen Sie genehmigen oder ablehnen.",
 	"That swap is no longer pending.": "Dieser Tausch ist nicht mehr ausstehend.",
+	"The swap could not be completed (database error). Try again or check the server logs.": "Der Tausch konnte nicht abgeschlossen werden (Datenbankfehler). Versuchen Sie es erneut oder prüfen Sie die Server-Logs.",
 	"Manager approval is required for this swap.": "Für diesen Tausch ist eine Manager-Genehmigung erforderlich.",
 	"You don't have permission to act on this swap.": "Sie sind nicht berechtigt, auf diesen Tausch zu reagieren.",
 	"Location \"VAL\" is not in authorised value category \"CAT\". Pick a value from the list.": "Standort \"VAL\" ist nicht in der normierten Wertekategorie \"CAT\". Wählen Sie einen Wert aus der Liste.",
 	"You are not authorized to view that roster.": "Sie sind nicht berechtigt, diesen Dienstplan anzusehen.",
+	"Assignment not found": "Zuweisung nicht gefunden",
+	"Authentication required": "Anmeldung erforderlich",
+	"Date is closed per Koha calendar": "Datum laut Koha-Kalender geschlossen",
+	"Date is closed": "Datum geschlossen",
+	"date is required": "Datum ist erforderlich",
+	"ids must be a non-empty array": "ids muss ein nicht-leeres Array sein",
+	"Not authorized for this roster": "Keine Berechtigung für diesen Dienstplan",
+	"Not your assignment": "Nicht Ihre Zuweisung",
+	"Roster not found": "Dienstplan nicht gefunden",
+	"Self-service is disabled": "Selbstbedienung ist deaktiviert",
+	"Slot or roster not found": "Zeitfenster oder Dienstplan nicht gefunden",
+	"slot_id and assignment_date required": "slot_id und assignment_date erforderlich",
+	"slot_id, patron_id, assignment_date required": "slot_id, patron_id, assignment_date erforderlich",
+	"staffroster_assign permission required": "Berechtigung staffroster_assign erforderlich",
+	"staffroster_self_assign permission required": "Berechtigung staffroster_self_assign erforderlich",
+	"staffroster_view permission required": "Berechtigung staffroster_view erforderlich",
+	"target must include slot_id, patron_id, or assignment_date": "Ziel muss slot_id, patron_id oder assignment_date enthalten",
+	"target required for move": "Ziel für Verschieben erforderlich",
+	"Staff already assigned to overlapping slot that day": "Personal bereits einer überlappenden Schicht an diesem Tag zugewiesen",
 	"Staff rosters": "Dienstpläne",
 	"No rosters found.": "Keine Dienstpläne gefunden.",
 	"Create your first roster": "Erstellen Sie Ihren ersten Dienstplan",
@@ -1598,6 +1471,10 @@ var zt = { de: {
 	Reason: "Grund",
 	"Optional note shown alongside the exception in the schedule.": "Optionale Notiz, die neben der Ausnahme im Plan angezeigt wird.",
 	"Save exception": "Ausnahme speichern",
+	Closed: "Geschlossen",
+	Holiday: "Feiertag",
+	"Special event": "Sonderveranstaltung",
+	"Reduced hours": "Reduzierte Öffnungszeiten",
 	"Edit exception": "Ausnahme bearbeiten",
 	"Delete exception for DATE?": "Ausnahme für DATE löschen?",
 	"No exceptions defined. Use Add exception to create one.": "Keine Ausnahmen definiert. Verwenden Sie 'Ausnahme hinzufügen', um eine zu erstellen.",
@@ -1698,12 +1575,159 @@ var zt = { de: {
 	open: "offen",
 	"Claiming…": "Wird übernommen…"
 } };
-function Bt() {
+function Et() {
 	return (typeof document < "u" && document.documentElement.lang || "en").toLowerCase().split(/[-_]/)[0] ?? "en";
 }
-var Vt = zt[Bt()] ?? {};
-function J(e) {
-	return Vt[e] ?? e;
+var Dt = Tt[Et()] ?? {};
+function G(e) {
+	return Dt[e] ?? e;
+}
+//#endregion
+//#region src/api.ts
+var K = "/api/v1/contrib/staffroster", q = new wt(K, {
+	get: {
+		rosterWeek: {
+			url: `${K}/rosters`,
+			ignoreCache: !0
+		},
+		availableStaff: {
+			url: `${K}/staff/available`,
+			ignoreCache: !0
+		},
+		myWeek: {
+			url: `${K}/me/week`,
+			ignoreCache: !0
+		},
+		myOpenSlots: {
+			url: `${K}/me/open_slots`,
+			ignoreCache: !0
+		}
+	},
+	post: {
+		assignments: {
+			url: `${K}/assignments`,
+			ignoreCache: !0
+		},
+		bulk: {
+			url: `${K}/assignments/bulk`,
+			ignoreCache: !0
+		},
+		selfClaim: {
+			url: `${K}/me/claim`,
+			ignoreCache: !0
+		}
+	},
+	put: { assignments: {
+		url: `${K}/assignments`,
+		ignoreCache: !0
+	} },
+	delete: {
+		assignments: {
+			url: `${K}/assignments`,
+			ignoreCache: !0
+		},
+		selfClaim: {
+			url: `${K}/me/claim`,
+			ignoreCache: !0
+		}
+	}
+});
+async function J(e) {
+	if (!e.ok) {
+		let t = (await e.json().catch(() => ({}))).error ?? `HTTP ${e.status}`, n = Error(G(t));
+		throw n.status = e.status, n;
+	}
+	if (e.status !== 204) return await e.json();
+}
+async function Ot(e, t) {
+	return J(await q.get({
+		endpoint: "rosterWeek",
+		path: [String(e), "week"],
+		query: { start: t }
+	}));
+}
+async function kt(e) {
+	return J(await q.post({
+		endpoint: "assignments",
+		requestInit: {
+			method: "post",
+			body: JSON.stringify(e)
+		}
+	}));
+}
+async function At(e, t) {
+	return J(await q.put({
+		endpoint: "assignments",
+		path: [String(e)],
+		requestInit: {
+			method: "put",
+			body: JSON.stringify(t)
+		}
+	}));
+}
+async function jt(e) {
+	await J(await q.delete({
+		endpoint: "assignments",
+		path: [String(e)]
+	}));
+}
+async function Mt(e) {
+	return J(await q.get({
+		endpoint: "myWeek",
+		query: { start: e }
+	}));
+}
+async function Nt(e) {
+	return J(await q.get({
+		endpoint: "myOpenSlots",
+		query: { start: e }
+	}));
+}
+async function Pt(e) {
+	return J(await q.post({
+		endpoint: "selfClaim",
+		requestInit: {
+			method: "post",
+			body: JSON.stringify(e)
+		}
+	}));
+}
+async function Ft(e) {
+	await J(await q.delete({
+		endpoint: "selfClaim",
+		path: [String(e)]
+	}));
+}
+async function It(e) {
+	let t = { date: e.date };
+	return e.slot_id && (t.slot_id = String(e.slot_id)), e.branch && (t.branch = e.branch), e.q && (t.q = e.q), J(await q.get({
+		endpoint: "availableStaff",
+		query: t
+	}));
+}
+//#endregion
+//#region src/util.ts
+function Lt(e) {
+	let t = (e.getDay() + 6) % 7, n = new Date(e);
+	return n.setDate(e.getDate() - t), n.toISOString().slice(0, 10);
+}
+function Rt() {
+	return new URLSearchParams(window.location.search).get("class") ?? "";
+}
+function zt(e, t) {
+	let n = new Date(e);
+	return n.setDate(n.getDate() + t), n.toISOString().slice(0, 10);
+}
+function Bt() {
+	return typeof document < "u" && document.documentElement.lang || "en";
+}
+function Vt(e) {
+	let t = /* @__PURE__ */ new Date(e + "T00:00:00");
+	return new Intl.DateTimeFormat(Bt(), {
+		weekday: "long",
+		month: "short",
+		day: "numeric"
+	}).format(t);
 }
 //#endregion
 //#region src/components/shared/toolbar.ts
@@ -1713,17 +1737,17 @@ function Ht(e) {
     <div class="btn-toolbar srg-toolbar" role="toolbar">
       <div class="btn-group" role="group">
         <button class="btn btn-default btn-sm" @click=${() => n(-7)}>
-          <i class="fa fa-arrow-left" aria-hidden="true"></i> ${J("Previous")}
+          <i class="fa fa-arrow-left" aria-hidden="true"></i> ${G("Previous")}
         </button>
         <button class="btn btn-default btn-sm" @click=${() => n(7)}>
-          ${J("Next")} <i class="fa fa-arrow-right" aria-hidden="true"></i>
+          ${G("Next")} <i class="fa fa-arrow-right" aria-hidden="true"></i>
         </button>
       </div>
-      <span class="srg-week-label">${J("Week of")} ${t}</span>
+      <span class="srg-week-label">${G("Week of")} ${t}</span>
       ${i ?? C}
       <div class="btn-group" role="group">
         <button class="btn btn-default btn-sm" @click=${() => r()}>
-          <i class="fa fa-refresh" aria-hidden="true"></i> ${J("Refresh")}
+          <i class="fa fa-refresh" aria-hidden="true"></i> ${G("Refresh")}
         </button>
       </div>
     </div>
@@ -1747,7 +1771,7 @@ function Ut(e) {
             ${r ? x`<button
                   type="button"
                   class="btn-close"
-                  aria-label="${J("Dismiss")}"
+                  aria-label="${G("Dismiss")}"
                   @click=${r}
                 ></button>` : C}
           </div>
@@ -1776,7 +1800,7 @@ function Wt(e) {
             <button
               type="button"
               class="btn-close"
-              aria-label="Close"
+              aria-label="${G("Close")}"
               @click=${i}
             ></button>
           </div>
@@ -1803,11 +1827,11 @@ var Y = class {
 		document.removeEventListener("keydown", this.onKey);
 	}
 }, Gt = () => ({
-	scheduled: J("Scheduled"),
-	confirmed: J("Confirmed"),
-	completed: J("Completed"),
-	cancelled: J("Cancelled"),
-	no_show: J("No-show")
+	scheduled: G("Scheduled"),
+	confirmed: G("Confirmed"),
+	completed: G("Completed"),
+	cancelled: G("Cancelled"),
+	no_show: G("No-show")
 });
 //#endregion
 //#region \0@oxc-project+runtime@0.127.0/helpers/decorate.js
@@ -1820,21 +1844,21 @@ function X(e, t, n, r) {
 //#endregion
 //#region src/components/staff-roster-grid.ts
 var Kt = 5e3, qt = 10, Jt = () => [
-	J("Mon"),
-	J("Tue"),
-	J("Wed"),
-	J("Thu"),
-	J("Fri"),
-	J("Sat"),
-	J("Sun")
+	G("Mon"),
+	G("Tue"),
+	G("Wed"),
+	G("Thu"),
+	G("Fri"),
+	G("Sat"),
+	G("Sun")
 ], Yt = () => [
-	J("Monday"),
-	J("Tuesday"),
-	J("Wednesday"),
-	J("Thursday"),
-	J("Friday"),
-	J("Saturday"),
-	J("Sunday")
+	G("Monday"),
+	G("Tuesday"),
+	G("Wednesday"),
+	G("Thursday"),
+	G("Friday"),
+	G("Saturday"),
+	G("Sunday")
 ], Xt = [
 	"MO",
 	"TU",
@@ -1860,7 +1884,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		return this;
 	}
 	connectedCallback() {
-		super.connectedCallback(), this.weekStart ||= Pt(/* @__PURE__ */ new Date()), this.refresh(), this.loadAvailable(), this.pollTimer = setInterval(() => void this.refresh(), Kt), document.addEventListener("keydown", this.onKeyDown);
+		super.connectedCallback(), this.weekStart ||= Lt(/* @__PURE__ */ new Date()), this.refresh(), this.loadAvailable(), this.pollTimer = setInterval(() => void this.refresh(), Kt), document.addEventListener("keydown", this.onKeyDown);
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this.pollTimer && clearInterval(this.pollTimer), this.recentlyChangedTimer && clearTimeout(this.recentlyChangedTimer), document.removeEventListener("keydown", this.onKeyDown);
@@ -1874,7 +1898,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		try {
 			let n = /* @__PURE__ */ new Map(), r = /* @__PURE__ */ new Set();
 			for (let e of this.week?.assignments ?? []) n.set(this.assignmentKey(e), e.updated_at), r.add(e.id);
-			let i = await Tt(this.rosterId, this.weekStart);
+			let i = await Ot(this.rosterId, this.weekStart);
 			if (this.dragging || e !== this.fetchGeneration) return;
 			if (this.week = i, this.updateComplete.then(t), this.error = "", r.size > 0) {
 				let e = /* @__PURE__ */ new Set();
@@ -1896,7 +1920,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 	renderAvailableFilterHeader() {
 		let e = this.availableMeta;
 		if (!e) return C;
-		let t = e.filter, n = t.mode === "codes" ? t.codes.join(", ") : J("category type S (any patron flagged staff)"), r = t.branch_scope.mode === "group" ? `${J("library group")}: ${t.branch_scope.label ?? J("(unnamed)")}` : t.branch_scope.mode === "branch" ? `${J("branch")}: ${t.branch_scope.label}` : J("all branches"), i = this.availableContextDay === null ? null : Yt()[this.availableContextDay], a = t.slot, o = a ? `${J("Free at")} ${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} ${J("on")} ${i ?? a.date}` : `${J("Free on")} ${t.date}`, s = e.count >= e.limit, c = t.mode === "category_type_s";
+		let t = e.filter, n = t.mode === "codes" ? t.codes.join(", ") : G("category type S (any patron flagged staff)"), r = t.branch_scope.mode === "group" ? `${G("library group")}: ${t.branch_scope.label ?? G("(unnamed)")}` : t.branch_scope.mode === "branch" ? `${G("branch")}: ${t.branch_scope.label}` : G("all branches"), i = this.availableContextDay === null ? null : Yt()[this.availableContextDay], a = t.slot, o = a ? `${G("Free at")} ${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} ${G("on")} ${i ?? a.date}` : `${G("Free on")} ${t.date}`, s = e.count >= e.limit, c = t.mode === "category_type_s";
 		return x`
       <div class="srg-avail-meta">
         <div class="srg-avail-context">${o}</div>
@@ -1906,14 +1930,14 @@ var Kt = 5e3, qt = 10, Jt = () => [
           <span class="text-muted"> · ${r}</span>
         </div>
         <div class="srg-avail-counter">
-          <strong>${e.count}</strong> ${J("of")} ${e.pool} ${J("eligible")}
-          ${s ? x`<span class="text-muted"> · ${J("capped at")} ${e.limit}</span>` : C}
+          <strong>${e.count}</strong> ${G("of")} ${e.pool} ${G("eligible")}
+          ${s ? x`<span class="text-muted"> · ${G("capped at")} ${e.limit}</span>` : C}
         </div>
         ${c ? x`
               <div class="srg-avail-warn text-muted">
                 <i class="fa fa-info-circle" aria-hidden="true"></i>
-                ${J("Showing all category-type-S patrons (incl. service accounts). Set staff_categorycodes in plugin configuration to narrow.")}
-                <a href="?class=${Ft()}&method=configure">${J("configuration")}</a>
+                ${G("Showing all category-type-S patrons (incl. service accounts). Set staff_categorycodes in plugin configuration to narrow.")}
+                <a href="?class=${Rt()}&method=configure">${G("configuration")}</a>
               </div>
             ` : C}
       </div>
@@ -1921,7 +1945,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 	}
 	async loadAvailable(e) {
 		if (this.week) try {
-			let t = await Nt({
+			let t = await It({
 				date: e?.date ?? this.weekStart,
 				slot_id: e?.slotId,
 				q: this.staffQuery || void 0
@@ -1956,7 +1980,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 	async undo() {
 		let e = this.undoStack.pop();
 		if (e) try {
-			e.kind === "create" ? await Ot(e.id) : e.kind === "delete" ? await Et(e.payload) : await Dt(e.id, e.before), await this.refresh();
+			e.kind === "create" ? await jt(e.id) : e.kind === "delete" ? await kt(e.payload) : await At(e.id, e.before), await this.refresh();
 		} catch (e) {
 			this.setError(`Undo failed: ${e.message}`);
 		}
@@ -1967,7 +1991,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		if (n.kind === "staff") {
 			let r = n.staff;
 			try {
-				let n = await Et({
+				let n = await kt({
 					slot_id: e.id,
 					patron_id: r.patron_id,
 					assignment_date: t
@@ -1989,7 +2013,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 				return;
 			}
 			try {
-				await Dt(r.id, {
+				await At(r.id, {
 					slot_id: e.id,
 					assignment_date: t
 				}), await this.pushUndo({
@@ -2031,7 +2055,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		(this.week?.assignment_fields ?? []).length && (t.additional_fields = this.editForm.fields);
 		let n = this.dayIdxForDate(e.assignment_date), r = `${e.slot_id}-${n}`;
 		try {
-			await Dt(e.id, t), this.liveMessage = `Updated assignment for ${e.firstname} ${e.surname}.`, this.editing = null, this.editOriginEl = null, await this.refresh(), this.focusedCellKey = r, this.pendingFocusCellKey = r;
+			await At(e.id, t), this.liveMessage = `Updated assignment for ${e.firstname} ${e.surname}.`, this.editing = null, this.editOriginEl = null, await this.refresh(), this.focusedCellKey = r, this.pendingFocusCellKey = r;
 		} catch (e) {
 			this.setError(e.message);
 		}
@@ -2054,7 +2078,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		this.pendingDelete = null;
 		let t = this.dayIdxForDate(e.assignment_date), n = `${e.slot_id}-${t}`;
 		try {
-			await Ot(e.id), await this.pushUndo({
+			await jt(e.id), await this.pushUndo({
 				kind: "delete",
 				payload: {
 					slot_id: e.slot_id,
@@ -2063,7 +2087,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 					status: e.status,
 					notes: e.notes ?? void 0
 				}
-			}), this.liveMessage = `${J("Removed")} ${e.firstname} ${e.surname} ${J("from")} ${Yt()[t]} ${e.assignment_date}.`, await this.refresh();
+			}), this.liveMessage = `${G("Removed")} ${e.firstname} ${e.surname} ${G("from")} ${Yt()[t]} ${e.assignment_date}.`, await this.refresh();
 		} catch (e) {
 			this.setError(e.message);
 		}
@@ -2088,15 +2112,15 @@ var Kt = 5e3, qt = 10, Jt = () => [
 	}
 	cellAriaLabel(e, t, n, r, i) {
 		let a = Yt()[n], o = `${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}`;
-		if (r) return `${a} ${t}, ${o} ${J("slot, closed.")}`;
-		let s = i.length, c = `${a} ${t}, ${o} ${J("slot")}, ${s} ${J("of")} ${e.max_staff} ${J("staff assigned")}`;
+		if (r) return `${a} ${t}, ${o} ${G("slot, closed.")}`;
+		let s = i.length, c = `${a} ${t}, ${o} ${G("slot")}, ${s} ${G("of")} ${e.max_staff} ${G("staff assigned")}`;
 		return s === 0 ? `${c}.` : `${c}: ${i.map((e) => `${e.firstname} ${e.surname}`).join(", ")}.`;
 	}
 	pickUpStaff(e, t) {
 		this.pickedUp = {
 			kind: "staff",
 			staff: e
-		}, this.pickupOriginEl = t, this.liveMessage = `${J("Picked up")} ${e.firstname} ${e.surname}. ${J("Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.")}`;
+		}, this.pickupOriginEl = t, this.liveMessage = `${G("Picked up")} ${e.firstname} ${e.surname}. ${G("Use arrow keys to choose a target cell. Press Enter to drop, Esc to cancel.")}`;
 		let n = this.firstApplicableCellKey();
 		n && (this.focusedCellKey = n, this.pendingFocusCellKey = n);
 	}
@@ -2104,12 +2128,12 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		this.pickedUp = {
 			kind: "assignment",
 			assignment: e
-		}, this.pickupOriginEl = t, this.liveMessage = `${J("Picked up")} ${e.firstname} ${e.surname}. ${J("Use arrow keys to move. Press Enter to drop, Esc to cancel.")}`;
+		}, this.pickupOriginEl = t, this.liveMessage = `${G("Picked up")} ${e.firstname} ${e.surname}. ${G("Use arrow keys to move. Press Enter to drop, Esc to cancel.")}`;
 		let n = this.firstApplicableCellKey();
 		n && (this.focusedCellKey = n, this.pendingFocusCellKey = n);
 	}
 	cancelPickup() {
-		this.pickedUp = null, this.liveMessage = J("Cancelled.");
+		this.pickedUp = null, this.liveMessage = G("Cancelled.");
 		let e = this.pickupOriginEl;
 		this.pickupOriginEl = null, e && requestAnimationFrame(() => e.focus());
 	}
@@ -2118,7 +2142,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		let n = this.pickedUp, r = this.cargoName(n), i = e.start_time.slice(0, 5);
 		this.dragging = n, this.pickedUp = null, this.pickupOriginEl = null;
 		let a = this.error;
-		await this.dropOnCell(e, t), this.error && this.error !== a ? this.liveMessage = `${J("Cannot drop here.")} ${this.error}` : this.liveMessage = `${J("Moved")} ${r} ${J("to")} ${Yt()[this.dayIdxForDate(t)]} ${t}, ${i} ${J("slot.")}`;
+		await this.dropOnCell(e, t), this.error && this.error !== a ? this.liveMessage = `${G("Cannot drop here.")} ${this.error}` : this.liveMessage = `${G("Moved")} ${r} ${G("to")} ${Yt()[this.dayIdxForDate(t)]} ${t}, ${i} ${G("slot.")}`;
 		let o = `${e.id}-${this.dayIdxForDate(t)}`;
 		this.focusedCellKey = o, this.pendingFocusCellKey = o;
 	}
@@ -2230,7 +2254,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 		}
 	}
 	render() {
-		if (!this.week) return x`<div class="text-center text-muted py-4">${J("Loading…")}</div>`;
+		if (!this.week) return x`<div class="text-center text-muted py-4">${G("Loading…")}</div>`;
 		let e = this.week.roster.type_color, t = this.sortedSlots(), n = this.pickedUp !== null, r = Jt(), i = Gt();
 		return x`
       <div class="srg-sr-only" aria-live="polite" aria-atomic="true">${this.liveMessage}</div>
@@ -2251,7 +2275,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
               @click=${() => void this.undo()}
               ?disabled=${this.undoStack.length === 0}
             >
-              <i class="fa fa-undo" aria-hidden="true"></i> ${J("Undo")} (${this.undoStack.length})
+              <i class="fa fa-undo" aria-hidden="true"></i> ${G("Undo")} (${this.undoStack.length})
             </button>
           </div>
         `
@@ -2259,12 +2283,12 @@ var Kt = 5e3, qt = 10, Jt = () => [
 
       <div class="srg-layout" style=${`--srg-type-color: ${e}`}>
         <section class="page-section srg-staff-panel">
-          <h3 class="srg-panel-title" id="srg-staff-list-label">${J("Available staff")}</h3>
+          <h3 class="srg-panel-title" id="srg-staff-list-label">${G("Available staff")}</h3>
           ${this.renderAvailableFilterHeader()}
           <input
             type="search"
             class="form-control input-sm"
-            placeholder="${J("Search staff…")}"
+            placeholder="${G("Search staff…")}"
             .value=${this.staffQuery}
             @input=${this.onStaffSearch}
             @focus=${() => void this.loadAvailable()}
@@ -2283,7 +2307,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
                     tabindex="0"
                     data-pill-idx=${t}
                     aria-selected=${n ? "true" : "false"}
-                    aria-label="${e.surname}, ${e.firstname}. ${J("Press Enter to pick up.")}"
+                    aria-label="${e.surname}, ${e.firstname}. ${G("Press Enter to pick up.")}"
                     draggable="true"
                     @dragstart=${(t) => {
 				this.dragging = {
@@ -2303,7 +2327,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
                   </li>
                 `;
 		})}
-            ${this.available.length === 0 && this.staffQuery ? x`<li class="list-group-item text-muted">${J("No matches")}</li>` : C}
+            ${this.available.length === 0 && this.staffQuery ? x`<li class="list-group-item text-muted">${G("No matches")}</li>` : C}
           </ul>
         </section>
 
@@ -2311,13 +2335,13 @@ var Kt = 5e3, qt = 10, Jt = () => [
           <table
             class="table srg-grid ${n ? "srg-pickup-active" : ""}"
             role="grid"
-            aria-label="${J("Staff roster schedule")}"
+            aria-label="${G("Staff roster schedule")}"
             aria-rowcount=${t.length + 1}
             aria-colcount="8"
           >
             <thead>
               <tr role="row" aria-rowindex="1">
-                <th class="srg-slot-col" role="columnheader" aria-colindex="1">${J("Slot")}</th>
+                <th class="srg-slot-col" role="columnheader" aria-colindex="1">${G("Slot")}</th>
                 ${r.map((e, t) => x`
                     <th role="columnheader" aria-colindex=${t + 2}>
                       <span class="srg-day">${e}</span>
@@ -2330,9 +2354,9 @@ var Kt = 5e3, qt = 10, Jt = () => [
               ${t.length === 0 ? x`
                     <tr role="row">
                       <td colspan="8" class="srg-empty" role="gridcell">
-                        <p>${J("No time slots defined for this roster yet.")}</p>
-                        <a class="btn btn-default btn-sm" href="?class=${Ft()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
-                          <i class="fa fa-clock" aria-hidden="true"></i> ${J("Manage slots")}
+                        <p>${G("No time slots defined for this roster yet.")}</p>
+                        <a class="btn btn-default btn-sm" href="?class=${Rt()}&method=tool&op=manage_slots&roster_id=${this.rosterId}">
+                          <i class="fa fa-clock" aria-hidden="true"></i> ${G("Manage slots")}
                         </a>
                       </td>
                     </tr>
@@ -2367,7 +2391,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
                           @keydown=${(n) => this.onCellKeyDown(n, e, o, t, a)}
                           @focus=${() => this.focusedCellKey = u}
                         >
-                          <small>${J("closed")}</small>
+                          <small>${G("closed")}</small>
                         </td>`;
 			let d = this.assignmentsFor(e.id, o), f = d.length;
 			return x`
@@ -2407,8 +2431,8 @@ var Kt = 5e3, qt = 10, Jt = () => [
                                   role="button"
                                   tabindex="0"
                                   draggable="true"
-                                  aria-label="${t.firstname} ${t.surname}, ${i[t.status]}. ${J("Press Enter to move, Delete to remove. Click to edit.")}"
-                                  title="${t.firstname} ${t.surname} (${i[t.status]}). ${J("Click to edit.")}"
+                                  aria-label="${t.firstname} ${t.surname}, ${i[t.status]}. ${G("Press Enter to move, Delete to remove. Click to edit.")}"
+                                  title="${t.firstname} ${t.surname} (${i[t.status]}). ${G("Click to edit.")}"
                                   @dragstart=${(e) => {
 					this.dragging = {
 						kind: "assignment",
@@ -2465,8 +2489,8 @@ var Kt = 5e3, qt = 10, Jt = () => [
         <div class="modal-dialog modal-lg srg-edit-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header">
-              <h1 class="modal-title">${J("Edit assignment")}</h1>
-              <button type="button" class="btn-close" aria-label="${J("Close")}" @click=${() => this.cancelEdit()}></button>
+              <h1 class="modal-title">${G("Edit assignment")}</h1>
+              <button type="button" class="btn-close" aria-label="${G("Close")}" @click=${() => this.cancelEdit()}></button>
             </div>
             <div class="modal-body srg-edit-body">
               <p class="srg-edit-subject">
@@ -2475,7 +2499,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
               </p>
               <div class="srg-edit-grid">
                 <div class="srg-edit-row">
-                  <label for="srg-edit-status">${J("Status")}</label>
+                  <label for="srg-edit-status">${G("Status")}</label>
                   <select
                     id="srg-edit-status"
                     class="form-select"
@@ -2489,12 +2513,12 @@ var Kt = 5e3, qt = 10, Jt = () => [
                   </select>
                 </div>
                 <div class="srg-edit-row">
-                  <label for="srg-edit-notes">${J("Notes")}</label>
+                  <label for="srg-edit-notes">${G("Notes")}</label>
                   <textarea
                     id="srg-edit-notes"
                     class="form-control"
                     rows="3"
-                    placeholder="${J("Optional notes shown on the chip and in handoffs")}"
+                    placeholder="${G("Optional notes shown on the chip and in handoffs")}"
                     .value=${this.editForm.notes}
                     @input=${(e) => this.editForm = {
 			...this.editForm,
@@ -2507,11 +2531,11 @@ var Kt = 5e3, qt = 10, Jt = () => [
             </div>
             <div class="modal-footer srg-edit-footer">
               <button type="button" class="btn btn-danger me-auto" @click=${() => this.deleteFromEdit()}>
-                <i class="fa fa-trash"></i> ${J("Remove")}
+                <i class="fa fa-trash"></i> ${G("Remove")}
               </button>
-              <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>${J("Cancel")}</button>
+              <button type="button" class="btn btn-default" @click=${() => this.cancelEdit()}>${G("Cancel")}</button>
               <button type="button" class="btn btn-primary" @click=${() => void this.saveEdit()}>
-                <i class="fa fa-save"></i> ${J("Save")}
+                <i class="fa fa-save"></i> ${G("Save")}
               </button>
             </div>
           </div>
@@ -2544,7 +2568,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
 				r(t === "" ? [] : [t]);
 			}}
           >
-            <option value="">${J("— None —")}</option>
+            <option value="">${G("— None —")}</option>
             ${e.av_options.map((e) => x`<option value=${e.value} ?selected=${e.value === i}>${e.lib || e.value}</option>`)}
           </select>
         </div>
@@ -2558,7 +2582,7 @@ var Kt = 5e3, qt = 10, Jt = () => [
           id=${t}
           type="text"
           class="form-control"
-          placeholder=${e.repeatable ? J("comma-separated values") : ""}
+          placeholder=${e.repeatable ? G("comma-separated values") : ""}
           .value=${i}
           @input=${(t) => {
 			let n = t.target.value;
@@ -2570,18 +2594,18 @@ var Kt = 5e3, qt = 10, Jt = () => [
 	}
 	renderDeleteModal(e) {
 		return Wt({
-			title: J("Remove assignment?"),
+			title: G("Remove assignment?"),
 			onCancel: () => this.cancelDelete(),
 			body: x`
-        <p>${J("Remove")} <strong>${e.surname}, ${e.firstname}</strong> ${J("from this slot on")} ${e.assignment_date}?</p>
-        <p class="text-muted">${J("You can undo with Cmd-Z (or the Undo button) if this was a mistake.")}</p>
+        <p>${G("Remove")} <strong>${e.surname}, ${e.firstname}</strong> ${G("from this slot on")} ${e.assignment_date}?</p>
+        <p class="text-muted">${G("You can undo with Cmd-Z (or the Undo button) if this was a mistake.")}</p>
       `,
 			footer: x`
         <button type="button" class="btn btn-danger" @click=${() => void this.confirmDelete()}>
-          <i class="fa fa-trash"></i> ${J("Remove")}
+          <i class="fa fa-trash"></i> ${G("Remove")}
         </button>
         <button type="button" class="btn btn-default" @click=${() => this.cancelDelete()}>
-          <i class="fa fa-times"></i> ${J("Cancel")}
+          <i class="fa fa-times"></i> ${G("Cancel")}
         </button>
       `
 		});
@@ -2615,7 +2639,7 @@ function Qt(e) {
             <ul class="list-group">
               ${Qe(t, (e) => e.date, (e) => x`
                   <li class="list-group-item">
-                    <h4 class="srg-day-heading">${Rt(e.date)}</h4>
+                    <h4 class="srg-day-heading">${Vt(e.date)}</h4>
                     <ul class="list-unstyled">
                       ${e.items.map((e) => r(e))}
                     </ul>
@@ -2636,12 +2660,12 @@ var Q = class extends D {
 		return this;
 	}
 	connectedCallback() {
-		super.connectedCallback(), this.weekStart ||= Pt(/* @__PURE__ */ new Date()), this.refresh();
+		super.connectedCallback(), this.weekStart ||= Lt(/* @__PURE__ */ new Date()), this.refresh();
 	}
 	async refresh() {
 		this.loading = !0;
 		try {
-			this.week = await kt(this.weekStart), this.error = "";
+			this.week = await Mt(this.weekStart), this.error = "";
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -2649,7 +2673,7 @@ var Q = class extends D {
 		}
 	}
 	shiftWeek(e) {
-		this.weekStart = It(this.weekStart, e), this.refresh();
+		this.weekStart = zt(this.weekStart, e), this.refresh();
 	}
 	rosterById(e) {
 		return this.week?.rosters.find((t) => t.id === e);
@@ -2665,7 +2689,7 @@ var Q = class extends D {
 		if (e) {
 			this.pendingDrop = null, this.dropping = e.assignment_id, this.error = "";
 			try {
-				await Mt(e.assignment_id), this.successMsg = J("Shift dropped."), setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
+				await Ft(e.assignment_id), this.successMsg = G("Shift dropped."), setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
 			} catch (e) {
 				this.error = e instanceof Error ? e.message : String(e);
 			} finally {
@@ -2674,7 +2698,7 @@ var Q = class extends D {
 		}
 	}
 	render() {
-		if (this.loading && !this.week) return x`<div class="text-center text-muted py-4">${J("Loading…")}</div>`;
+		if (this.loading && !this.week) return x`<div class="text-center text-muted py-4">${G("Loading…")}</div>`;
 		let e = Zt(this.week?.shifts ?? [], (e) => e.assignment_date);
 		return x`
       ${Ut({
@@ -2691,7 +2715,7 @@ var Q = class extends D {
 
       ${Qt({
 			groups: e,
-			emptyText: J("No shifts scheduled this week."),
+			emptyText: G("No shifts scheduled this week."),
 			renderItem: (e) => this.renderShift(e)
 		})}
 
@@ -2712,9 +2736,9 @@ var Q = class extends D {
         </span>
         <span class="srg-my-shift-roster">
           <a
-            href="?class=${Ft()}&method=tool&op=view_assignments&roster_id=${e.roster_id}&week_start=${this.weekStart}"
+            href="?class=${Rt()}&method=tool&op=view_assignments&roster_id=${e.roster_id}&week_start=${this.weekStart}"
           >
-            ${t?.name ?? J("Roster #") + e.roster_id}
+            ${t?.name ?? G("Roster #") + e.roster_id}
           </a>
           ${t?.branch_name ? x`<small class="text-muted"> · ${t.branch_name}</small>` : C}
         </span>
@@ -2725,20 +2749,20 @@ var Q = class extends D {
         <span class="srg-my-shift-actions">
           <a
             class="btn btn-default btn-xs"
-            href="?class=${Ft()}&method=tool&op=manage_swaps&roster_id=${e.roster_id}"
-            title="${J("Request swap on this roster")}"
+            href="?class=${Rt()}&method=tool&op=manage_swaps&roster_id=${e.roster_id}"
+            title="${G("Request swap on this roster")}"
           >
-            <i class="fa fa-exchange" aria-hidden="true"></i> ${J("Swap")}
+            <i class="fa fa-exchange" aria-hidden="true"></i> ${G("Swap")}
           </a>
           <button
             type="button"
             class="btn btn-default btn-xs"
             ?disabled=${this.dropping === e.assignment_id}
             @click=${() => this.requestDrop(e)}
-            title="${J("Drop this shift")}"
+            title="${G("Drop this shift")}"
           >
             <i class="fa fa-times" aria-hidden="true"></i>
-            ${this.dropping === e.assignment_id ? J("Dropping…") : J("Drop")}
+            ${this.dropping === e.assignment_id ? G("Dropping…") : G("Drop")}
           </button>
         </span>
       </li>
@@ -2747,25 +2771,25 @@ var Q = class extends D {
 	renderDropModal(e) {
 		let t = this.rosterById(e.roster_id);
 		return Wt({
-			title: J("Drop this shift?"),
+			title: G("Drop this shift?"),
 			onCancel: () => this.cancelDrop(),
 			body: x`
         <p>
-          ${J("Drop your shift on")}
-          <strong>${Rt(e.assignment_date)}</strong>,
+          ${G("Drop your shift on")}
+          <strong>${Vt(e.assignment_date)}</strong>,
           <strong>${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</strong>
-          (${t?.name ?? J("Roster #") + e.roster_id})?
+          (${t?.name ?? G("Roster #") + e.roster_id})?
         </p>
         <p class="text-muted">
-          ${J("The slot will be re-opened for someone else to claim. If you need a one-for-one trade instead, use Swap.")}
+          ${G("The slot will be re-opened for someone else to claim. If you need a one-for-one trade instead, use Swap.")}
         </p>
       `,
 			footer: x`
         <button type="button" class="btn btn-danger" @click=${() => void this.confirmDrop()}>
-          <i class="fa fa-times"></i> ${J("Drop shift")}
+          <i class="fa fa-times"></i> ${G("Drop shift")}
         </button>
         <button type="button" class="btn btn-default" @click=${() => this.cancelDrop()}>
-          ${J("Cancel")}
+          ${G("Cancel")}
         </button>
       `
 		});
@@ -2785,12 +2809,12 @@ var $ = class extends D {
 		return this;
 	}
 	connectedCallback() {
-		super.connectedCallback(), this.weekStart ||= Pt(/* @__PURE__ */ new Date()), this.refresh();
+		super.connectedCallback(), this.weekStart ||= Lt(/* @__PURE__ */ new Date()), this.refresh();
 	}
 	async refresh() {
 		this.loading = !0;
 		try {
-			this.data = await At(this.weekStart), this.error = "";
+			this.data = await Nt(this.weekStart), this.error = "";
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -2798,7 +2822,7 @@ var $ = class extends D {
 		}
 	}
 	shiftWeek(e) {
-		this.weekStart = It(this.weekStart, e), this.refresh();
+		this.weekStart = zt(this.weekStart, e), this.refresh();
 	}
 	requestClaim(e) {
 		this.pendingClaim = e;
@@ -2813,10 +2837,10 @@ var $ = class extends D {
 		let t = this.openingKey(e);
 		this.claiming = t, this.error = "";
 		try {
-			await jt({
+			await Pt({
 				slot_id: e.slot_id,
 				assignment_date: e.assignment_date
-			}), this.successMsg = `${J("Claimed")} ${e.roster_name} ${J("on")} ${e.assignment_date}.`, setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
+			}), this.successMsg = `${G("Claimed")} ${e.roster_name} ${G("on")} ${e.assignment_date}.`, setTimeout(() => this.successMsg = "", 4e3), await this.refresh();
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -2830,7 +2854,7 @@ var $ = class extends D {
 		return Number(e.replaceAll("-", ""));
 	}
 	render() {
-		if (this.loading && !this.data) return x`<div class="text-center text-muted py-4">${J("Loading…")}</div>`;
+		if (this.loading && !this.data) return x`<div class="text-center text-muted py-4">${G("Loading…")}</div>`;
 		let e = Zt(this.data?.openings ?? [], (e) => e.assignment_date);
 		return x`
       ${Ut({
@@ -2847,7 +2871,7 @@ var $ = class extends D {
 
       ${Qt({
 			groups: e,
-			emptyText: J("No open shifts available this week."),
+			emptyText: G("No open shifts available this week."),
 			renderItem: (e) => this.renderOpening(e)
 		})}
 
@@ -2856,26 +2880,26 @@ var $ = class extends D {
 	}
 	renderClaimModal(e) {
 		return Wt({
-			title: J("Claim this shift?"),
+			title: G("Claim this shift?"),
 			onCancel: () => this.cancelClaim(),
 			body: x`
         <p>
-          ${J("Claim")}
-          <strong>${Rt(e.assignment_date)}</strong>,
+          ${G("Claim")}
+          <strong>${Vt(e.assignment_date)}</strong>,
           <strong>${e.start_time.slice(0, 5)}–${e.end_time.slice(0, 5)}</strong>
-          ${J("on")} <strong>${e.roster_name}</strong>?
+          ${G("on")} <strong>${e.roster_name}</strong>?
         </p>
         ${e.location ? x`<p class="text-muted"><i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}</p>` : C}
         <p class="text-muted">
-          ${J("You'll be added to the roster immediately. Drop the shift later from My shifts if plans change.")}
+          ${G("You'll be added to the roster immediately. Drop the shift later from My shifts if plans change.")}
         </p>
       `,
 			footer: x`
         <button type="button" class="btn btn-primary" @click=${() => void this.confirmClaim()}>
-          <i class="fa fa-hand-paper-o"></i> ${J("Claim shift")}
+          <i class="fa fa-hand-paper-o"></i> ${G("Claim shift")}
         </button>
         <button type="button" class="btn btn-default" @click=${() => this.cancelClaim()}>
-          ${J("Cancel")}
+          ${G("Cancel")}
         </button>
       `
 		});
@@ -2899,7 +2923,7 @@ var $ = class extends D {
         ${e.location ? x`<span class="srg-my-shift-location text-muted">
               <i class="fa fa-map-marker" aria-hidden="true"></i> ${e.location}
             </span>` : C}
-        <span class="srg-my-shift-status badge">${e.capacity_remaining} ${J("open")}</span>
+        <span class="srg-my-shift-status badge">${e.capacity_remaining} ${G("open")}</span>
         <button
           type="button"
           class="btn btn-primary btn-xs"
@@ -2907,7 +2931,7 @@ var $ = class extends D {
           @click=${() => this.requestClaim(e)}
         >
           <i class="fa fa-hand-paper-o" aria-hidden="true"></i>
-          ${J(n ? "Claiming…" : "Claim")}
+          ${G(n ? "Claiming…" : "Claim")}
         </button>
       </li>
     `;

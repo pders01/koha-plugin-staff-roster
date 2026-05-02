@@ -252,6 +252,8 @@
                 <span>[% tr('Pick approve or reject.') | html %]</span>
             [% CASE 'swap_not_pending' %]
                 <span>[% tr('That swap is no longer pending.') | html %]</span>
+            [% CASE 'swap_txn_failed' %]
+                <span>[% tr('The swap could not be completed (database error). Try again or check the server logs.') | html %]</span>
             [% CASE 'swap_needs_manager' %]
                 <span>[% tr('Manager approval is required for this swap.') | html %]</span>
             [% CASE 'swap_not_authorised' %]

@@ -86,8 +86,12 @@ sub translator {
 
 sub tr {
     my ($key) = @_;
-    state $current = translator();
-    return $current->($key);
+    # Resolve the translator on every call so the active language is
+    # picked up per request. A cached `state $current = translator()`
+    # would bind the locale to whichever request first warmed the
+    # Plack worker — every subsequent request on that worker would
+    # render the wrong language even after the user changed it.
+    return translator()->($key);
 }
 
 1;

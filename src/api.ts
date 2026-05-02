@@ -1,5 +1,6 @@
 import { RequestHandler } from "@jpahd/lit-stack/http";
 import type { ApiEndpoints } from "@jpahd/lit-stack/http";
+import { __ } from "./i18n/index.js";
 
 const NS = "staffroster";
 const BASE = `/api/v1/contrib/${NS}`;
@@ -92,7 +93,13 @@ export type RosterWeek = {
 async function asJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
-    const err = new Error(body.error ?? `HTTP ${res.status}`) as Error & { status: number };
+    // Run the server-supplied error string through the translation
+    // shim so a German user gets the German variant for messages we
+    // have keys for. Strings the dict doesn't know fall through
+    // unchanged; the same shim handles "Slot full (X/Y)" by matching
+    // the literal pattern, so add those entries to de.json verbatim.
+    const raw = body.error ?? `HTTP ${res.status}`;
+    const err = new Error(__(raw)) as Error & { status: number };
     err.status = res.status;
     throw err;
   }

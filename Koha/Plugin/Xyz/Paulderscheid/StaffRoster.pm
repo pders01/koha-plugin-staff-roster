@@ -1289,9 +1289,14 @@ sub _tool_delete_slot {
     return if !_gate( 'staffroster_manage_rosters', $messages );
     my $slot_id  = $cgi->param('slot_id');
     my $original = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
-    $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
-    _audit( 'DELETE', $slot_id, { entity => 'slot' }, $original );
-    push @{$messages}, { type => 'success', code => 'slot_deleted' };
+    my $ok       = $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
+    if ( $ok && $ok ne '0E0' ) {
+        _audit( 'DELETE', $slot_id, { entity => 'slot' }, $original );
+        push @{$messages}, { type => 'success', code => 'slot_deleted' };
+    }
+    else {
+        push @{$messages}, { type => 'danger', code => 'error_on_delete' };
+    }
     return;
 }
 
@@ -1357,9 +1362,13 @@ sub _tool_delete_exception {
         undef, $exception_id, $roster_id );
     my $count = $dbh->do( q{DELETE FROM staff_roster_exceptions WHERE id = ? AND roster_id = ?},
         undef, $exception_id, $roster_id );
-    _audit( 'DELETE', $exception_id, { entity => 'exception', roster_id => $roster_id }, $original )
-        if $count && $count ne '0E0';
-    push @{$messages}, { type => 'success', code => 'exception_deleted' };
+    if ( $count && $count ne '0E0' ) {
+        _audit( 'DELETE', $exception_id, { entity => 'exception', roster_id => $roster_id }, $original );
+        push @{$messages}, { type => 'success', code => 'exception_deleted' };
+    }
+    else {
+        push @{$messages}, { type => 'danger', code => 'error_on_delete' };
+    }
     return;
 }
 
@@ -1532,7 +1541,7 @@ sub _tool_respond_swap {
         }
         else {
             warn "StaffRoster: swap respond txn failed: $err";
-            push @{$messages}, { type => 'danger', code => 'swap_not_pending' };
+            push @{$messages}, { type => 'danger', code => 'swap_txn_failed' };
         }
         return;
     }
@@ -1580,14 +1589,27 @@ sub _tool_cancel_swap {
         return;
     }
 
-    $dbh->do(
-        q{UPDATE staff_roster_swap_requests
-            SET status = 'cancelled', responded_at = NOW(), updated_at = NOW()
-          WHERE id = ?},
-        undef, $swap_id
-    );
-    my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
-    _audit( 'MODIFY', $swap_id, { entity => 'swap_request', decision => 'cancelled', %{ $after // {} } }, $swap, );
+    my $txn_ok = eval {
+        _txn(
+            $dbh,
+            sub {
+                $dbh->do(
+                    q{UPDATE staff_roster_swap_requests
+                        SET status = 'cancelled', responded_at = NOW(), updated_at = NOW()
+                      WHERE id = ? AND status = 'pending'},
+                    undef, $swap_id
+                );
+                my $after = $dbh->selectrow_hashref( q{SELECT * FROM staff_roster_swap_requests WHERE id = ?}, undef, $swap_id );
+                _audit( 'MODIFY', $swap_id, { entity => 'swap_request', decision => 'cancelled', %{ $after // {} } }, $swap, );
+            }
+        );
+        1;
+    };
+    if ( !$txn_ok ) {
+        warn "StaffRoster: swap cancel txn failed: " . ( $@ // 'unknown' );
+        push @{$messages}, { type => 'danger', code => 'swap_txn_failed' };
+        return;
+    }
     push @{$messages}, { type => 'success', code => 'swap_cancelled' };
     return;
 }
