@@ -771,7 +771,7 @@ sub configure {
 
     my @config_keys = qw(
         enable_email_reminders reminder_days_before enable_swap_notifications
-        staff_can_self_assign require_swap_approval
+        staff_can_self_assign self_unclaim_lockout_hours require_swap_approval
         library_group_mode default_library_group_id
         use_koha_calendar koha_calendar_branch koha_calendar_strict
         staff_categories use_koha_desks
@@ -820,6 +820,7 @@ sub configure {
         reminder_days_before      => $self->retrieve_data('reminder_days_before')      // '1',
         enable_swap_notifications => $self->retrieve_data('enable_swap_notifications') // '1',
         staff_can_self_assign     => $self->retrieve_data('staff_can_self_assign')     // '0',
+        self_unclaim_lockout_hours => $self->retrieve_data('self_unclaim_lockout_hours') // '0',
         require_swap_approval     => $self->retrieve_data('require_swap_approval')     // '1',
         library_group_mode        => $self->retrieve_data('library_group_mode')        // 'off',
         default_library_group_id  => $self->retrieve_data('default_library_group_id')  // q{},

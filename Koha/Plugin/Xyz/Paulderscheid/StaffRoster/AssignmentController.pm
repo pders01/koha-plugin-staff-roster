@@ -444,13 +444,45 @@ sub self_delete {
         my $dbh = C4::Context->dbh;
 
         my $original = $dbh->selectrow_hashref(
-            q{SELECT * FROM staff_roster_assignments WHERE id = ?}, undef, $id );
+            q{SELECT a.*, s.start_time
+              FROM staff_roster_assignments a
+              JOIN staff_roster_slots s ON a.slot_id = s.id
+              WHERE a.id = ?}, undef, $id );
         if ( !$original ) {
             return $c->render( status => 404, openapi => { error => 'Assignment not found' } );
         }
         if ( $original->{borrowernumber} != $borrowernumber ) {
             return $c->render( status => 403, openapi => { error => 'Not your assignment' } );
         }
+
+        # Lockout window: refuse to drop a shift inside the configured
+        # cooldown so managers aren't surprised by a no-show right before
+        # the desk opens. 0 (default) disables the gate entirely.
+        my $plugin   = Koha::Plugin::Xyz::Paulderscheid::StaffRoster->new;
+        my $lockout  = int( $plugin->retrieve_data('self_unclaim_lockout_hours') || 0 );
+        if ( $lockout > 0 ) {
+            my $shift_start = eval {
+                Koha::DateUtils::dt_from_string(
+                    "$original->{assignment_date} $original->{start_time}", 'iso' );
+            };
+            if ($shift_start) {
+                my $hours_until = ( $shift_start->epoch - time ) / 3600;
+                if ( $hours_until < $lockout ) {
+                    return $c->render(
+                        status  => 403,
+                        openapi => {
+                            error             => "Self-unclaim closed: must drop at least ${lockout}h before the shift",
+                            hours_until_shift => sprintf( '%.2f', $hours_until ),
+                            lockout_hours     => $lockout,
+                        },
+                    );
+                }
+            }
+        }
+
+        # Drop the joined slot column before passing the row through to
+        # the audit diff so the snapshot mirrors the table schema.
+        delete $original->{start_time};
 
         $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id = ?}, undef, $id );
         Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_audit(

@@ -343,4 +343,38 @@ SKIP: {
     }
 };
 
+subtest 'self-unclaim lockout window' => sub {
+    clean_slot_date();
+    my $create = call_self_create();
+    is( $create->{status}, 201, 'claim created' )
+        or do { fail 'cannot test lockout without a row'; return };
+    my $aid = $create->{openapi}{id};
+
+    # Huge lockout > any reasonable distance to test_date + start_time
+    # so the window is guaranteed to be open.
+    $plugin->store_data( { self_unclaim_lockout_hours => '1000000' } );
+    my $blocked = call_self_delete( assignment_id => $aid );
+    is( $blocked->{status}, 403, 'drop blocked inside lockout window' );
+    is(
+        ref $blocked->{openapi},   'HASH',
+        'response is a structured payload',
+    );
+    like(
+        $blocked->{openapi}{error}, qr/^Self-unclaim closed/,
+        'reports lockout in error message',
+    );
+    is( $blocked->{openapi}{lockout_hours}, 1000000, 'echoes configured hours' );
+
+    # Disable lockout, drop should now succeed.
+    $plugin->store_data( { self_unclaim_lockout_hours => '0' } );
+    my $ok = call_self_delete( assignment_id => $aid );
+    is( $ok->{status}, 204, 'drop succeeds when lockout cleared' );
+
+    my ($still_there) = $dbh->selectrow_array(
+        q{SELECT COUNT(*) FROM staff_roster_assignments WHERE id = ?},
+        undef, $aid,
+    );
+    is( $still_there, 0, 'row is gone after the unblocked drop' );
+};
+
 done_testing();

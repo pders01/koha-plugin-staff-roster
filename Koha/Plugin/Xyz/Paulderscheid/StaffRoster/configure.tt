@@ -200,6 +200,14 @@
                     </select>
                 </li>
                 <li>
+                    <label for="self_unclaim_lockout_hours">Self-unclaim lockout (hours before shift):</label>
+                    <input type="number" min="0" step="1"
+                           name="self_unclaim_lockout_hours"
+                           id="self_unclaim_lockout_hours"
+                           value="[% self_unclaim_lockout_hours | html %]" />
+                    <span class="hint">0 = no lockout. Set e.g. 24 to block self-drops within 24 hours of the shift start.</span>
+                </li>
+                <li>
                     <label for="require_swap_approval">Require manager approval for swaps:</label>
                     <select name="require_swap_approval" id="require_swap_approval">
                         <option value="1" [% IF require_swap_approval == '1' %]selected[% END %]>Yes</option>
