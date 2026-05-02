@@ -245,7 +245,77 @@ sub install() {
     }
     );
 
+    _register_permissions($dbh);
     return 1;
+}
+
+# Granular sub-permissions registered under Koha's plugins module (bit 19).
+# Sites that grant 'plugins' wholesale get them all automatically; sites that
+# grant plugins in limited mode can hand out exactly the slice each tier of
+# staff needs. Superlibrarians always pass every check via the bypass in
+# _has_perm. Re-run on every install + upgrade so descriptions can evolve.
+my %SUBPERMISSIONS = (
+    staffroster_view             => 'Staff Roster: view rosters and own schedule',
+    staffroster_assign           => 'Staff Roster: drag staff onto slots and edit assignments',
+    staffroster_manage_rosters   => 'Staff Roster: create or edit rosters, slots, exceptions',
+    staffroster_manage_types     => 'Staff Roster: manage roster types catalogue',
+    staffroster_swap_request     => 'Staff Roster: request a shift swap',
+    staffroster_swap_respond     => 'Staff Roster: accept or reject a swap directed at you',
+    staffroster_swap_approve     => 'Staff Roster: approve swaps as a manager',
+    staffroster_configure        => 'Staff Roster: change plugin configuration',
+);
+
+sub _register_permissions {
+    my ($dbh) = @_;
+    # Upsert rather than REPLACE: the latter does a DELETE + INSERT, which
+    # would cascade-clobber any existing user_permissions grants for the same
+    # (module_bit, code) every time the plugin upgrades.
+    for my $code ( sort keys %SUBPERMISSIONS ) {
+        $dbh->do(
+            q{INSERT INTO permissions (module_bit, code, description)
+              VALUES (19, ?, ?)
+              ON DUPLICATE KEY UPDATE description = VALUES(description)},
+            undef, $code, $SUBPERMISSIONS{$code}
+        );
+    }
+    return;
+}
+
+sub _unregister_permissions {
+    my ($dbh) = @_;
+    my @codes = keys %SUBPERMISSIONS;
+    return if !@codes;
+    my $placeholders = join q{,}, ('?') x @codes;
+    $dbh->do(
+        qq{DELETE FROM permissions WHERE module_bit = 19 AND code IN ($placeholders)},
+        undef, @codes
+    );
+    $dbh->do(
+        qq{DELETE FROM user_permissions WHERE module_bit = 19 AND code IN ($placeholders)},
+        undef, @codes
+    );
+    return;
+}
+
+# Permission check used by every gated handler. Superlibrarians bypass all
+# checks (matches Koha's convention everywhere else). Returns 1/0.
+sub _has_perm {
+    my ($code) = @_;
+    my $env = C4::Context->userenv;
+    return 0 if !$env;
+    my $flags = $env->{flags} // 0;
+    return 1 if $flags == 1 || ( $flags & 1 );
+    require C4::Auth;
+    return C4::Auth::haspermission( $env->{id}, { plugins => $code } ) ? 1 : 0;
+}
+
+# Gate convenience: returns 1 when the user has $code, else pushes a denial
+# message and returns 0 so the calling handler can `return if !_gate(...)`.
+sub _gate {
+    my ( $code, $messages ) = @_;
+    return 1 if _has_perm($code);
+    push @{$messages}, { type => 'danger', code => 'access_denied' };
+    return 0;
 }
 
 =head3 upgrade
@@ -300,6 +370,10 @@ sub upgrade {
     #         ADD COLUMN reminder_sent TINYINT(1) DEFAULT 0 AFTER notes
     #     });
     # }
+
+    # Always re-register sub-permissions on upgrade so existing installs pick
+    # up new codes + description tweaks without manual intervention.
+    _register_permissions($dbh);
 
     $self->store_data( { '__INSTALLED_VERSION__' => $self->get_metadata->{version} } );
 
@@ -370,6 +444,8 @@ sub uninstall {
     $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_slots });
     $dbh->do(q{ DROP TABLE IF EXISTS staff_roster });
     $dbh->do(q{ DROP TABLE IF EXISTS staff_roster_types });
+
+    _unregister_permissions($dbh);
 
     return 1;
 }
@@ -450,6 +526,7 @@ sub admin {
 
 sub _admin_save_type {
     my ( $dbh, $cgi, $id, $messages ) = @_;
+    return if !_gate( 'staffroster_manage_types', $messages );
 
     my @fields = (
         uc( $cgi->param('code') // q{} ),
@@ -496,6 +573,7 @@ sub _admin_save_type {
 
 sub _admin_delete_type {
     my ( $dbh, $cgi, $id, $messages ) = @_;
+    return if !_gate( 'staffroster_manage_types', $messages );
 
     my ($count) = $dbh->selectrow_array( q{SELECT COUNT(*) FROM staff_roster WHERE roster_type_id = ?}, undef, $id );
 
@@ -576,6 +654,10 @@ sub configure {
     my $template = $self->get_template( { file => 'configure.tt' } );
 
     if ( $op eq 'cud-save' ) {
+        if ( !_has_perm('staffroster_configure') ) {
+            $template->param( denied => 1 );
+            return $self->output_html( $template->output );
+        }
         my %config;
         for my $key (@config_keys) {
             if ( $key eq 'staff_categories' ) {
@@ -819,6 +901,7 @@ sub tool {
 
 sub _tool_save_roster {
     my ( $self, $dbh, $cgi, $messages ) = @_;
+    return if !_gate( 'staffroster_manage_rosters', $messages );
 
     my $target = $cgi->param('target') // 'all';
     my ( $branch_id, $group_id );
@@ -882,6 +965,7 @@ sub _tool_save_roster {
 
 sub _tool_delete_roster {
     my ( $self, $dbh, $cgi, $messages ) = @_;
+    return if !_gate( 'staffroster_manage_rosters', $messages );
     my $roster_id = $cgi->param('roster_id');
     _delete_additional_fields( $dbh, 'staff_roster', $roster_id );
     my $ok = $dbh->do( q{DELETE FROM staff_roster WHERE id = ?}, undef, $roster_id );
@@ -896,6 +980,7 @@ sub _tool_delete_roster {
 
 sub _tool_save_slot {
     my ( $self, $dbh, $cgi, $messages ) = @_;
+    return if !_gate( 'staffroster_manage_rosters', $messages );
 
     my @dows = sort { $a <=> $b } grep { /^[0-6]$/sm } $cgi->multi_param('day_of_week');
 
@@ -976,6 +1061,7 @@ sub _tool_save_slot {
 
 sub _tool_delete_slot {
     my ( $self, $dbh, $cgi, $messages ) = @_;
+    return if !_gate( 'staffroster_manage_rosters', $messages );
     my $slot_id = $cgi->param('slot_id');
     $dbh->do( q{DELETE FROM staff_roster_slots WHERE id = ?}, undef, $slot_id );
     _audit( 'DELETE', $slot_id, { entity => 'slot' } );
@@ -989,6 +1075,7 @@ my %EXCEPTION_TYPES = map { $_ => 1 } qw( closed holiday special reduced_hours )
 
 sub _tool_save_exception {
     my ( $self, $dbh, $cgi, $messages ) = @_;
+    return if !_gate( 'staffroster_manage_rosters', $messages );
 
     my $roster_id      = $cgi->param('roster_id');
     my $exception_date = $cgi->param('exception_date') // q{};
@@ -1035,6 +1122,7 @@ sub _tool_save_exception {
 
 sub _tool_delete_exception {
     my ( $self, $dbh, $cgi, $messages ) = @_;
+    return if !_gate( 'staffroster_manage_rosters', $messages );
     my $roster_id    = $cgi->param('roster_id');
     my $exception_id = $cgi->param('exception_id');
     my $count = $dbh->do(
@@ -1065,6 +1153,7 @@ sub _tool_delete_exception {
 
 sub _tool_request_swap {
     my ( $self, $dbh, $cgi, $messages ) = @_;
+    return if !_gate( 'staffroster_swap_request', $messages );
 
     my $roster_id          = $cgi->param('roster_id');
     my $from_assignment_id = $cgi->param('from_assignment_id');
@@ -1131,19 +1220,29 @@ sub _tool_respond_swap {
         return;
     }
 
-    # Only superlibs may approve when the require_swap_approval setting is on.
-    # Reject is always allowed for either the target or a manager.
-    my $env             = C4::Context->userenv;
-    my $is_superlib     = $env && ( ( $env->{flags} // 0 ) == 1 || ( ( $env->{flags} // 0 ) & 1 ) );
-    my $is_target       = $env && $env->{number} && $swap->{to_borrowernumber} == $env->{number};
-    my $approval_gated  = ( $self->retrieve_data('require_swap_approval') // '1' ) eq '1';
-    if ( $decision eq 'approve' && $approval_gated && !$is_superlib ) {
-        push @{$messages}, { type => 'danger', code => 'swap_needs_manager' };
-        return;
+    # Approve gating: when require_swap_approval is on, only the manager perm
+    # may approve. When off, the target staff member may also approve via
+    # staffroster_swap_respond. Reject only requires the respond perm (or
+    # manager). Superlibs always pass via _has_perm.
+    my $env            = C4::Context->userenv;
+    my $is_target      = $env && $env->{number} && $swap->{to_borrowernumber} == $env->{number};
+    my $approval_gated = ( $self->retrieve_data('require_swap_approval') // '1' ) eq '1';
+
+    if ( $decision eq 'approve' ) {
+        my $ok = _has_perm('staffroster_swap_approve');
+        $ok ||= ( !$approval_gated && $is_target && _has_perm('staffroster_swap_respond') );
+        if ( !$ok ) {
+            push @{$messages}, { type => 'danger', code => 'swap_needs_manager' };
+            return;
+        }
     }
-    if ( !$is_superlib && !$is_target ) {
-        push @{$messages}, { type => 'danger', code => 'swap_not_authorised' };
-        return;
+    else {    # reject
+        my $ok = _has_perm('staffroster_swap_approve')
+            || ( $is_target && _has_perm('staffroster_swap_respond') );
+        if ( !$ok ) {
+            push @{$messages}, { type => 'danger', code => 'swap_not_authorised' };
+            return;
+        }
     }
 
     if ( $decision eq 'approve' ) {
@@ -1202,9 +1301,12 @@ sub _tool_cancel_swap {
         return;
     }
 
-    my $is_superlib = $env && ( ( $env->{flags} // 0 ) == 1 || ( ( $env->{flags} // 0 ) & 1 ) );
-    my $is_owner    = $env && $env->{number} && $swap->{from_borrowernumber} == $env->{number};
-    if ( !$is_superlib && !$is_owner ) {
+    # The requester can always cancel their own pending swap (provided they
+    # still hold staffroster_swap_request); managers can cancel anyone's.
+    my $is_owner = $env && $env->{number} && $swap->{from_borrowernumber} == $env->{number};
+    my $ok       = _has_perm('staffroster_swap_approve')
+        || ( $is_owner && _has_perm('staffroster_swap_request') );
+    if ( !$ok ) {
         push @{$messages}, { type => 'danger', code => 'swap_not_authorised' };
         return;
     }

@@ -22,6 +22,11 @@ sub create {
     my $c = shift->openapi->valid_input or return;
 
     return try {
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+            return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
+        }
+
         my $body = $c->req->json // {};
         my ( $slot_id, $borrowernumber, $date ) = @{$body}{qw( slot_id borrowernumber assignment_date )};
 
@@ -84,6 +89,11 @@ sub update {
     my $c = shift->openapi->valid_input or return;
 
     return try {
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+            return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
+        }
+
         my $id   = $c->validation->param('assignment_id');
         my $body = $c->req->json // {};
         my $dbh  = C4::Context->dbh;
@@ -155,6 +165,11 @@ sub delete {
     my $c = shift->openapi->valid_input or return;
 
     return try {
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+            return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
+        }
+
         my $id    = $c->validation->param('assignment_id');
         my $dbh   = C4::Context->dbh;
         my $count = $dbh->do( q{DELETE FROM staff_roster_assignments WHERE id = ?}, undef, $id );
@@ -184,6 +199,11 @@ sub bulk {
     my $c = shift->openapi->valid_input or return;
 
     return try {
+        require Koha::Plugin::Xyz::Paulderscheid::StaffRoster;
+        if ( !Koha::Plugin::Xyz::Paulderscheid::StaffRoster::_has_perm('staffroster_assign') ) {
+            return $c->render( status => 403, openapi => { error => 'staffroster_assign permission required' } );
+        }
+
         my $body = $c->req->json // {};
         my $op   = $body->{op}   // q{};
         my $ids  = $body->{ids}  // [];

@@ -54,6 +54,9 @@
     [% IF saved %]
         <div class="alert alert-success">Configuration saved successfully.</div>
     [% END %]
+    [% IF denied %]
+        <div class="alert alert-danger">You don't have the <code>staffroster_configure</code> permission. Changes were not saved.</div>
+    [% END %]
 
     <form method="post" action="/cgi-bin/koha/plugins/run.pl" class="validated">
         [% INCLUDE 'csrf-token.inc' %]
